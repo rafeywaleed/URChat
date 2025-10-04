@@ -34,11 +34,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   final FocusNode _focusNode = FocusNode();
   final List<Message> _messages = [];
 
-  // Theme variables for THIS CHAT only
-  final List<String> _themeNames = ['Modern', 'Cute', 'Elegant'];
-  late int _selectedTheme;
-  late bool _isDarkMode;
-
   bool _isLoading = true;
   bool _isTyping = false;
   String _typingUser = '';
@@ -57,16 +52,24 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   int _pageSize = 20;
   bool _hasMoreMessages = true;
   bool _isLoadingMore = false;
+  final List<String> _themeNames = ['Modern', 'Cute', 'Elegant'];
+  late final Widget _backgroundWidget;
+
+  late int _selectedTheme;
+  late bool _isDarkMode;
 
   @override
   void initState() {
     super.initState();
 
+    _backgroundWidget = _getBackgroundByTheme(
+        widget.chatRoom.themeIndex, widget.chatRoom.isDark);
+
     // Initialize chat-specific theme from chatRoom
     _selectedTheme = widget.chatRoom.themeIndex;
     _isDarkMode = widget.chatRoom.isDark;
 
-    _loadChatTheme();
+    // _loadChatTheme();
 
     _typingAnimationController = AnimationController(
       duration: const Duration(milliseconds: 1200),
@@ -95,6 +98,19 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     _setupScrollListener();
     _startTypingCleanupTimer();
     _loadInitialMessages();
+  }
+
+  @override
+  void didUpdateWidget(ChatScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (oldWidget.chatRoom.themeIndex != widget.chatRoom.themeIndex ||
+        oldWidget.chatRoom.isDark != widget.chatRoom.isDark) {
+      setState(() {
+        _backgroundWidget = _getBackgroundByTheme(
+            widget.chatRoom.themeIndex, widget.chatRoom.isDark);
+      });
+    }
   }
 
   void _loadInitialMessages() async {
@@ -563,7 +579,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor: theme.colorScheme.background,
+      backgroundColor: Colors.black87,
       appBar: AppBar(
         leading: widget.isEmbedded
             ? IconButton(
@@ -628,7 +644,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       ),
       body: Stack(
         children: [
-          _background(),
+          _backgroundWidget,
           Column(
             children: [
               _buildConnectionStatus(),
@@ -708,10 +724,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       color: isDark ? theme.cardTheme.color : Colors.white,
       child: Row(
         children: [
-          IconButton(
-            icon: Icon(Icons.add_circle, color: theme.primaryColor),
-            onPressed: _onAttachmentPressed,
-          ),
           Expanded(
             child: Container(
               child: TextField(
@@ -753,38 +765,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  void _onAttachmentPressed() {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => SafeArea(
-        child: Wrap(
-          children: [
-            ListTile(
-              leading: const Icon(Icons.photo),
-              title: const Text('Photo & Video Library'),
-              onTap: () => Navigator.pop(context),
-            ),
-            ListTile(
-              leading: const Icon(Icons.camera_alt),
-              title: const Text('Take Photo'),
-              onTap: () => Navigator.pop(context),
-            ),
-            ListTile(
-              leading: const Icon(Icons.attach_file),
-              title: const Text('Document'),
-              onTap: () => Navigator.pop(context),
-            ),
-            ListTile(
-              leading: const Icon(Icons.location_on),
-              title: const Text('Location'),
-              onTap: () => Navigator.pop(context),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -864,23 +844,16 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   }
 
   // THEMING METHODS
-
   Future<void> _changeTheme(int themeIndex) async {
     try {
-      // Update theme on server
       await ApiService.updateChatTheme({
         'themeIndex': themeIndex,
-        'isDark': _isDarkMode, // Keep current dark mode setting
+        'isDark': widget.chatRoom.isDark,
       }, widget.chatRoom.chatId);
 
-      // Update local state
-      if (mounted) {
-        setState(() {
-          _selectedTheme = themeIndex;
-        });
-      }
+      // Force Homescreen to reload chat data to reflect theme changes
+      // This will trigger a rebuild of ChatThemeWrapper
 
-      // Show success feedback
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Theme changed to ${_themeNames[themeIndex]}'),
@@ -900,19 +873,12 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 
   Future<void> _toggleDarkMode() async {
     try {
-      final newDarkMode = !_isDarkMode;
+      final newDarkMode = !widget.chatRoom.isDark;
 
       await ApiService.updateChatTheme({
-        'themeIndex': _selectedTheme,
+        'themeIndex': widget.chatRoom.themeIndex,
         'isDark': newDarkMode,
       }, widget.chatRoom.chatId);
-
-      if (mounted) {
-        setState(() {
-          _isDarkMode = newDarkMode;
-        });
-      }
-
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Switched to ${newDarkMode ? 'Dark' : 'Light'} mode'),
@@ -943,10 +909,11 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
           onTap: _toggleDarkMode,
           child: ListTile(
             leading: Icon(
-              _isDarkMode ? Icons.light_mode : Icons.dark_mode,
+              widget.chatRoom.isDark ? Icons.light_mode : Icons.dark_mode,
               color: Theme.of(context).iconTheme.color,
             ),
-            title: Text(_isDarkMode ? 'Switch to Light' : 'Switch to Dark'),
+            title: Text(
+                widget.chatRoom.isDark ? 'Switch to Light' : 'Switch to Dark'),
           ),
         ),
         // Theme style selector
@@ -967,7 +934,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                 children: List.generate(_themeNames.length, (index) {
                   return ChoiceChip(
                     label: Text(_themeNames[index]),
-                    selected: _selectedTheme == index,
+                    selected: widget.chatRoom.themeIndex == index,
                     onSelected: (selected) {
                       if (selected) {
                         Navigator.pop(context);
@@ -988,7 +955,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
             children: [
               const SizedBox(height: 8),
               Text(
-                'Current: ${_themeNames[_selectedTheme]} • ${_isDarkMode ? 'Dark' : 'Light'}',
+                'Current: ${_themeNames[widget.chatRoom.themeIndex]} • ${widget.chatRoom.isDark ? 'Dark' : 'Light'}',
                 style: TextStyle(
                   color: Theme.of(context).primaryColor,
                   fontWeight: FontWeight.bold,
@@ -1005,61 +972,54 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _background() {
-    return _getBackgroundByTheme(_selectedTheme);
-  }
+  // Widget _background() {
+  //   return _getBackgroundByTheme(_selectedTheme);
+  // }
 
-  Widget _getBackgroundByTheme(int themeIndex) {
-    Widget backgroundWidget;
-
+  Widget _getBackgroundByTheme(int themeIndex, bool isDark) {
     switch (themeIndex) {
       case 2: // Elegant
-        backgroundWidget = MeteorShower(
-          isDark: _isDarkMode,
+        return MeteorShower(
+          key: ValueKey('elegant-$isDark'), // Important: key prevents reset
+          isDark: isDark,
           numberOfMeteors: 10,
           duration: const Duration(seconds: 5),
-          child: Container(
-            width: double.infinity,
-            height: double.infinity,
-          ),
+          child: Container(),
         );
-        break;
       case 0: // Modern
-        backgroundWidget = AnimatedGridPattern(
+        return AnimatedGridPattern(
+          key: ValueKey('modern-$isDark'),
           squares: List.generate(20, (index) => [index % 5, index ~/ 5]),
           gridSize: 40,
           skewAngle: 12,
         );
-        break;
       case 1: // Cute
-        backgroundWidget = ButterflyDemo();
-        break;
+        return ButterflyDemo(
+          key: ValueKey('cute-$isDark'),
+        );
       default:
-        backgroundWidget =
-            Container(color: Theme.of(context).scaffoldBackgroundColor);
-    }
-
-    return Positioned.fill(
-      child: backgroundWidget,
-    );
-  }
-
-  Future<void> _loadChatTheme() async {
-    try {
-      final chatTheme = await ApiService.getChatTheme(widget.chatRoom.chatId);
-      if (chatTheme.containsKey('themeIndex')) {
-        final themeIndex = chatTheme['themeIndex'] as int;
-        final isDark = chatTheme['isDark'] as bool? ?? false;
-
-        if (mounted) {
-          setState(() {
-            _selectedTheme = themeIndex;
-            _isDarkMode = isDark;
-          });
-        }
-      }
-    } catch (e) {
-      print('Error loading chat theme: $e');
+        return Container(
+            key: ValueKey('default-$isDark'),
+            color: Theme.of(context).scaffoldBackgroundColor);
     }
   }
+
+  // Future<void> _loadChatTheme() async {
+  //   try {
+  //     final chatTheme = await ApiService.getChatTheme(widget.chatRoom.chatId);
+  //     if (chatTheme.containsKey('themeIndex')) {
+  //       final themeIndex = chatTheme['themeIndex'] as int;
+  //       final isDark = chatTheme['isDark'] as bool? ?? false;
+
+  //       if (mounted) {
+  //         setState(() {
+  //           _selectedTheme = themeIndex;
+  //           _isDarkMode = isDark;
+  //         });
+  //       }
+  //     }
+  //   } catch (e) {
+  //     print('Error loading chat theme: $e');
+  //   }
+  // }
 }

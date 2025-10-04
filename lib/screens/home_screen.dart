@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:urchat_back_testing/model/ChatRoom.dart';
 import 'package:urchat_back_testing/model/message.dart';
 import 'package:urchat_back_testing/screens/auth_screen.dart';
-import 'package:urchat_back_testing/screens/chat_screen.dart';
+
+import 'package:urchat_back_testing/screens/chatting.dart';
 import 'package:urchat_back_testing/screens/profile_screen.dart';
 import 'package:urchat_back_testing/screens/search_delegate.dart';
-import 'package:urchat_back_testing/screens/themed_chat_screen.dart';
 import 'package:urchat_back_testing/service/api_service.dart';
 import 'package:urchat_back_testing/service/local_cache_service.dart';
 import 'package:urchat_back_testing/service/websocket_service.dart';
@@ -169,6 +169,15 @@ class _HomescreenState extends State<Homescreen> {
     });
 
     _webSocketService.subscribeToChatRoom(chat.chatId);
+  }
+
+  void _refreshSelectedChat() {
+    if (_selectedChatId != null) {
+      setState(() {
+        // This will force ChatThemeWrapper to rebuild with updated theme
+      });
+    }
+    _loadChatsFromApi();
   }
 
   void _deselectChat() {
@@ -432,13 +441,10 @@ class _HomescreenState extends State<Homescreen> {
     if (_selectedChat == null) return _buildEmptyChatView();
 
     return Expanded(
-      child: ChatThemeWrapper(
-        key: Key(_selectedChatId!),
-        chatRoom: _selectedChat!,
-        webSocketService: _webSocketService,
-        onBack: _isMobileScreen ? _deselectChat : null,
-        isEmbedded: true,
-      ),
+      child: URChatApp(
+          key: ValueKey(_selectedChat!.chatId),
+          chatRoom: _selectedChat!,
+          webSocketService: _webSocketService),
     );
   }
 
@@ -519,10 +525,8 @@ class _HomescreenState extends State<Homescreen> {
                     '   WebSocket connected: ${_webSocketService.isConnected}');
                 print('   Selected chat: $_selectedChatId');
 
-                // Force a chat list reload to test
                 _loadChatsFromApi();
 
-                // Test if we can receive messages
                 print('   Testing message reception...');
               },
             ),
@@ -612,6 +616,7 @@ class _HomescreenState extends State<Homescreen> {
                     ],
                   ),
                 )
+              // : _buildMobileLayout()
               : _isMobileScreen
                   ? _buildMobileLayout()
                   : _buildDesktopLayout(),

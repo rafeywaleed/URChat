@@ -5,7 +5,7 @@ import 'package:urchat_back_testing/model/ChatRoom.dart';
 import 'package:urchat_back_testing/service/websocket_service.dart';
 import 'chat_screen.dart';
 
-class ChatThemeWrapper extends StatelessWidget {
+class ChatThemeWrapper extends StatefulWidget {
   final ChatRoom chatRoom;
   final WebSocketService webSocketService;
   final VoidCallback? onBack;
@@ -20,23 +20,46 @@ class ChatThemeWrapper extends StatelessWidget {
   }) : super(key: key);
 
   @override
+  State<ChatThemeWrapper> createState() => _ChatThemeWrapperState();
+}
+
+class _ChatThemeWrapperState extends State<ChatThemeWrapper> {
+  late ChatRoom _currentChatRoom;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentChatRoom = widget.chatRoom;
+  }
+
+  @override
+  void didUpdateWidget(ChatThemeWrapper oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.chatRoom.chatId != widget.chatRoom.chatId ||
+        oldWidget.chatRoom.themeIndex != widget.chatRoom.themeIndex ||
+        oldWidget.chatRoom.isDark != widget.chatRoom.isDark) {
+      setState(() {
+        _currentChatRoom = widget.chatRoom;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Theme(
-      data: _getChatTheme(chatRoom.themeIndex, Theme.of(context).brightness),
+      data: _getChatTheme(_currentChatRoom.themeIndex, _currentChatRoom.isDark),
       child: ChatScreen(
-        key: Key(chatRoom.chatId),
-        chatRoom: chatRoom,
-        webSocketService: webSocketService,
-        onBack: onBack,
-        isEmbedded: isEmbedded,
+        key: Key(
+            '${_currentChatRoom.chatId}-${_currentChatRoom.themeIndex}-${_currentChatRoom.isDark}'),
+        chatRoom: _currentChatRoom,
+        webSocketService: widget.webSocketService,
+        onBack: widget.onBack,
+        isEmbedded: widget.isEmbedded,
       ),
     );
   }
 
-  ThemeData _getChatTheme(int themeIndex, Brightness brightness) {
-    final isDark = brightness == Brightness.dark;
-
-    // Define your chat-specific themes here
+  ThemeData _getChatTheme(int themeIndex, bool isDark) {
     switch (themeIndex) {
       case 1: // Cute
         return isDark ? _cuteDarkTheme : _cuteLightTheme;
@@ -49,6 +72,7 @@ class ChatThemeWrapper extends StatelessWidget {
   }
 
   ThemeData get _modernLightTheme => ThemeData.light().copyWith(
+        useMaterial3: true,
         primaryColor: const Color(0xFF2E4057),
         colorScheme: const ColorScheme.light(
           primary: Color(0xFF2E4057),
@@ -57,23 +81,20 @@ class ChatThemeWrapper extends StatelessWidget {
           background: Color(0xFFFFFFFF),
           onSurface: Color(0xFF212529),
         ),
-        textTheme: GoogleFonts.robotoTextTheme().apply(
-          bodyColor: const Color(0xFF212529),
-          displayColor: const Color(0xFF212529),
-        ),
+        scaffoldBackgroundColor: const Color(0xFFFFFFFF),
+        textTheme: GoogleFonts.robotoTextTheme(ThemeData.light().textTheme),
         cardTheme: CardThemeData(
           elevation: 1,
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           color: Colors.white,
         ),
-        floatingActionButtonTheme: FloatingActionButtonThemeData(
-          backgroundColor: const Color(0xFF2E4057),
+        floatingActionButtonTheme: const FloatingActionButtonThemeData(
+          backgroundColor: Color(0xFF2E4057),
           elevation: 4,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
         appBarTheme: AppBarTheme(
+          backgroundColor: const Color(0xFF2E4057),
           elevation: 0,
           centerTitle: true,
           titleTextStyle: GoogleFonts.roboto(
@@ -81,11 +102,12 @@ class ChatThemeWrapper extends StatelessWidget {
             fontWeight: FontWeight.w600,
             color: Colors.white,
           ),
-          iconTheme: const IconThemeData(color: Colors.black87),
+          iconTheme: const IconThemeData(color: Colors.white),
         ),
       );
 
   ThemeData get _modernDarkTheme => ThemeData.dark().copyWith(
+        useMaterial3: true,
         primaryColor: const Color(0xFF4A6FA5),
         colorScheme: const ColorScheme.dark(
           primary: Color(0xFF4A6FA5),
@@ -94,23 +116,20 @@ class ChatThemeWrapper extends StatelessWidget {
           background: Color(0xFF121212),
           onSurface: Color(0xFFE0E0E0),
         ),
-        textTheme: GoogleFonts.robotoTextTheme().apply(
-          bodyColor: const Color(0xFFE0E0E0),
-          displayColor: Colors.white,
-        ),
+        scaffoldBackgroundColor: const Color(0xFF121212),
+        textTheme: GoogleFonts.robotoTextTheme(ThemeData.dark().textTheme),
         cardTheme: CardThemeData(
           elevation: 2,
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           color: const Color(0xFF1A1A2E),
         ),
-        floatingActionButtonTheme: FloatingActionButtonThemeData(
-          backgroundColor: const Color(0xFF4A6FA5),
+        floatingActionButtonTheme: const FloatingActionButtonThemeData(
+          backgroundColor: Color(0xFF4A6FA5),
           elevation: 4,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
         appBarTheme: AppBarTheme(
+          backgroundColor: const Color(0xFF4A6FA5),
           elevation: 0,
           centerTitle: true,
           titleTextStyle: GoogleFonts.roboto(
@@ -123,6 +142,7 @@ class ChatThemeWrapper extends StatelessWidget {
       );
 
   ThemeData get _cuteLightTheme => ThemeData.light().copyWith(
+        useMaterial3: true,
         primaryColor: const Color(0xFFE91E63),
         colorScheme: const ColorScheme.light(
           primary: Color(0xFFE91E63),
@@ -131,23 +151,20 @@ class ChatThemeWrapper extends StatelessWidget {
           background: Color(0xFFFFF9FB),
           onSurface: Color(0xFF333333),
         ),
-        textTheme: GoogleFonts.poppinsTextTheme().apply(
-          bodyColor: const Color(0xFF333333),
-          displayColor: const Color(0xFF333333),
-        ),
+        scaffoldBackgroundColor: const Color(0xFFFFF9FB),
+        textTheme: GoogleFonts.poppinsTextTheme(ThemeData.light().textTheme),
         cardTheme: CardThemeData(
           elevation: 1,
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           color: Colors.white,
         ),
-        floatingActionButtonTheme: FloatingActionButtonThemeData(
-          backgroundColor: const Color(0xFFE91E63),
+        floatingActionButtonTheme: const FloatingActionButtonThemeData(
+          backgroundColor: Color(0xFFE91E63),
           elevation: 4,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         ),
         appBarTheme: AppBarTheme(
+          backgroundColor: const Color(0xFFE91E63),
           elevation: 0,
           centerTitle: true,
           titleTextStyle: GoogleFonts.poppins(
@@ -155,11 +172,12 @@ class ChatThemeWrapper extends StatelessWidget {
             fontWeight: FontWeight.w600,
             color: Colors.white,
           ),
-          iconTheme: const IconThemeData(color: Colors.black87),
+          iconTheme: const IconThemeData(color: Colors.white),
         ),
       );
 
   ThemeData get _cuteDarkTheme => ThemeData.dark().copyWith(
+        useMaterial3: true,
         primaryColor: const Color(0xFFEC407A),
         colorScheme: const ColorScheme.dark(
           primary: Color(0xFFEC407A),
@@ -168,23 +186,20 @@ class ChatThemeWrapper extends StatelessWidget {
           background: Color(0xFF121212),
           onSurface: Color(0xFFE0E0E0),
         ),
-        textTheme: GoogleFonts.poppinsTextTheme().apply(
-          bodyColor: const Color(0xFFE0E0E0),
-          displayColor: Colors.white,
-        ),
+        scaffoldBackgroundColor: const Color(0xFF121212),
+        textTheme: GoogleFonts.poppinsTextTheme(ThemeData.dark().textTheme),
         cardTheme: CardThemeData(
           elevation: 2,
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           color: const Color(0xFF1E1E2E),
         ),
-        floatingActionButtonTheme: FloatingActionButtonThemeData(
-          backgroundColor: const Color(0xFFEC407A),
+        floatingActionButtonTheme: const FloatingActionButtonThemeData(
+          backgroundColor: Color(0xFFEC407A),
           elevation: 4,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         ),
         appBarTheme: AppBarTheme(
+          backgroundColor: const Color(0xFFEC407A),
           elevation: 0,
           centerTitle: true,
           titleTextStyle: GoogleFonts.poppins(
@@ -197,6 +212,7 @@ class ChatThemeWrapper extends StatelessWidget {
       );
 
   ThemeData get _elegantLightTheme => ThemeData.light().copyWith(
+        useMaterial3: true,
         primaryColor: const Color(0xFF5D737E),
         colorScheme: const ColorScheme.light(
           primary: Color(0xFF5D737E),
@@ -205,24 +221,20 @@ class ChatThemeWrapper extends StatelessWidget {
           background: Color(0xFFFFFFFF),
           onSurface: Color(0xFF3A3A3A),
         ),
-        textTheme: GoogleFonts.robotoTextTheme().apply(
-          bodyColor: const Color(0xFF3A3A3A),
-          displayColor: const Color(0xFF3A3A3A),
-        ),
+        scaffoldBackgroundColor: const Color(0xFFFFFFFF),
+        textTheme: GoogleFonts.robotoTextTheme(ThemeData.light().textTheme),
         cardTheme: CardThemeData(
           elevation: 0,
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           color: Colors.white,
-          margin: const EdgeInsets.all(8),
         ),
-        floatingActionButtonTheme: FloatingActionButtonThemeData(
-          backgroundColor: const Color(0xFF5D737E),
+        floatingActionButtonTheme: const FloatingActionButtonThemeData(
+          backgroundColor: Color(0xFF5D737E),
           elevation: 1,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
         appBarTheme: AppBarTheme(
+          backgroundColor: const Color(0xFF5D737E),
           elevation: 0,
           centerTitle: true,
           titleTextStyle: GoogleFonts.roboto(
@@ -230,37 +242,34 @@ class ChatThemeWrapper extends StatelessWidget {
             fontWeight: FontWeight.w500,
             color: Colors.white,
           ),
-          iconTheme: const IconThemeData(color: Colors.black87),
+          iconTheme: const IconThemeData(color: Colors.white),
         ),
       );
 
   ThemeData get _elegantDarkTheme => ThemeData.dark().copyWith(
+        useMaterial3: true,
         primaryColor: const Color(0xFF7A8B99),
         colorScheme: const ColorScheme.dark(
-          primary: Color(0xFF7A8B99), // Lighter slate
-          secondary: Color(0xFF5D737E), // Slate blue-gray
-          surface: Color(0xFF1E2A32), // Dark slate
-          background: Color(0xFF121A21), // Very dark slate
-          onSurface: Color(0xFFE0E3E7), // Light gray
+          primary: Color(0xFF7A8B99),
+          secondary: Color(0xFF5D737E),
+          surface: Color(0xFF1E2A32),
+          background: Color(0xFF121A21),
+          onSurface: Color(0xFFE0E3E7),
         ),
-        textTheme: GoogleFonts.robotoTextTheme().apply(
-          bodyColor: const Color(0xFFE0E3E7),
-          displayColor: Colors.white,
-        ),
+        scaffoldBackgroundColor: const Color(0xFF121A21),
+        textTheme: GoogleFonts.robotoTextTheme(ThemeData.dark().textTheme),
         cardTheme: CardThemeData(
           elevation: 0,
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           color: const Color(0xFF1E2A32),
-          margin: const EdgeInsets.all(8),
         ),
-        floatingActionButtonTheme: FloatingActionButtonThemeData(
-          backgroundColor: const Color(0xFF7A8B99),
+        floatingActionButtonTheme: const FloatingActionButtonThemeData(
+          backgroundColor: Color(0xFF7A8B99),
           elevation: 1,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
         appBarTheme: AppBarTheme(
+          backgroundColor: const Color(0xFF7A8B99),
           elevation: 0,
           centerTitle: true,
           titleTextStyle: GoogleFonts.roboto(
