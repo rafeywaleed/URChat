@@ -33,6 +33,10 @@ class _URChatAppState extends State<URChatApp> {
   late int _selectedTheme;
   late bool _isDarkMode;
 
+  // Add these to remember the last committed theme/mode
+  late int _committedTheme;
+  late ThemeMode _committedThemeMode;
+
   final List<ThemeData> _lightThemes = [];
   final List<ThemeData> _darkThemes = [];
   final List<String> _themeNames = ['Cute', 'Modern', 'Elegant'];
@@ -40,11 +44,13 @@ class _URChatAppState extends State<URChatApp> {
   @override
   void initState() {
     super.initState();
-
-    // Initialize from chat room settings
     _selectedTheme = widget.chatRoom.themeIndex ?? 0;
     _isDarkMode = widget.chatRoom.isDark ?? true;
     _themeMode = _isDarkMode ? ThemeMode.dark : ThemeMode.light;
+
+    // Save committed values
+    _committedTheme = _selectedTheme;
+    _committedThemeMode = _themeMode;
 
     _initializeThemes();
   }
@@ -59,6 +65,23 @@ class _URChatAppState extends State<URChatApp> {
   void _changeTheme(int index) {
     setState(() {
       _selectedTheme = index;
+    });
+  }
+
+  // Call this to commit the previewed theme/mode
+  void _commitThemeChanges() {
+    setState(() {
+      _committedTheme = _selectedTheme;
+      _committedThemeMode = _themeMode;
+    });
+  }
+
+  // Call this to revert to the last committed theme/mode
+  void _revertThemeChanges() {
+    setState(() {
+      _selectedTheme = _committedTheme;
+      _themeMode = _committedThemeMode;
+      _isDarkMode = _themeMode == ThemeMode.dark;
     });
   }
 
@@ -295,6 +318,8 @@ class _URChatAppState extends State<URChatApp> {
         onBack: widget.onBack,
         onThemeModeChanged: _changeThemeMode,
         onThemeChanged: _changeTheme,
+        onThemeSave: _commitThemeChanges, // <-- pass this
+        onThemeCancel: _revertThemeChanges, // <-- pass this
         isDarkMode: _isDarkMode,
         selectedTheme: _selectedTheme,
         themeNames: _themeNames,
@@ -309,6 +334,8 @@ class ChatScreen extends StatefulWidget {
   final VoidCallback? onBack;
   final void Function(ThemeMode)? onThemeModeChanged;
   final void Function(int)? onThemeChanged;
+  final VoidCallback? onThemeSave;
+  final VoidCallback? onThemeCancel;
   final bool isDarkMode;
   final int selectedTheme;
   final List<String> themeNames;
@@ -319,6 +346,8 @@ class ChatScreen extends StatefulWidget {
     this.onBack,
     this.onThemeModeChanged,
     this.onThemeChanged,
+    this.onThemeSave,
+    this.onThemeCancel,
     this.isDarkMode = false,
     this.selectedTheme = 0,
     required this.themeNames,
@@ -521,66 +550,87 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     }
   }
 
-  void _showThemeMenu() {
-    final screenWidth = MediaQuery.of(context).size.width;
-    showMenu(
+  void _showThemeMenu() async {
+    int tempTheme = widget.selectedTheme;
+    bool tempDarkMode = widget.isDarkMode;
+
+    await showDialog(
+      barrierDismissible: false,
+      fullscreenDialog: true,
+      useRootNavigator: false,
       context: context,
-      position: RelativeRect.fromLTRB(
-        screenWidth - 220,
-        kToolbarHeight,
-        16,
-        0,
-      ),
-      items: [
-        PopupMenuItem(
-          onTap: () {
-            widget.onThemeModeChanged?.call(
-              widget.isDarkMode ? ThemeMode.light : ThemeMode.dark,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Theme Settings'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ListTile(
+                    leading: Icon(
+                      tempDarkMode ? Iconsax.sun_1 : Iconsax.moon,
+                      color: Theme.of(context).iconTheme.color,
+                    ),
+                    title: Text(tempDarkMode ? 'Light Mode' : 'Dark Mode'),
+                    onTap: () {
+                      setState(() {
+                        tempDarkMode = !tempDarkMode;
+                      });
+                      widget.onThemeModeChanged?.call(
+                          tempDarkMode ? ThemeMode.dark : ThemeMode.light);
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Theme Style',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    children: List.generate(widget.themeNames.length, (index) {
+                      return ChoiceChip(
+                        label: Text(widget.themeNames[index]),
+                        selected: tempTheme == index,
+                        onSelected: (selected) {
+                          if (selected) {
+                            setState(() {
+                              tempTheme = index;
+                            });
+                            widget.onThemeChanged?.call(index);
+                          }
+                        },
+                      );
+                    }),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    widget.onThemeCancel?.call(); // revert preview
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    widget.onThemeSave?.call(); // commit preview
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text('Save'),
+                ),
+              ],
             );
           },
-          child: ListTile(
-            leading: Icon(
-              widget.isDarkMode ? Iconsax.sun_1 : Iconsax.moon,
-              color: Theme.of(context).iconTheme.color,
-            ),
-            title: Text(widget.isDarkMode ? 'Light Mode' : 'Dark Mode'),
-          ),
-        ),
-        PopupMenuItem(
-          enabled: false,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Theme Style',
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-              ),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                children: List.generate(widget.themeNames.length, (index) {
-                  return ChoiceChip(
-                    label: Text(widget.themeNames[index]),
-                    selected: widget.selectedTheme == index,
-                    onSelected: (selected) {
-                      if (selected) {
-                        Navigator.pop(context);
-                        widget.onThemeChanged?.call(index);
-                      }
-                    },
-                  );
-                }),
-              ),
-            ],
-          ),
-        ),
-      ],
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      elevation: 8,
+        );
+      },
     );
   }
 
