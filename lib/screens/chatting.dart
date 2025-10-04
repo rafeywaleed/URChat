@@ -53,6 +53,28 @@ class _URChatAppState extends State<URChatApp> {
     _committedThemeMode = _themeMode;
 
     _initializeThemes();
+
+    // Load theme from API
+    _loadThemeFromApi();
+  }
+
+  Future<void> _loadThemeFromApi() async {
+    try {
+      final themeData = await ApiService.getChatTheme(widget.chatRoom.chatId);
+      if (themeData.containsKey('themeIndex') &&
+          themeData.containsKey('isDark')) {
+        setState(() {
+          _selectedTheme = themeData['themeIndex'] ?? 0;
+          _isDarkMode = themeData['isDark'] ?? true;
+          _themeMode = _isDarkMode ? ThemeMode.dark : ThemeMode.light;
+          _committedTheme = _selectedTheme;
+          _committedThemeMode = _themeMode;
+        });
+      }
+    } catch (e) {
+      print('❌ Failed to load chat theme from API: $e');
+      // Optionally show a message or fallback to defaults
+    }
   }
 
   void _changeThemeMode(ThemeMode mode) {
@@ -69,11 +91,26 @@ class _URChatAppState extends State<URChatApp> {
   }
 
   // Call this to commit the previewed theme/mode
-  void _commitThemeChanges() {
+  Future<void> _commitThemeChanges() async {
     setState(() {
       _committedTheme = _selectedTheme;
       _committedThemeMode = _themeMode;
     });
+
+    try {
+      await ApiService.updateChatTheme(
+        {
+          "themeIndex": _selectedTheme,
+          "isDark": _isDarkMode,
+        },
+        widget.chatRoom.chatId,
+      );
+      // Optionally show a success message
+      print('✅ Chat theme updated on server');
+    } catch (e) {
+      // Optionally show an error message
+      print('❌ Failed to update chat theme: $e');
+    }
   }
 
   // Call this to revert to the last committed theme/mode
