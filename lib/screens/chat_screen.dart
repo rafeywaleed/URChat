@@ -9,7 +9,6 @@ import 'package:urchat_back_testing/service/websocket_service.dart';
 import 'package:urchat_back_testing/themes/butter/bfdemo.dart';
 import 'package:urchat_back_testing/themes/grid.dart';
 import 'package:urchat_back_testing/themes/meteor.dart';
-import 'package:urchat_back_testing/themes/theme_manager.dart';
 
 class ChatScreen extends StatefulWidget {
   final ChatRoom chatRoom;
@@ -35,7 +34,10 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   final FocusNode _focusNode = FocusNode();
   final List<Message> _messages = [];
 
-  late ThemeManager _themeManager;
+  // Theme variables for THIS CHAT only
+  final List<String> _themeNames = ['Modern', 'Cute', 'Elegant'];
+  late int _selectedTheme;
+  late bool _isDarkMode;
 
   bool _isLoading = true;
   bool _isTyping = false;
@@ -51,15 +53,21 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   final Map<String, Map<String, dynamic>> _typingUsers = {};
   Timer? _typingCleanupTimer;
 
+  int _currentPage = 0;
+  int _pageSize = 20;
+  bool _hasMoreMessages = true;
+  bool _isLoadingMore = false;
+
   @override
   void initState() {
     super.initState();
-    // _themeManager = Provider.of<ThemeManager>(context, listen: false);
-    // _loadThemePreferences
-    _themeManager = Provider.of<ThemeManager>(context, listen: false);
+
+    // Initialize chat-specific theme from chatRoom
+    _selectedTheme = widget.chatRoom.themeIndex;
+    _isDarkMode = widget.chatRoom.isDark;
+
     _loadChatTheme();
 
-    // Initialize animations
     _typingAnimationController = AnimationController(
       duration: const Duration(milliseconds: 1200),
       vsync: this,
@@ -83,18 +91,82 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       curve: Curves.easeInOut,
     ));
 
-    _loadMessages();
     _subscribeToChat();
     _setupScrollListener();
     _startTypingCleanupTimer();
+    _loadInitialMessages();
+  }
+
+  void _loadInitialMessages() async {
+    try {
+      setState(() {
+        _isLoading = true;
+        _currentPage = 0;
+        _hasMoreMessages = true;
+      });
+
+      final messages = await ApiService.getPaginatedMessages(
+          widget.chatRoom.chatId, 0, _pageSize);
+
+      messages.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+
+      setState(() {
+        _messages.clear();
+        _messages.addAll(messages);
+        _isLoading = false;
+        _hasMoreMessages = messages.length == _pageSize;
+      });
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _scrollToBottom(instant: true);
+      });
+    } catch (e) {
+      print('Error loading messages: $e');
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _loadMoreMessages() async {
+    if (_isLoadingMore || !_hasMoreMessages) return;
+
+    try {
+      setState(() {
+        _isLoadingMore = true;
+      });
+
+      final nextPage = _currentPage + 1;
+      final messages = await ApiService.getPaginatedMessages(
+          widget.chatRoom.chatId, nextPage, _pageSize);
+
+      if (messages.isNotEmpty) {
+        messages.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+
+        setState(() {
+          _messages.insertAll(0, messages);
+          _currentPage = nextPage;
+          _hasMoreMessages = messages.length == _pageSize;
+        });
+      } else {
+        setState(() {
+          _hasMoreMessages = false;
+        });
+      }
+    } catch (e) {
+      print('Error loading more messages: $e');
+    } finally {
+      setState(() {
+        _isLoadingMore = false;
+      });
+    }
   }
 
   void _startTypingCleanupTimer() {
-    _typingCleanupTimer = Timer.periodic(Duration(seconds: 3), (timer) {
+    _typingCleanupTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
       final now = DateTime.now().millisecondsSinceEpoch;
       _typingUsers.removeWhere((username, data) {
-        return now - data['lastSeenTyping'] >
-            3000; // Remove after 3 seconds of inactivity
+        return now - data['lastSeenTyping'] > 3000;
       });
       if (_typingUsers.isEmpty && _typingUser.isNotEmpty) {
         setState(() {
@@ -120,28 +192,13 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
           _scrollButtonAnimationController.reverse();
         }
       }
+
+      if (_scrollController.position.pixels <= 100 &&
+          !_isLoadingMore &&
+          _hasMoreMessages) {
+        _loadMoreMessages();
+      }
     });
-  }
-
-  void _loadMessages() async {
-    try {
-      final messages = await ApiService.getChatMessages(widget.chatRoom.chatId);
-      messages.sort((a, b) => a.timestamp.compareTo(b.timestamp));
-
-      setState(() {
-        _messages.addAll(messages);
-        _isLoading = false;
-      });
-
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _scrollToBottom(instant: true);
-      });
-    } catch (e) {
-      print('Error loading messages: $e');
-      setState(() {
-        _isLoading = false;
-      });
-    }
   }
 
   void _subscribeToChat() {
@@ -169,7 +226,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                   },
               'lastSeenTyping': DateTime.now().millisecondsSinceEpoch,
             };
-            // Update main typing user for display
             if (_typingUsers.length == 1) {
               _typingUser = username;
             } else {
@@ -197,8 +253,10 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       _messages.add(message);
     });
 
-    // Animate the new message
-    _messageSendAnimationController.forward(from: 0.0);
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 100) {
+      _scrollToBottom();
+    }
   }
 
   void _sendMessage() {
@@ -208,7 +266,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     widget.webSocketService.sendMessage(widget.chatRoom.chatId, message);
     _messageController.clear();
     _stopTyping();
-    _focusNode.unfocus();
   }
 
   void _startTyping() {
@@ -218,7 +275,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     }
 
     _typingTimer?.cancel();
-    _typingTimer = Timer(Duration(seconds: 2), _stopTyping);
+    _typingTimer = Timer(const Duration(seconds: 2), _stopTyping);
   }
 
   void _stopTyping() {
@@ -231,139 +288,106 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 
   void _scrollToBottom({bool instant = false}) {
     if (_scrollController.hasClients && _messages.isNotEmpty) {
-      if (instant) {
-        _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
-      } else {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
-      }
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (instant) {
+          _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+        } else {
+          _scrollController.animateTo(
+            _scrollController.position.maxScrollExtent,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+          );
+        }
+      });
     }
   }
 
   Widget _buildMessageBubble(Message message, int index) {
     final isOwnMessage = message.sender == ApiService.currentUsername;
     final showAvatar = !isOwnMessage;
-    final isNewMessage = index == _messages.length - 1;
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return AnimatedBuilder(
-      animation: isNewMessage
-          ? _messageSendAnimationController
-          : AlwaysStoppedAnimation(1.0),
-      builder: (context, child) {
-        final scale = isNewMessage
-            ? Tween<double>(begin: 0.5, end: 1.0)
-                .animate(
-                  CurvedAnimation(
-                    parent: _messageSendAnimationController,
-                    curve: Curves.elasticOut,
-                  ),
-                )
-                .value
-            : 1.0;
-
-        final opacity = isNewMessage
-            ? Tween<double>(begin: 0.0, end: 1.0)
-                .animate(
-                  CurvedAnimation(
-                    parent: _messageSendAnimationController,
-                    curve: Curves.easeIn,
-                  ),
-                )
-                .value
-            : 1.0;
-
-        return Transform.scale(
-          scale: scale,
-          child: Opacity(
-            opacity: opacity,
-            child: child,
-          ),
-        );
-      },
-      child: Padding(
-        padding: EdgeInsets.symmetric(vertical: 4, horizontal: 16),
-        child: Row(
-          mainAxisAlignment:
-              isOwnMessage ? MainAxisAlignment.end : MainAxisAlignment.start,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (showAvatar) ...[
-              _buildUserAvatar(message.sender),
-              SizedBox(width: 8),
-            ],
-            Flexible(
-              child: Container(
-                padding: EdgeInsets.symmetric(vertical: 10, horizontal: 14),
-                decoration: BoxDecoration(
-                  color: isOwnMessage
-                      ? theme.colorScheme.primary
-                      : theme.colorScheme.surface.withOpacity(0.9),
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(18),
-                    topRight: Radius.circular(18),
-                    bottomLeft:
-                        isOwnMessage ? Radius.circular(18) : Radius.circular(4),
-                    bottomRight:
-                        isOwnMessage ? Radius.circular(4) : Radius.circular(18),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black12,
-                      blurRadius: 2,
-                      offset: Offset(0, 3),
-                    ),
-                  ],
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
+      child: Row(
+        mainAxisAlignment:
+            isOwnMessage ? MainAxisAlignment.end : MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (showAvatar) ...[
+            _buildUserAvatar(message.sender),
+            const SizedBox(width: 8),
+          ],
+          Flexible(
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+              decoration: BoxDecoration(
+                color: isOwnMessage
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.surface.withOpacity(0.9),
+                borderRadius: BorderRadius.only(
+                  topLeft: const Radius.circular(18),
+                  topRight: const Radius.circular(18),
+                  bottomLeft: isOwnMessage
+                      ? const Radius.circular(18)
+                      : const Radius.circular(4),
+                  bottomRight: isOwnMessage
+                      ? const Radius.circular(4)
+                      : const Radius.circular(18),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (!isOwnMessage)
-                      Padding(
-                        padding: EdgeInsets.only(bottom: 4),
-                        child: Text(
-                          message.sender,
-                          style: TextStyle(
-                            color: isOwnMessage
-                                ? Colors.white
-                                : theme.colorScheme.onSurface,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
-                          ),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Colors.black12,
+                    blurRadius: 2,
+                    offset: Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (!isOwnMessage)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Text(
+                        message.sender,
+                        style: TextStyle(
+                          color: isOwnMessage
+                              ? Colors.white
+                              : theme.colorScheme.onSurface,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
                         ),
                       ),
-                    Text(
-                      message.content,
-                      style: TextStyle(
-                        color: isOwnMessage
-                            ? Colors.white
-                            : (isDark ? Colors.white : Colors.black87),
-                      ),
                     ),
-                    SizedBox(height: 4),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          _formatMessageTime(message.timestamp),
-                          style: TextStyle(
-                            color: isOwnMessage ? Colors.white70 : Colors.grey,
-                            fontSize: 10,
-                          ),
+                  Text(
+                    message.content,
+                    style: TextStyle(
+                      color: isOwnMessage
+                          ? Colors.white
+                          : (isDark ? Colors.white : Colors.black87),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        _formatMessageTime(message.timestamp),
+                        style: TextStyle(
+                          color: isOwnMessage ? Colors.white70 : Colors.grey,
+                          fontSize: 10,
                         ),
-                      ],
-                    ),
-                  ],
-                ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
-            if (!showAvatar) SizedBox(width: 8),
-          ],
-        ),
+          ),
+          if (!showAvatar) const SizedBox(width: 8),
+        ],
       ),
     );
   }
@@ -378,18 +402,18 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       radius: 16,
       child: Text(
         pfpIndex,
-        style: TextStyle(fontSize: 12, color: Colors.white),
+        style: const TextStyle(fontSize: 12, color: Colors.white),
       ),
     );
   }
 
   Widget _buildDateSeparator(DateTime date) {
     return Padding(
-      padding: EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: 8),
       child: Center(
         child: AnimatedContainer(
-          duration: Duration(milliseconds: 300),
-          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          duration: const Duration(milliseconds: 300),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
           decoration: BoxDecoration(
             color: Colors.grey.shade300,
             borderRadius: BorderRadius.circular(12),
@@ -408,10 +432,10 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   }
 
   Widget _buildTypingIndicator() {
-    if (_typingUsers.isEmpty) return SizedBox();
+    if (_typingUsers.isEmpty) return const SizedBox();
 
     return AnimatedContainer(
-      duration: Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 300),
       child: Column(
         children: _typingUsers.entries.map((entry) {
           final username = entry.key;
@@ -419,17 +443,18 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
           final profile = userData['profile'] as Map<String, dynamic>;
 
           return Padding(
-            padding: EdgeInsets.symmetric(vertical: 4, horizontal: 16),
+            padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
             child: Row(
               children: [
                 _buildUserAvatar(username),
-                SizedBox(width: 8),
+                const SizedBox(width: 8),
                 Container(
-                  padding: EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(18),
-                    boxShadow: [
+                    boxShadow: const [
                       BoxShadow(
                         color: Colors.black12,
                         blurRadius: 2,
@@ -442,12 +467,12 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                     children: [
                       Text(
                         '${profile['fullName'] ?? username} is typing',
-                        style: TextStyle(
+                        style: const TextStyle(
                           color: Colors.grey,
                           fontStyle: FontStyle.italic,
                         ),
                       ),
-                      SizedBox(width: 8),
+                      const SizedBox(width: 8),
                       _buildAnimatedDots(),
                     ],
                   ),
@@ -491,7 +516,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                     child: Container(
                       width: 6,
                       height: 6,
-                      decoration: BoxDecoration(
+                      decoration: const BoxDecoration(
                         color: Colors.grey,
                         shape: BoxShape.circle,
                       ),
@@ -528,7 +553,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         backgroundColor: theme.primaryColor,
         foregroundColor: Colors.white,
         onPressed: _scrollToBottom,
-        child: Icon(Icons.arrow_downward),
+        child: const Icon(Icons.arrow_downward),
       ),
     );
   }
@@ -536,16 +561,13 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final appBarIconsColor =
-        Theme.of(context).appBarTheme.iconTheme?.color ?? Colors.white;
 
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
+      backgroundColor: theme.colorScheme.background,
       appBar: AppBar(
         leading: widget.isEmbedded
             ? IconButton(
-                icon: Icon(Icons.arrow_back),
+                icon: const Icon(Icons.arrow_back),
                 onPressed: widget.onBack,
               )
             : null,
@@ -559,36 +581,38 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                 backgroundColor: _parseColor(widget.chatRoom.pfpBg),
                 child: Text(
                   widget.chatRoom.pfpIndex,
-                  style: TextStyle(color: Colors.white),
+                  style: const TextStyle(color: Colors.white),
                 ),
               ),
             ),
-            SizedBox(width: 12),
+            const SizedBox(width: 12),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   widget.chatRoom.chatName,
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 AnimatedSwitcher(
-                  duration: Duration(milliseconds: 300),
+                  duration: const Duration(milliseconds: 300),
                   child: _typingUser.isNotEmpty
                       ? Row(
                           children: [
-                            SizedBox(width: 4),
+                            const SizedBox(width: 4),
                             Text(
                               _typingUsers.length == 1
                                   ? '$_typingUser is typing...'
                                   : '$_typingUser are typing...',
-                              style: TextStyle(
+                              style: const TextStyle(
                                   fontSize: 12, color: Colors.white70),
                             ),
                           ],
                         )
                       : Text(
                           widget.chatRoom.isGroup ? 'Group' : 'Online',
-                          style: TextStyle(fontSize: 12, color: Colors.white70),
+                          style: const TextStyle(
+                              fontSize: 12, color: Colors.white70),
                         ),
                 ),
               ],
@@ -597,71 +621,20 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         ),
         actions: [
           IconButton(
-            icon: Icon(Icons.palette),
+            icon: const Icon(Icons.palette),
             onPressed: _showThemeMenu,
-          ),
-          PopupMenuButton<String>(
-            icon: Icon(Icons.more_vert),
-            onSelected: (value) {
-              switch (value) {
-                case 'info':
-                  break;
-                case 'mute':
-                  break;
-                case 'clear':
-                  _showClearChatDialog();
-                  break;
-              }
-            },
-            itemBuilder: (context) => [
-              PopupMenuItem(
-                value: 'info',
-                child: Row(
-                  children: [
-                    Icon(Icons.info, color: Color(0xFF5C4033)),
-                    SizedBox(width: 8),
-                    Text('Chat Info'),
-                  ],
-                ),
-              ),
-              PopupMenuItem(
-                value: 'mute',
-                child: Row(
-                  children: [
-                    Icon(Icons.notifications_off, color: Color(0xFF5C4033)),
-                    SizedBox(width: 8),
-                    Text('Mute Notifications'),
-                  ],
-                ),
-              ),
-              PopupMenuItem(
-                value: 'clear',
-                child: Row(
-                  children: [
-                    Icon(Icons.delete, color: Colors.red),
-                    SizedBox(width: 8),
-                    Text('Clear Chat'),
-                  ],
-                ),
-              ),
-            ],
           ),
         ],
       ),
       body: Stack(
         children: [
-          _background(_selectedTheme),
+          _background(),
           Column(
             children: [
               _buildConnectionStatus(),
               Expanded(
                 child: _isLoading
-                    ? Center(
-                        child: CircularProgressIndicator(
-                          valueColor:
-                              AlwaysStoppedAnimation<Color>(Color(0xFF5C4033)),
-                        ),
-                      )
+                    ? const Center(child: CircularProgressIndicator())
                     : _buildMessageList(),
               ),
               _buildMessageInput(),
@@ -689,6 +662,17 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 
     final List<Widget> messageWidgets = [];
 
+    if (_isLoadingMore) {
+      messageWidgets.add(
+        const Padding(
+          padding: EdgeInsets.all(16),
+          child: Center(
+            child: CircularProgressIndicator(),
+          ),
+        ),
+      );
+    }
+
     for (final date in sortedDates) {
       final messages = messagesByDate[date]!;
 
@@ -707,7 +691,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     return ListView.builder(
       controller: _scrollController,
       reverse: false,
-      padding: EdgeInsets.only(top: 8, bottom: 8),
+      padding: const EdgeInsets.only(top: 8, bottom: 8),
       itemCount: messageWidgets.length,
       itemBuilder: (context, index) {
         return messageWidgets[index];
@@ -720,7 +704,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     final isDark = theme.brightness == Brightness.dark;
 
     return Container(
-      padding: EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
       color: isDark ? theme.cardTheme.color : Colors.white,
       child: Row(
         children: [
@@ -729,8 +713,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
             onPressed: _onAttachmentPressed,
           ),
           Expanded(
-            child: AnimatedContainer(
-              duration: Duration(milliseconds: 200),
+            child: Container(
               child: TextField(
                 controller: _messageController,
                 focusNode: _focusNode,
@@ -743,9 +726,10 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                     borderSide: BorderSide.none,
                   ),
                   filled: true,
-                  fillColor: isDark ? Colors.grey.shade800 : Color(0xFFF5F5DC),
+                  fillColor:
+                      isDark ? Colors.grey.shade800 : const Color(0xFFF5F5DC),
                   contentPadding:
-                      EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 ),
                 onChanged: (text) {
                   if (text.isNotEmpty) {
@@ -758,13 +742,12 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
               ),
             ),
           ),
-          SizedBox(width: 8),
-          AnimatedContainer(
-            duration: Duration(milliseconds: 200),
+          const SizedBox(width: 8),
+          Container(
             child: CircleAvatar(
               backgroundColor: theme.primaryColor,
               child: IconButton(
-                icon: Icon(Icons.send, color: Colors.white),
+                icon: const Icon(Icons.send, color: Colors.white),
                 onPressed: _sendMessage,
               ),
             ),
@@ -781,58 +764,27 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         child: Wrap(
           children: [
             ListTile(
-              leading: Icon(Icons.photo),
-              title: Text('Photo & Video Library'),
-              onTap: () {
-                Navigator.pop(context);
-              },
+              leading: const Icon(Icons.photo),
+              title: const Text('Photo & Video Library'),
+              onTap: () => Navigator.pop(context),
             ),
             ListTile(
-              leading: Icon(Icons.camera_alt),
-              title: Text('Take Photo'),
-              onTap: () {
-                Navigator.pop(context);
-              },
+              leading: const Icon(Icons.camera_alt),
+              title: const Text('Take Photo'),
+              onTap: () => Navigator.pop(context),
             ),
             ListTile(
-              leading: Icon(Icons.attach_file),
-              title: Text('Document'),
-              onTap: () {
-                Navigator.pop(context);
-              },
+              leading: const Icon(Icons.attach_file),
+              title: const Text('Document'),
+              onTap: () => Navigator.pop(context),
             ),
             ListTile(
-              leading: Icon(Icons.location_on),
-              title: Text('Location'),
-              onTap: () {
-                Navigator.pop(context);
-              },
+              leading: const Icon(Icons.location_on),
+              title: const Text('Location'),
+              onTap: () => Navigator.pop(context),
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  void _showClearChatDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Clear Chat'),
-        content:
-            Text('Are you sure you want to clear all messages in this chat?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-            },
-            child: Text('Clear', style: TextStyle(color: Colors.red)),
-          ),
-        ],
       ),
     );
   }
@@ -841,7 +793,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     try {
       return Color(int.parse(colorString.replaceAll('#', '0xFF')));
     } catch (e) {
-      return Color(0xFF4CAF50);
+      return const Color(0xFF4CAF50);
     }
   }
 
@@ -866,8 +818,8 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 
   Widget _buildConnectionStatus() {
     return AnimatedContainer(
-      duration: Duration(milliseconds: 300),
-      padding: EdgeInsets.all(4),
+      duration: const Duration(milliseconds: 300),
+      padding: const EdgeInsets.all(4),
       color: widget.webSocketService.isConnected
           ? Colors.green.withOpacity(0.1)
           : Colors.orange.withOpacity(0.1),
@@ -881,7 +833,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                 ? Colors.green
                 : Colors.orange,
           ),
-          SizedBox(width: 8),
+          const SizedBox(width: 8),
           Text(
             widget.webSocketService.isConnected ? 'Connected' : 'Connecting...',
             style: TextStyle(
@@ -911,55 +863,64 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     super.dispose();
   }
 
-  //Theming
-
-  late int _selectedTheme = widget.chatRoom.themeIndex;
-  bool _isDarkMode = false;
-  final List<String> _themeNames = ['Cute', 'Modern', 'Elegant'];
-  late ThemeMode _themeMode =
-      widget.chatRoom.isDark ? ThemeMode.dark : ThemeMode.light;
-
-  Future<void> _loadPreferences() async {
-    final prefs = await SharedPreferences.getInstance();
-    final themeIdx = prefs.getInt('selectedTheme') ?? 0;
-    final modeIndex = prefs.getInt('themeMode') ?? 0;
-    final isDark = prefs.getBool('isDarkMode') ?? false;
-
-    if (mounted) {
-      setState(() {
-        _selectedTheme = themeIdx;
-        _themeMode = ThemeMode.values[modeIndex];
-        _isDarkMode = isDark;
-      });
-    }
-  }
+  // THEMING METHODS
 
   Future<void> _changeTheme(int themeIndex) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt('selectedTheme', themeIndex);
-    if (mounted) {
-      setState(() {
-        _selectedTheme = themeIndex;
-      });
+    try {
+      // Update theme on server
+      await ApiService.updateChatTheme({
+        'themeIndex': themeIndex,
+        'isDark': _isDarkMode, // Keep current dark mode setting
+      }, widget.chatRoom.chatId);
 
-      final appState = context.findAncestorStateOfType<_ChatScreenState>();
-      appState?._changeTheme(themeIndex);
+      // Update local state
+      if (mounted) {
+        setState(() {
+          _selectedTheme = themeIndex;
+        });
+      }
+
+      // Show success feedback
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Theme changed to ${_themeNames[themeIndex]}'),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    } catch (e) {
+      print('Error updating chat theme: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Failed to change theme'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
-  Future<void> _changeThemeMode(ThemeMode mode) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt('themeMode', mode.index);
-    await prefs.setBool('isDarkMode', mode == ThemeMode.dark);
+  Future<void> _toggleDarkMode() async {
+    try {
+      final newDarkMode = !_isDarkMode;
 
-    if (mounted) {
-      setState(() {
-        _themeMode = mode;
-        _isDarkMode = mode == ThemeMode.dark;
-      });
+      await ApiService.updateChatTheme({
+        'themeIndex': _selectedTheme,
+        'isDark': newDarkMode,
+      }, widget.chatRoom.chatId);
 
-      final appState = context.findAncestorStateOfType<_ChatScreenState>();
-      appState?._changeThemeMode(mode);
+      if (mounted) {
+        setState(() {
+          _isDarkMode = newDarkMode;
+        });
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Switched to ${newDarkMode ? 'Dark' : 'Light'} mode'),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    } catch (e) {
+      print('Error toggling dark mode: $e');
     }
   }
 
@@ -968,207 +929,119 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     final Offset appBarPosition = appBarBox.localToGlobal(Offset.zero);
     final screenWidth = MediaQuery.of(context).size.width;
 
-    int tempSelectedTheme = _selectedTheme;
-    bool tempIsDarkMode = _isDarkMode;
-
-    showDialog(
+    showMenu(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Chat Theme Settings'),
-        content: StatefulBuilder(
-          builder: (context, setDialogState) {
-            return Container(
-              width: double.maxFinite,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Theme Mode Toggle
-                  ListTile(
-                    leading: Icon(
-                      tempIsDarkMode ? Icons.dark_mode : Icons.light_mode,
-                      color: Theme.of(context).iconTheme.color,
-                    ),
-                    title: Text('Dark Mode'),
-                    trailing: Switch(
-                      value: tempIsDarkMode,
-                      onChanged: (value) {
-                        setDialogState(() {
-                          tempIsDarkMode = value;
-                        });
-                      },
-                    ),
-                  ),
-
-                  SizedBox(height: 16),
-
-                  // Theme Style Selection
-                  Text(
-                    'Theme Style',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                  ),
-                  SizedBox(height: 12),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: List.generate(_themeNames.length, (index) {
-                      return ChoiceChip(
-                        label: Text(_themeNames[index]),
-                        selected: tempSelectedTheme == index,
-                        onSelected: (selected) {
-                          setDialogState(() {
-                            tempSelectedTheme = index;
-                          });
-                        },
-                      );
-                    }),
-                  ),
-
-                  SizedBox(height: 20),
-
-                  // Preview Section
-                  Container(
-                    padding: EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surface,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Theme.of(context).dividerColor),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Preview:',
-                          style: TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                        SizedBox(height: 8),
-                        Row(
-                          children: [
-                            Container(
-                              width: 40,
-                              height: 40,
-                              decoration: BoxDecoration(
-                                color: Theme.of(context).primaryColor,
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                            ),
-                            SizedBox(width: 12),
-                            Expanded(
-                              child: Container(
-                                height: 40,
-                                decoration: BoxDecoration(
-                                  color: tempSelectedTheme == 0
-                                      ? (tempIsDarkMode
-                                          ? Color(0xFFD81B60)
-                                          : Color(0xFFFFB6C1))
-                                      : tempSelectedTheme == 1
-                                          ? (tempIsDarkMode
-                                              ? Color(0xFF1976D2)
-                                              : Color(0xFF2196F3))
-                                          : (tempIsDarkMode
-                                              ? Color(0xFF5D4037)
-                                              : Color(0xFF795548)),
-                                  borderRadius: BorderRadius.only(
-                                    topRight: Radius.circular(12),
-                                    bottomRight: Radius.circular(12),
-                                    bottomLeft: Radius.circular(12),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              await _saveThemeSettings(tempSelectedTheme, tempIsDarkMode);
-              Navigator.pop(context);
-            },
-            child: Text('Save Theme'),
-          ),
-        ],
+      position: RelativeRect.fromLTRB(
+        screenWidth - 220,
+        appBarPosition.dy + appBarBox.size.height,
+        16,
+        0,
       ),
+      items: [
+        // Dark/Light mode toggle
+        PopupMenuItem(
+          onTap: _toggleDarkMode,
+          child: ListTile(
+            leading: Icon(
+              _isDarkMode ? Icons.light_mode : Icons.dark_mode,
+              color: Theme.of(context).iconTheme.color,
+            ),
+            title: Text(_isDarkMode ? 'Switch to Light' : 'Switch to Dark'),
+          ),
+        ),
+        // Theme style selector
+        PopupMenuItem(
+          enabled: false,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Theme Style',
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                children: List.generate(_themeNames.length, (index) {
+                  return ChoiceChip(
+                    label: Text(_themeNames[index]),
+                    selected: _selectedTheme == index,
+                    onSelected: (selected) {
+                      if (selected) {
+                        Navigator.pop(context);
+                        _changeTheme(index);
+                      }
+                    },
+                  );
+                }),
+              ),
+            ],
+          ),
+        ),
+        // Current theme info
+        PopupMenuItem(
+          enabled: false,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 8),
+              Text(
+                'Current: ${_themeNames[_selectedTheme]} • ${_isDarkMode ? 'Dark' : 'Light'}',
+                style: TextStyle(
+                  color: Theme.of(context).primaryColor,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      elevation: 8,
     );
   }
 
-  Future<void> _saveThemeSettings(int themeIndex, bool isDarkMode) async {
-    try {
-      // Update local state
-      setState(() {
-        _selectedTheme = themeIndex;
-        _isDarkMode = isDarkMode;
-        _themeMode = isDarkMode ? ThemeMode.dark : ThemeMode.light;
-      });
-
-      // Update ThemeManager
-      _themeManager.changeTheme(themeIndex);
-      _themeManager.changeThemeMode(_themeMode);
-
-      // Save to backend
-      final chatTheme = {
-        'themeIndex': themeIndex,
-        'isDark': isDarkMode,
-      };
-
-      await ApiService.updateChatTheme(chatTheme, widget.chatRoom.chatId);
-
-      // Show success feedback
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Theme updated successfully!'),
-          backgroundColor: Colors.green,
-        ),
-      );
-    } catch (e) {
-      print('Error saving theme: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to save theme. Please try again.'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
+  Widget _background() {
+    return _getBackgroundByTheme(_selectedTheme);
   }
 
-  Widget _background(int themeIndex) {
-    switch (themeIndex) {
-      case 2:
-        return Center(
-          child: MeteorShower(
-              isDark: Theme.of(context).brightness == Brightness.dark,
-              numberOfMeteors: 10,
-              duration: Duration(seconds: 5),
-              child: Container(
-                height: MediaQuery.of(context).size.height,
-              )),
-        );
+  Widget _getBackgroundByTheme(int themeIndex) {
+    Widget backgroundWidget;
 
-      case 1:
-        return AnimatedGridPattern(
+    switch (themeIndex) {
+      case 2: // Elegant
+        backgroundWidget = MeteorShower(
+          isDark: _isDarkMode,
+          numberOfMeteors: 10,
+          duration: const Duration(seconds: 5),
+          child: Container(
+            width: double.infinity,
+            height: double.infinity,
+          ),
+        );
+        break;
+      case 0: // Modern
+        backgroundWidget = AnimatedGridPattern(
           squares: List.generate(20, (index) => [index % 5, index ~/ 5]),
           gridSize: 40,
           skewAngle: 12,
         );
-      case 0:
-        return ButterflyDemo();
-
+        break;
+      case 1: // Cute
+        backgroundWidget = ButterflyDemo();
+        break;
       default:
-        return const SizedBox.shrink();
+        backgroundWidget =
+            Container(color: Theme.of(context).scaffoldBackgroundColor);
     }
+
+    return Positioned.fill(
+      child: backgroundWidget,
+    );
   }
 
   Future<void> _loadChatTheme() async {
@@ -1182,12 +1055,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
           setState(() {
             _selectedTheme = themeIndex;
             _isDarkMode = isDark;
-            _themeMode = isDark ? ThemeMode.dark : ThemeMode.light;
           });
-
-          // Update ThemeManager
-          _themeManager.changeTheme(themeIndex);
-          _themeManager.changeThemeMode(_themeMode);
         }
       }
     } catch (e) {

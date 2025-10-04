@@ -299,6 +299,35 @@ class ApiService {
     }
   }
 
+  static Future<List<Message>> getPaginatedMessages(
+      String chatId, int page, int size) async {
+    print('🔍 Fetching paginated messages for chat: $chatId, page: $page');
+
+    final response = await _makeAuthenticatedRequest(() async {
+      return await http.get(
+        Uri.parse(
+            '$baseUrl/chat/$chatId/messages/paginated?page=$page&size=$size'),
+        headers: headers,
+      );
+    });
+
+    print('📡 Paginated messages response status: ${response.statusCode}');
+
+    if (response.statusCode == 200) {
+      try {
+        final List<dynamic> data = jsonDecode(response.body);
+        print('📦 Parsed ${data.length} messages for page $page');
+        return data.map((json) => Message.fromJson(json)).toList();
+      } catch (e) {
+        print('❌ Error parsing paginated messages: $e');
+        throw Exception('Failed to parse paginated messages: $e');
+      }
+    } else {
+      throw Exception(
+          'Failed to load paginated messages: ${response.statusCode}');
+    }
+  }
+
   static Future<void> updateChatTheme(
       Map<String, dynamic> chatTheme, String chatId) async {
     try {

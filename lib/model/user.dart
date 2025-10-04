@@ -47,4 +47,18 @@ class User {
           : DateTime.now(),
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'username': username,
+      'email': email,
+      'fullName': fullName,
+      'bio': bio,
+      'pfpIndex': pfpIndex,
+      'pfpBg': pfpBg,
+      'joinedAt': joinedAt,
+      'refreshToken': refreshToken,
+      'refreshTokenExpiry': refreshTokenExpiry.toIso8601String(),
+    };
+  }
 }

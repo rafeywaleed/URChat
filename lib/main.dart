@@ -60,6 +60,7 @@ import 'package:urchat_back_testing/model/user.dart';
 import 'package:urchat_back_testing/screens/auth_screen.dart';
 import 'package:urchat_back_testing/screens/home_screen.dart';
 import 'package:urchat_back_testing/service/api_service.dart';
+import 'package:urchat_back_testing/service/local_cache_service.dart';
 import 'package:urchat_back_testing/themes/theme_manager.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:web_socket_channel/status.dart' as status;
@@ -71,6 +72,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // ThemeManager().initializeThemes();
+  await LocalCacheService.init();
   await ApiService.init();
   runApp(MyApp());
 }

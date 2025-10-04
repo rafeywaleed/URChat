@@ -39,16 +39,29 @@ class ChatRoom {
     }
 
     return ChatRoom(
-      chatId: json['chatId']?.toString() ?? 'unknown',
-      chatName: json['chatName']?.toString() ?? 'Unknown Chat',
-      isGroup: json['isGroup'] ?? false,
-      lastActivity: lastActivity,
-      lastMessage: json['lastMessage']?.toString() ?? 'No messages yet',
-      pfpIndex: json['pfpIndex']?.toString() ?? '😊',
-      pfpBg: json['pfpBg']?.toString() ?? '#4CAF50',
-      themeIndex: json['themeIndex'] ?? 0,
-      isDark: json['isDark'] ?? true
-    );
+        chatId: json['chatId']?.toString() ?? 'unknown',
+        chatName: json['chatName']?.toString() ?? 'Unknown Chat',
+        isGroup: json['isGroup'] ?? false,
+        lastActivity: lastActivity,
+        lastMessage: json['lastMessage']?.toString() ?? 'No messages yet',
+        pfpIndex: json['pfpIndex']?.toString() ?? '😊',
+        pfpBg: json['pfpBg']?.toString() ?? '#4CAF50',
+        themeIndex: json['themeIndex'] ?? 0,
+        isDark: json['isDark'] ?? true);
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'chatId': chatId,
+      'chatName': chatName,
+      'isGroup': isGroup,
+      'lastMessage': lastMessage,
+      'lastActivity': lastActivity.toIso8601String(),
+      'pfpIndex': pfpIndex,
+      'pfpBg': pfpBg,
+      'themeIndex': themeIndex,
+      'isDark': isDark,
+    };
   }
 
   @override

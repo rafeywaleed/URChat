@@ -43,6 +43,17 @@ class Message {
     );
   }
 
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'content': content,
+      'sender': sender,
+      'chatId': chatId,
+      'timestamp': timestamp.toIso8601String(),
+      'isOwnMessage': isOwnMessage,
+    };
+  }
+
   @override
   String toString() {
     return 'Message{id: $id, sender: $sender, content: $content}';

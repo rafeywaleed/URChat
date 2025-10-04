@@ -7,6 +7,7 @@ import 'package:urchat_back_testing/screens/profile_screen.dart';
 import 'package:urchat_back_testing/screens/search_delegate.dart';
 import 'package:urchat_back_testing/screens/themed_chat_screen.dart';
 import 'package:urchat_back_testing/service/api_service.dart';
+import 'package:urchat_back_testing/service/local_cache_service.dart';
 import 'package:urchat_back_testing/service/websocket_service.dart';
 
 class Homescreen extends StatefulWidget {
@@ -23,6 +24,9 @@ class _HomescreenState extends State<Homescreen> {
   String _errorMessage = '';
   late WebSocketService _webSocketService;
   String? _selectedChatId;
+
+  // Track if we're showing chat details on mobile
+  bool _showChatScreen = false;
 
   ChatRoom? get _selectedChat {
     if (_selectedChatId == null) return null;
@@ -60,15 +64,22 @@ class _HomescreenState extends State<Homescreen> {
 
   void _loadChats() async {
     try {
-      final chats = await ApiService.getUserChats();
-      // Sort by last activity DESCENDING (newest first)
-      chats.sort((a, b) => b.lastActivity.compareTo(a.lastActivity));
+      // Try cache first
+      final cachedChats = await LocalCacheService.getCachedChats();
 
-      setState(() {
-        _chats = chats;
-        _isLoading = false;
-        _errorMessage = '';
-      });
+      if (cachedChats != null && cachedChats.isNotEmpty) {
+        print('📦 Loading chats from cache');
+        setState(() {
+          _chats = cachedChats;
+          _isLoading = false;
+          _errorMessage = '';
+        });
+
+        // Load fresh data in background
+        _loadFreshChats();
+      } else {
+        _loadFreshChats();
+      }
     } catch (e) {
       print('❌ Error loading initial chats: $e');
       setState(() {
@@ -76,6 +87,37 @@ class _HomescreenState extends State<Homescreen> {
         _errorMessage = 'Failed to load chats: $e';
       });
     }
+  }
+
+  void _loadFreshChats() async {
+    try {
+      final chats = await ApiService.getUserChats();
+      chats.sort((a, b) => b.lastActivity.compareTo(a.lastActivity));
+
+      // Cache the chats
+      await LocalCacheService.cacheChats(chats);
+
+      if (mounted) {
+        setState(() {
+          _chats = chats;
+          _isLoading = false;
+          _errorMessage = '';
+        });
+      }
+    } catch (e) {
+      print('❌ Error loading fresh chats: $e');
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = 'Failed to load chats: $e';
+        });
+      }
+    }
+  }
+
+  void _loadChatsFromApi() async {
+    print('🔄 Reloading chats from API...');
+    _loadFreshChats();
   }
 
   void _handleNewMessage(Message message) {
@@ -113,32 +155,17 @@ class _HomescreenState extends State<Homescreen> {
         } catch (e) {
           print('⚠️ Selected chat no longer exists: $_selectedChatId');
           _selectedChatId = null;
+          _showChatScreen = false;
         }
       }
     });
-  }
-
-  void _loadChatsFromApi() async {
-    print('🔄 Reloading chats from API...');
-    try {
-      final chats = await ApiService.getUserChats();
-      setState(() {
-        _chats = chats;
-        _errorMessage = '';
-      });
-      print('✅ Reloaded ${chats.length} chats');
-    } catch (e) {
-      print('❌ Error reloading chats: $e');
-      setState(() {
-        _errorMessage = 'Failed to reload chats: $e';
-      });
-    }
   }
 
   void _selectChat(ChatRoom chat) {
     print('👆 Selecting chat: ${chat.chatName} (ID: ${chat.chatId})');
     setState(() {
       _selectedChatId = chat.chatId;
+      _showChatScreen = true;
     });
 
     _webSocketService.subscribeToChatRoom(chat.chatId);
@@ -151,7 +178,25 @@ class _HomescreenState extends State<Homescreen> {
     }
     setState(() {
       _selectedChatId = null;
+      _showChatScreen = false;
     });
+  }
+
+  void _handleBackButton() {
+    if (_showChatScreen) {
+      _deselectChat();
+    }
+  }
+
+  // Check if we're on mobile screen
+  bool get _isMobileScreen {
+    final mediaQuery = MediaQuery.of(context);
+    return mediaQuery.size.width < 768; // Typical tablet breakpoint
+  }
+
+  // Check if we're on tablet or desktop
+  bool get _isLargeScreen {
+    return !_isMobileScreen;
   }
 
   Widget _buildChatListItem(ChatRoom chat) {
@@ -160,7 +205,7 @@ class _HomescreenState extends State<Homescreen> {
     return Hero(
       tag: chat.chatId,
       child: Container(
-        margin: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
           color: isSelected ? _brown.withOpacity(0.1) : Colors.white,
           borderRadius: BorderRadius.circular(8),
@@ -172,7 +217,7 @@ class _HomescreenState extends State<Homescreen> {
               BoxShadow(
                 color: Colors.grey.withOpacity(0.1),
                 blurRadius: 2,
-                offset: Offset(0, 1),
+                offset: const Offset(0, 1),
               ),
           ],
         ),
@@ -181,7 +226,7 @@ class _HomescreenState extends State<Homescreen> {
             backgroundColor: _parseColor(chat.pfpBg),
             child: Text(
               chat.pfpIndex,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 20,
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
@@ -218,21 +263,23 @@ class _HomescreenState extends State<Homescreen> {
 
   Widget _buildChatsList() {
     return Container(
-      width: 350,
+      width: _isLargeScreen ? 350 : double.infinity,
       decoration: BoxDecoration(
         color: _beige,
-        border: Border(
-          right: BorderSide(
-            color: Colors.grey.shade300,
-            width: 1,
-          ),
-        ),
+        border: _isLargeScreen
+            ? Border(
+                right: BorderSide(
+                  color: Colors.grey.shade300,
+                  width: 1,
+                ),
+              )
+            : null,
       ),
       child: Column(
         children: [
           // Connection status bar
           Container(
-            padding: EdgeInsets.all(12),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: Colors.white,
               border: Border(
@@ -253,7 +300,7 @@ class _HomescreenState extends State<Homescreen> {
                       ? Colors.green
                       : Colors.orange,
                 ),
-                SizedBox(width: 8),
+                const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     _webSocketService.isConnected
@@ -300,7 +347,7 @@ class _HomescreenState extends State<Homescreen> {
                             size: 64,
                             color: _brown.withOpacity(0.5),
                           ),
-                          SizedBox(height: 16),
+                          const SizedBox(height: 16),
                           Text(
                             'No chats yet',
                             style: TextStyle(
@@ -309,9 +356,9 @@ class _HomescreenState extends State<Homescreen> {
                               fontWeight: FontWeight.w500,
                             ),
                           ),
-                          SizedBox(height: 8),
+                          const SizedBox(height: 8),
                           Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 32),
+                            padding: const EdgeInsets.symmetric(horizontal: 32),
                             child: Text(
                               'Start a conversation by searching for users',
                               textAlign: TextAlign.center,
@@ -350,7 +397,7 @@ class _HomescreenState extends State<Homescreen> {
                 size: 120,
                 color: _brown.withOpacity(0.2),
               ),
-              SizedBox(height: 24),
+              const SizedBox(height: 24),
               Text(
                 'Welcome to URChat',
                 style: TextStyle(
@@ -359,7 +406,7 @@ class _HomescreenState extends State<Homescreen> {
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              SizedBox(height: 12),
+              const SizedBox(height: 12),
               Text(
                 'Select a chat from the list to start messaging',
                 style: TextStyle(
@@ -367,7 +414,7 @@ class _HomescreenState extends State<Homescreen> {
                   color: _brown.withOpacity(0.6),
                 ),
               ),
-              SizedBox(height: 8),
+              const SizedBox(height: 8),
               Text(
                 'or start a new conversation',
                 style: TextStyle(
@@ -385,13 +432,35 @@ class _HomescreenState extends State<Homescreen> {
     if (_selectedChat == null) return _buildEmptyChatView();
 
     return Expanded(
-      child: ThemedChatScreen(
+      child: ChatThemeWrapper(
         key: Key(_selectedChatId!),
         chatRoom: _selectedChat!,
         webSocketService: _webSocketService,
-        onBack: _deselectChat,
+        onBack: _isMobileScreen ? _deselectChat : null,
         isEmbedded: true,
       ),
+    );
+  }
+
+  Widget _buildMobileLayout() {
+    if (_showChatScreen && _selectedChat != null) {
+      // Show chat screen on mobile
+      return _buildSelectedChatView();
+    } else {
+      // Show chat list on mobile
+      return _buildChatsList();
+    }
+  }
+
+  Widget _buildDesktopLayout() {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _buildChatsList(),
+        _selectedChatId != null
+            ? _buildSelectedChatView()
+            : _buildEmptyChatView(),
+      ],
     );
   }
 
@@ -400,7 +469,7 @@ class _HomescreenState extends State<Homescreen> {
       return Color(int.parse(colorString.replaceAll('#', '0xFF')));
     } catch (e) {
       print('⚠️ Error parsing color: $colorString, using default');
-      return Color(0xFF4CAF50);
+      return const Color(0xFF4CAF50);
     }
   }
 
@@ -433,57 +502,66 @@ class _HomescreenState extends State<Homescreen> {
             fontSize: 20,
           ),
         ),
+        leading: _isMobileScreen && _showChatScreen
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: _handleBackButton,
+              )
+            : null,
         actions: [
-          IconButton(
-            icon: Icon(Icons.wifi_find),
-            onPressed: () {
-              print('🔍 === MANUAL WEB SOCKET TEST ===');
-              print('   Current chats: ${_chats.length}');
-              print('   WebSocket connected: ${_webSocketService.isConnected}');
-              print('   Selected chat: $_selectedChatId');
+          if (!_isMobileScreen || !_showChatScreen) ...[
+            IconButton(
+              icon: const Icon(Icons.wifi_find),
+              onPressed: () {
+                print('🔍 === MANUAL WEB SOCKET TEST ===');
+                print('   Current chats: ${_chats.length}');
+                print(
+                    '   WebSocket connected: ${_webSocketService.isConnected}');
+                print('   Selected chat: $_selectedChatId');
 
-              // Force a chat list reload to test
-              _loadChatsFromApi();
+                // Force a chat list reload to test
+                _loadChatsFromApi();
 
-              // Test if we can receive messages
-              print('   Testing message reception...');
-            },
-          ),
-          PopupMenuButton<String>(
-            icon: Icon(Icons.more_vert),
-            onSelected: (value) {
-              if (value == 'profile') {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => ProfileScreen()),
-                );
-              } else if (value == 'logout') {
-                _logout();
-              }
-            },
-            itemBuilder: (context) => [
-              PopupMenuItem(
-                value: 'profile',
-                child: Row(
-                  children: [
-                    Icon(Icons.person, color: _brown),
-                    SizedBox(width: 8),
-                    Text('Profile'),
-                  ],
+                // Test if we can receive messages
+                print('   Testing message reception...');
+              },
+            ),
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert),
+              onSelected: (value) {
+                if (value == 'profile') {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => ProfileScreen()),
+                  );
+                } else if (value == 'logout') {
+                  _logout();
+                }
+              },
+              itemBuilder: (context) => [
+                PopupMenuItem(
+                  value: 'profile',
+                  child: Row(
+                    children: [
+                      Icon(Icons.person, color: _brown),
+                      const SizedBox(width: 8),
+                      const Text('Profile'),
+                    ],
+                  ),
                 ),
-              ),
-              const PopupMenuItem(
-                value: 'logout',
-                child: Row(
-                  children: [
-                    Icon(Icons.logout, color: Colors.red),
-                    SizedBox(width: 8),
-                    Text('Logout'),
-                  ],
+                const PopupMenuItem(
+                  value: 'logout',
+                  child: Row(
+                    children: [
+                      Icon(Icons.logout, color: Colors.red),
+                      SizedBox(width: 8),
+                      Text('Logout'),
+                    ],
+                  ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            ),
+          ],
         ],
       ),
       body: _isLoading
@@ -494,8 +572,8 @@ class _HomescreenState extends State<Homescreen> {
                   CircularProgressIndicator(
                     valueColor: AlwaysStoppedAnimation<Color>(_brown),
                   ),
-                  SizedBox(height: 16),
-                  Text('Loading chats...'),
+                  const SizedBox(height: 16),
+                  const Text('Loading chats...'),
                 ],
               ),
             )
@@ -509,7 +587,7 @@ class _HomescreenState extends State<Homescreen> {
                         size: 64,
                         color: Colors.red,
                       ),
-                      SizedBox(height: 16),
+                      const SizedBox(height: 16),
                       const Text(
                         'Error loading chats',
                         style: TextStyle(
@@ -517,47 +595,42 @@ class _HomescreenState extends State<Homescreen> {
                           color: Colors.red,
                         ),
                       ),
-                      SizedBox(height: 8),
+                      const SizedBox(height: 8),
                       Text(
                         _errorMessage,
                         textAlign: TextAlign.center,
-                        style: TextStyle(color: Colors.grey),
+                        style: const TextStyle(color: Colors.grey),
                       ),
-                      SizedBox(height: 16),
+                      const SizedBox(height: 16),
                       ElevatedButton(
                         onPressed: _loadChatsFromApi,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: _brown,
                         ),
-                        child: Text('Retry'),
+                        child: const Text('Retry'),
                       ),
                     ],
                   ),
                 )
-              : Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _buildChatsList(),
-                    _selectedChatId != null
-                        ? _buildSelectedChatView()
-                        : _buildEmptyChatView(),
-                  ],
-                ),
-      floatingActionButton: _selectedChatId == null
-          ? FloatingActionButton(
-              backgroundColor: _brown,
-              foregroundColor: Colors.white,
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => SearchScreen()),
-                ).then((_) {
-                  _loadChatsFromApi();
-                });
-              },
-              child: Icon(Icons.search),
-            )
-          : null,
+              : _isMobileScreen
+                  ? _buildMobileLayout()
+                  : _buildDesktopLayout(),
+      // floatingActionButton: (_selectedChatId == null || _isLargeScreen) &&
+      //         (!_isMobileScreen || !_showChatScreen)
+      //     ? FloatingActionButton(
+      //         backgroundColor: _brown,
+      //         foregroundColor: Colors.white,
+      //         onPressed: () {
+      //           Navigator.push(
+      //             context,
+      //             MaterialPageRoute(builder: (context) => SearchScreen()),
+      //           ).then((_) {
+      //             _loadChatsFromApi();
+      //           });
+      //         },
+      //         child: Icon(Icons.search),
+      //       )
+      //     : null,
     );
   }
 
@@ -565,8 +638,8 @@ class _HomescreenState extends State<Homescreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Logout'),
-        content: Text('Are you sure you want to logout?'),
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to logout?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -580,7 +653,7 @@ class _HomescreenState extends State<Homescreen> {
               Navigator.pushReplacement(context,
                   MaterialPageRoute(builder: (context) => AuthScreen()));
             },
-            child: Text('Logout', style: TextStyle(color: Colors.red)),
+            child: const Text('Logout', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -601,7 +674,7 @@ class _HomescreenState extends State<Homescreen> {
         '   ✅ onChatListUpdated callback: ${_webSocketService.onChatListUpdated != null}');
 
     // Test after connection is established
-    Future.delayed(Duration(seconds: 3), () {
+    Future.delayed(const Duration(seconds: 3), () {
       if (_webSocketService.isConnected) {
         print('🎉 WebSocket is connected and ready!');
         print('   📡 Should receive updates on: /user/queue/chats/update');

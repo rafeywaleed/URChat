@@ -4,7 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ThemeManager with ChangeNotifier {
-  static const List<String> _themeNames = ['Cute', 'Modern', 'Elegant'];
+  static const List<String> _themeNames = ['Modern', 'Cute', 'Elegant'];
 
   ThemeMode _themeMode = ThemeMode.light;
   int _selectedThemeIndex = 0;
@@ -46,90 +46,15 @@ class ThemeManager with ChangeNotifier {
 
   ThemeData get currentTheme {
     switch (_selectedThemeIndex) {
-      case 1: // Modern
-        return _isDarkMode ? _modernDarkTheme : _modernLightTheme;
-      case 2: // Elegant
-        return _isDarkMode ? _elegantDarkTheme : _elegantLightTheme;
-      case 0: // Cute (default)
-      default:
+      case 1:
         return _isDarkMode ? _cuteDarkTheme : _cuteLightTheme;
+      case 2:
+        return _isDarkMode ? _elegantDarkTheme : _elegantLightTheme;
+      case 0:
+      default:
+        return _isDarkMode ? _modernDarkTheme : _modernLightTheme;
     }
   }
-
-  // Cute Theme
-  ThemeData get _cuteLightTheme => ThemeData.light().copyWith(
-        primaryColor: const Color(0xFFE91E63),
-        colorScheme: const ColorScheme.light(
-          primary: Color(0xFFE91E63),
-          secondary: Color(0xFFEC407A),
-          surface: Color(0xFFFFF5F7),
-          background: Color(0xFFFFF9FB),
-          onSurface: Color(0xFF333333),
-        ),
-        textTheme: GoogleFonts.poppinsTextTheme().apply(
-          bodyColor: const Color(0xFF333333),
-          displayColor: const Color(0xFF333333),
-        ),
-        cardTheme: CardThemeData(
-          elevation: 1,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          color: Colors.white,
-        ),
-        floatingActionButtonTheme: FloatingActionButtonThemeData(
-          backgroundColor: const Color(0xFFE91E63),
-          elevation: 4,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        ),
-        appBarTheme: AppBarTheme(
-          elevation: 0,
-          centerTitle: true,
-          titleTextStyle: GoogleFonts.poppins(
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-          ),
-          iconTheme: const IconThemeData(color: Colors.black87),
-        ),
-      );
-
-  ThemeData get _cuteDarkTheme => ThemeData.dark().copyWith(
-        primaryColor: const Color(0xFFEC407A),
-        colorScheme: const ColorScheme.dark(
-          primary: Color(0xFFEC407A),
-          secondary: Color(0xFFF06292),
-          surface: Color(0xFF1E1E2E),
-          background: Color(0xFF121212),
-          onSurface: Color(0xFFE0E0E0),
-        ),
-        textTheme: GoogleFonts.poppinsTextTheme().apply(
-          bodyColor: const Color(0xFFE0E0E0),
-          displayColor: Colors.white,
-        ),
-        cardTheme: CardThemeData(
-          elevation: 2,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          color: const Color(0xFF1E1E2E),
-        ),
-        floatingActionButtonTheme: FloatingActionButtonThemeData(
-          backgroundColor: const Color(0xFFEC407A),
-          elevation: 4,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        ),
-        appBarTheme: AppBarTheme(
-          elevation: 0,
-          centerTitle: true,
-          titleTextStyle: GoogleFonts.poppins(
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-          ),
-          iconTheme: const IconThemeData(color: Colors.white),
-        ),
-      );
 
   // Modern Theme
   ThemeData get _modernLightTheme => ThemeData.light().copyWith(
@@ -198,6 +123,81 @@ class ThemeManager with ChangeNotifier {
           elevation: 0,
           centerTitle: true,
           titleTextStyle: GoogleFonts.roboto(
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+          ),
+          iconTheme: const IconThemeData(color: Colors.white),
+        ),
+      );
+
+  // Cute Theme
+  ThemeData get _cuteLightTheme => ThemeData.light().copyWith(
+        primaryColor: const Color(0xFFE91E63),
+        colorScheme: const ColorScheme.light(
+          primary: Color(0xFFE91E63),
+          secondary: Color(0xFFEC407A),
+          surface: Color(0xFFFFF5F7),
+          background: Color(0xFFFFF9FB),
+          onSurface: Color(0xFF333333),
+        ),
+        textTheme: GoogleFonts.poppinsTextTheme().apply(
+          bodyColor: const Color(0xFF333333),
+          displayColor: const Color(0xFF333333),
+        ),
+        cardTheme: CardThemeData(
+          elevation: 1,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          color: Colors.white,
+        ),
+        floatingActionButtonTheme: FloatingActionButtonThemeData(
+          backgroundColor: const Color(0xFFE91E63),
+          elevation: 4,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        ),
+        appBarTheme: AppBarTheme(
+          elevation: 0,
+          centerTitle: true,
+          titleTextStyle: GoogleFonts.poppins(
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+          ),
+          iconTheme: const IconThemeData(color: Colors.black87),
+        ),
+      );
+
+  ThemeData get _cuteDarkTheme => ThemeData.dark().copyWith(
+        primaryColor: const Color(0xFFEC407A),
+        colorScheme: const ColorScheme.dark(
+          primary: Color(0xFFEC407A),
+          secondary: Color(0xFFF06292),
+          surface: Color(0xFF1E1E2E),
+          background: Color(0xFF121212),
+          onSurface: Color(0xFFE0E0E0),
+        ),
+        textTheme: GoogleFonts.poppinsTextTheme().apply(
+          bodyColor: const Color(0xFFE0E0E0),
+          displayColor: Colors.white,
+        ),
+        cardTheme: CardThemeData(
+          elevation: 2,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          color: const Color(0xFF1E1E2E),
+        ),
+        floatingActionButtonTheme: FloatingActionButtonThemeData(
+          backgroundColor: const Color(0xFFEC407A),
+          elevation: 4,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        ),
+        appBarTheme: AppBarTheme(
+          elevation: 0,
+          centerTitle: true,
+          titleTextStyle: GoogleFonts.poppins(
             fontSize: 20,
             fontWeight: FontWeight.w600,
             color: Colors.white,
