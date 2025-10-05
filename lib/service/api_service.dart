@@ -278,6 +278,29 @@ class ApiService {
     }
   }
 
+  static Future<Map<String, dynamic>> getUserProfile(String username) async {
+    print("🔍 Fetching profile for user: $username");
+    try {
+      final response = await _makeAuthenticatedRequest(() async {
+        return await http.get(
+          Uri.parse('$baseUrl/users/$username/profile'),
+          headers: {
+            'Authorization': 'Bearer $accessToken',
+            'Content-Type': 'application/json',
+          },
+        );
+      });
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body);
+      } else {
+        throw Exception('Failed to load user profile');
+      }
+    } catch (e) {
+      throw Exception('Failed to load user profile: $e');
+    }
+  }
+
   static Future<void> updateProfile(Map<String, dynamic> profileData) async {
     try {
       final response = await _makeAuthenticatedRequest(() async {

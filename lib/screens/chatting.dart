@@ -5,127 +5,16 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:urchat_back_testing/model/ChatRoom.dart';
+import 'package:urchat_back_testing/model/dto.dart';
 import 'package:urchat_back_testing/model/message.dart';
 import 'package:urchat_back_testing/service/api_service.dart';
+import 'package:urchat_back_testing/service/chat_cache_service.dart';
+import 'package:urchat_back_testing/service/user_cache_service.dart';
 import 'package:urchat_back_testing/service/websocket_service.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:urchat_back_testing/themes/butter/bfdemo.dart';
 import 'package:urchat_back_testing/themes/grid.dart';
 import 'package:urchat_back_testing/themes/meteor.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
-class ChatCacheService {
-  static const String _themePrefix = 'chat_theme_';
-  static const String _messagesPrefix = 'chat_messages_';
-  static const int _maxCachedMessages = 20;
-
-  // Save theme for a specific chat
-  static Future<void> saveChatTheme(
-      String chatId, int themeIndex, bool isDark) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final themeData = {
-        'themeIndex': themeIndex,
-        'isDark': isDark,
-        'lastUpdated': DateTime.now().millisecondsSinceEpoch,
-      };
-      await prefs.setString('$_themePrefix$chatId', json.encode(themeData));
-    } catch (e) {
-      print('❌ Failed to save theme to cache: $e');
-    }
-  }
-
-  // Load theme for a specific chat
-  static Future<Map<String, dynamic>?> loadChatTheme(String chatId) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final themeJson = prefs.getString('$_themePrefix$chatId');
-      if (themeJson != null) {
-        return json.decode(themeJson);
-      }
-    } catch (e) {
-      print('❌ Failed to load theme from cache: $e');
-    }
-    return null;
-  }
-
-  // Save initial messages for a specific chat
-  static Future<void> saveChatMessages(
-      String chatId, List<Message> messages) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-
-      // Take only the last _maxCachedMessages messages
-      final messagesToSave = messages.length > _maxCachedMessages
-          ? messages.sublist(messages.length - _maxCachedMessages)
-          : messages;
-
-      final messagesData = {
-        'messages': messagesToSave.map((msg) => msg.toJson()).toList(),
-        'lastUpdated': DateTime.now().millisecondsSinceEpoch,
-        'count': messagesToSave.length,
-      };
-
-      await prefs.setString(
-          '$_messagesPrefix$chatId', json.encode(messagesData));
-    } catch (e) {
-      print('❌ Failed to save messages to cache: $e');
-    }
-  }
-
-  // Load messages for a specific chat
-  static Future<List<Message>?> loadChatMessages(String chatId) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final messagesJson = prefs.getString('$_messagesPrefix$chatId');
-      if (messagesJson != null) {
-        final messagesData = json.decode(messagesJson);
-        final List<dynamic> messagesList = messagesData['messages'];
-        return messagesList
-            .map((msgJson) => Message.fromJson(msgJson))
-            .toList();
-      }
-    } catch (e) {
-      print('❌ Failed to load messages from cache: $e');
-    }
-    return null;
-  }
-
-  // Clear cache for a specific chat
-  static Future<void> clearChatCache(String chatId) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove('$_themePrefix$chatId');
-      await prefs.remove('$_messagesPrefix$chatId');
-    } catch (e) {
-      print('❌ Failed to clear chat cache: $e');
-    }
-  }
-
-  // Get cache info for a specific chat
-  static Future<Map<String, dynamic>> getCacheInfo(String chatId) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final themeJson = prefs.getString('$_themePrefix$chatId');
-      final messagesJson = prefs.getString('$_messagesPrefix$chatId');
-
-      return {
-        'hasTheme': themeJson != null,
-        'hasMessages': messagesJson != null,
-        'themeLastUpdated':
-            themeJson != null ? json.decode(themeJson)['lastUpdated'] : null,
-        'messagesLastUpdated': messagesJson != null
-            ? json.decode(messagesJson)['lastUpdated']
-            : null,
-        'cachedMessagesCount':
-            messagesJson != null ? json.decode(messagesJson)['count'] : 0,
-      };
-    } catch (e) {
-      print('❌ Failed to get cache info: $e');
-      return {};
-    }
-  }
-}
 
 class URChatApp extends StatefulWidget {
   final ChatRoom chatRoom;
@@ -617,6 +506,9 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
           _isLoading = false;
         });
 
+        // Preload user profiles AFTER loading cached messages
+        _preloadUserProfiles();
+
         // Scroll to bottom after loading cached messages
         WidgetsBinding.instance.addPostFrameCallback((_) {
           _scrollToBottom();
@@ -648,6 +540,9 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
             _isLoading = false;
           });
 
+          // Preload user profiles AFTER loading fresh messages
+          _preloadUserProfiles();
+
           // Save updated messages to cache
           if (_messages.isNotEmpty) {
             await ChatCacheService.saveChatMessages(
@@ -675,10 +570,10 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   }
 
   void _startTypingCleanupTimer() {
-    _typingCleanupTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
+    _typingCleanupTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       final now = DateTime.now().millisecondsSinceEpoch;
       _typingUsers.removeWhere((username, data) {
-        return now - data['lastSeenTyping'] > 3000;
+        return now - data['lastSeenTyping'] > 5000;
       });
       if (_typingUsers.isEmpty && _typingUser.isNotEmpty) {
         if (mounted) {
@@ -711,7 +606,8 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     });
   }
 
-  void _addMessage(Message message) {
+  void _addMessage(Message message) async {
+    await _fetchAndCacheUserProfile(message.sender);
     if (mounted) {
       setState(() {
         _messages.add(message);
@@ -725,7 +621,9 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 
       if (_scrollController.position.pixels >=
           _scrollController.position.maxScrollExtent - 100) {
-        _scrollToBottom();
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _scrollToBottom();
+        });
       }
     }
   }
@@ -734,6 +632,10 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     widget.webSocketService.onMessageReceived = (Message message) {
       if (message.chatId == widget.chatRoom.chatId) {
         _addMessage(message);
+      }
+
+      if (message.sender != ApiService.currentUsername) {
+        _cacheUserFromMessage(message);
       }
     };
 
@@ -747,14 +649,20 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
           if (isTyping && username != ApiService.currentUsername) {
             _typingUsers[username] = {
               'username': username,
-              'profile': userProfile ??
-                  {
-                    'pfpIndex': '😊',
-                    'pfpBg': '#4CAF50',
-                    'fullName': username,
-                  },
+              'profile': userProfile,
+              // ??
+              //     {
+              //       'pfpIndex': '😊',
+              //       'pfpBg': '#4CAF50',
+              //       'fullName': username,
+              //     },
               'lastSeenTyping': DateTime.now().millisecondsSinceEpoch,
             };
+
+            if (userProfile != null) {
+              _cacheUserFromProfile(username, userProfile);
+            }
+
             if (_typingUsers.length == 1) {
               _typingUser = username;
             } else {
@@ -1027,14 +935,21 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 
   Widget _buildTypingIndicator() {
     if (_typingUsers.isEmpty) return const SizedBox();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _scrollToBottom();
+    });
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
       child: Column(
         children: _typingUsers.entries.map((entry) {
           final username = entry.key;
-          final userData = entry.value;
-          final profile = userData['profile'] as Map<String, dynamic>;
+          final profile = _userProfiles[username] ??
+              {
+                'fullName': username,
+                'pfpIndex': '😊',
+                'pfpBg': '#4CAF50',
+              };
 
           return Padding(
             padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
@@ -1079,6 +994,162 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     );
   }
 
+  Future<void> _preloadUserProfiles() async {
+    if (_messages.isEmpty) {
+      print('⏳ No messages yet, skipping user profile preload');
+      return;
+    }
+
+    print("🚀 Starting preloadUserProfiles");
+    print("📊 Total messages: ${_messages.length}");
+
+    // Get unique usernames from messages and typing users
+    final usernames = <String>{};
+
+    for (final message in _messages) {
+      if (message.sender != ApiService.currentUsername) {
+        usernames.add(message.sender);
+        print('📨 Found message from: ${message.sender}');
+      }
+    }
+
+    usernames.addAll(_typingUsers.keys);
+
+    print('📝 Found ${usernames.length} unique users to preload: $usernames');
+
+    if (usernames.isEmpty) {
+      print('ℹ️ No users to preload');
+      return;
+    }
+
+    // Clear the currently fetching set to ensure we can fetch again
+    _currentlyFetchingUsers.clear();
+
+    // Use Future.wait to load profiles in parallel but with limited concurrency
+    final batches =
+        _splitIntoBatches(usernames.toList(), 3); // 3 concurrent requests
+
+    for (final batch in batches) {
+      print('🔄 Processing batch: $batch');
+
+      final futures = batch.map((username) async {
+        print('🎯 Preloading profile for: $username');
+        await _fetchAndCacheUserProfile(username);
+      }).toList();
+
+      await Future.wait(futures);
+
+      // Small delay between batches
+      await Future.delayed(const Duration(milliseconds: 200));
+    }
+
+    print('✅ Finished preloading user profiles');
+
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  void _manuallyLoadProfiles() {
+    print('🔄 Manually triggering profile load');
+    _preloadUserProfiles();
+  }
+
+// Helper method to split list into batches
+  List<List<String>> _splitIntoBatches(List<String> list, int batchSize) {
+    List<List<String>> batches = [];
+    for (int i = 0; i < list.length; i += batchSize) {
+      int end = (i + batchSize < list.length) ? i + batchSize : list.length;
+      batches.add(list.sublist(i, end));
+    }
+    return batches;
+  }
+
+  final Map<String, Map<String, dynamic>> _userProfiles = {};
+
+  Future<void> _fetchAndCacheUserProfile(String username) async {
+    // Skip if it's the current user
+    if (username == ApiService.currentUsername) {
+      return;
+    }
+
+    print('🔍 Fetching profile for: $username');
+
+    // Track if we're currently fetching this user to avoid duplicate API calls
+    if (_currentlyFetchingUsers.contains(username)) {
+      print('⏳ Already fetching profile for $username, skipping...');
+      return;
+    }
+
+    _currentlyFetchingUsers.add(username);
+
+    try {
+      // 1. First try to get from cache for instant display
+      var cachedProfile = await UserCacheService.getUserProfile(username);
+      if (cachedProfile != null) {
+        print('✅ Found in cache: $username');
+        _userProfiles[username] = cachedProfile;
+        if (mounted) setState(() {});
+      } else {
+        // Set default profile immediately for instant display
+        _userProfiles[username] = {
+          'username': username,
+          'fullName': username,
+          'pfpIndex': '😊',
+          'pfpBg': '#4CAF50',
+          'bio': '',
+        };
+        if (mounted) setState(() {});
+      }
+
+      // 2. ALWAYS try to fetch from API to get fresh data (even if we have cache)
+      print('🌐 Calling API for user: $username');
+
+      // Add a small delay to ensure UI is updated with cached/default data first
+      await Future.delayed(const Duration(milliseconds: 100));
+
+      final apiProfile = await ApiService.getUserProfile(username);
+
+      if (apiProfile != null && apiProfile.isNotEmpty) {
+        print('✅ API response received for $username: $apiProfile');
+
+        // Convert API response to UserDTO
+        final userDTO = UserDTO.fromJson(apiProfile);
+
+        // Save to cache
+        await UserCacheService.saveUser(userDTO);
+        print('✅ Saved to cache: ${userDTO.username}');
+
+        // Update in-memory profile
+        final updatedProfile = {
+          'username': userDTO.username,
+          'fullName': userDTO.fullName,
+          'pfpIndex': userDTO.pfpIndex,
+          'pfpBg': userDTO.pfpBg,
+          'bio': userDTO.bio,
+        };
+
+        // Always update with fresh API data
+        _userProfiles[username] = updatedProfile;
+        print('🔄 Updated profile for $username with API data');
+
+        if (mounted) {
+          setState(() {});
+        }
+      } else {
+        print('❌ No API data received for $username');
+      }
+    } catch (e) {
+      print('❌ Error fetching profile for $username: $e');
+      // Keep the cached/default profile if API fails
+    } finally {
+      _currentlyFetchingUsers.remove(username);
+    }
+  }
+
+// Add this set to track currently fetching users
+  final Set<String> _currentlyFetchingUsers = {};
+
   String _formatDate(DateTime date) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
@@ -1099,9 +1170,13 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   }
 
   Widget _buildUserAvatar(String username) {
-    final userData = _typingUsers[username];
-    final pfpIndex = userData?['profile']?['pfpIndex'] ?? '😊';
-    final pfpBg = userData?['profile']?['pfpBg'] ?? '#4CAF50';
+    final profile = _userProfiles[username] ??
+        {
+          'pfpIndex': '😊',
+          'pfpBg': '#4CAF50',
+        };
+    final pfpIndex = profile['pfpIndex'] ?? '😊';
+    final pfpBg = profile['pfpBg'] ?? '#4CAF50';
 
     return CircleAvatar(
       backgroundColor: _parseColor(pfpBg),
@@ -1170,12 +1245,12 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   Widget _buildMessageBubble(Message message, int index) {
     final isOwnMessage = message.sender == ApiService.currentUsername;
     final showAvatar = !isOwnMessage;
-    final String? text = message.content.isNotEmpty ? message.content : null;
-    final DateTime? timestamp =
-        message.timestamp != DateTime.fromMillisecondsSinceEpoch(0)
-            ? message.timestamp
-            : null;
-
+    final profile = _userProfiles[message.sender] ??
+        {
+          'fullName': message.sender,
+          'pfpIndex': '😊',
+          'pfpBg': '#4CAF50',
+        };
     final colorScheme = Theme.of(context).colorScheme;
 
     return Padding(
@@ -1221,7 +1296,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                     Padding(
                       padding: const EdgeInsets.only(bottom: 4),
                       child: Text(
-                        message.sender,
+                        profile['fullName'] ?? message.sender,
                         style: TextStyle(
                           color: isOwnMessage
                               ? Colors.white
@@ -1393,5 +1468,59 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         ],
       ),
     );
+  }
+
+  void _cacheUserFromMessage(Message message) async {
+    try {
+      final hasCachedUser = await UserCacheService.hasUser(message.sender);
+      if (!hasCachedUser) {
+        final userData = await ApiService.getUserProfile(message.sender);
+        if (userData != null) {
+          final user = UserDTO.fromJson(userData);
+          await UserCacheService.saveUser(user);
+          // Update in-memory profile
+          final profile = await UserCacheService.getUserProfile(user.username);
+          if (profile != null) {
+            setState(() {
+              _userProfiles[user.username] = profile;
+            });
+          }
+          print('✅ Cached user ${user.username} from message');
+        }
+      }
+    } catch (e) {
+      print('❌ Failed to cache user from message: $e');
+    }
+  }
+
+// Helper method to cache user from profile data
+  void _cacheUserFromProfile(
+      String username, Map<String, dynamic> profile) async {
+    try {
+      final hasCachedUser = await UserCacheService.hasUser(username);
+      if (!hasCachedUser) {
+        final user = UserDTO(
+          username: username,
+          fullName: profile['fullName'] ?? username,
+          bio: profile['bio'] ?? '',
+          pfpIndex: profile['pfpIndex'] ?? '😊',
+          pfpBg: profile['pfpBg'] ?? '#4CAF50',
+          joinedAt: profile['joinedAt'] != null
+              ? DateTime.parse(profile['joinedAt'])
+              : DateTime.now(),
+        );
+        await UserCacheService.saveUser(user);
+        // Update in-memory profile
+        final updatedProfile = await UserCacheService.getUserProfile(username);
+        if (updatedProfile != null) {
+          setState(() {
+            _userProfiles[username] = updatedProfile;
+          });
+        }
+        print('✅ Cached user $username from typing profile');
+      }
+    } catch (e) {
+      print('❌ Failed to cache user from profile: $e');
+    }
   }
 }

@@ -620,22 +620,6 @@ class _HomescreenState extends State<Homescreen> {
               : _isMobileScreen
                   ? _buildMobileLayout()
                   : _buildDesktopLayout(),
-      // floatingActionButton: (_selectedChatId == null || _isLargeScreen) &&
-      //         (!_isMobileScreen || !_showChatScreen)
-      //     ? FloatingActionButton(
-      //         backgroundColor: _brown,
-      //         foregroundColor: Colors.white,
-      //         onPressed: () {
-      //           Navigator.push(
-      //             context,
-      //             MaterialPageRoute(builder: (context) => SearchScreen()),
-      //           ).then((_) {
-      //             _loadChatsFromApi();
-      //           });
-      //         },
-      //         child: Icon(Icons.search),
-      //       )
-      //     : null,
     );
   }
 
