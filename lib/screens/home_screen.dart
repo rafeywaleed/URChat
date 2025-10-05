@@ -1,9 +1,13 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
+
 import 'package:flutter/material.dart';
 import 'package:urchat_back_testing/model/ChatRoom.dart';
+import 'package:urchat_back_testing/model/dto.dart';
 import 'package:urchat_back_testing/model/message.dart';
 import 'package:urchat_back_testing/screens/auth_screen.dart';
-
 import 'package:urchat_back_testing/screens/chatting.dart';
+import 'package:urchat_back_testing/screens/group_pfp_dialog.dart';
+import 'package:urchat_back_testing/screens/new_group.dart';
 import 'package:urchat_back_testing/screens/profile_screen.dart';
 import 'package:urchat_back_testing/screens/search_delegate.dart';
 import 'package:urchat_back_testing/service/api_service.dart';
@@ -15,15 +19,21 @@ class Homescreen extends StatefulWidget {
   _HomescreenState createState() => _HomescreenState();
 }
 
-class _HomescreenState extends State<Homescreen> {
+class _HomescreenState extends State<Homescreen>
+    with SingleTickerProviderStateMixin {
   final Color _beige = const Color(0xFFF5F5DC);
   final Color _brown = const Color(0xFF5C4033);
 
   List<ChatRoom> _chats = [];
+  List<ChatRoom> _groupInvitations = [];
   bool _isLoading = true;
+  bool _isLoadingInvitations = false;
   String _errorMessage = '';
   late WebSocketService _webSocketService;
   String? _selectedChatId;
+
+  // Tab controller for chats vs invitations
+  late TabController _tabController;
 
   // Track if we're showing chat details on mobile
   bool _showChatScreen = false;
@@ -40,8 +50,9 @@ class _HomescreenState extends State<Homescreen> {
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
     _initializeWebSocket();
-    _loadChats();
+    _loadInitialData();
   }
 
   void _initializeWebSocket() {
@@ -62,6 +73,30 @@ class _HomescreenState extends State<Homescreen> {
     _testWebSocketConnection();
   }
 
+  void _loadInitialData() async {
+    try {
+      setState(() {
+        _isLoading = true;
+      });
+
+      // Load chats and invitations in parallel
+      await Future.wait([
+        _loadChats(),
+        _loadGroupInvitations(),
+      ] as Iterable<Future>);
+
+      setState(() {
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('❌ Error loading initial data: $e');
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Failed to load data: $e';
+      });
+    }
+  }
+
   void _loadChats() async {
     try {
       // Try cache first
@@ -71,7 +106,6 @@ class _HomescreenState extends State<Homescreen> {
         print('📦 Loading chats from cache');
         setState(() {
           _chats = cachedChats;
-          _isLoading = false;
           _errorMessage = '';
         });
 
@@ -83,7 +117,6 @@ class _HomescreenState extends State<Homescreen> {
     } catch (e) {
       print('❌ Error loading initial chats: $e');
       setState(() {
-        _isLoading = false;
         _errorMessage = 'Failed to load chats: $e';
       });
     }
@@ -100,7 +133,6 @@ class _HomescreenState extends State<Homescreen> {
       if (mounted) {
         setState(() {
           _chats = chats;
-          _isLoading = false;
           _errorMessage = '';
         });
       }
@@ -108,8 +140,31 @@ class _HomescreenState extends State<Homescreen> {
       print('❌ Error loading fresh chats: $e');
       if (mounted) {
         setState(() {
-          _isLoading = false;
           _errorMessage = 'Failed to load chats: $e';
+        });
+      }
+    }
+  }
+
+  void _loadGroupInvitations() async {
+    try {
+      setState(() {
+        _isLoadingInvitations = true;
+      });
+
+      final invitations = await ApiService.getGroupInvitations();
+
+      if (mounted) {
+        setState(() {
+          _groupInvitations = invitations;
+          _isLoadingInvitations = false;
+        });
+      }
+    } catch (e) {
+      print('❌ Error loading group invitations: $e');
+      if (mounted) {
+        setState(() {
+          _isLoadingInvitations = false;
         });
       }
     }
@@ -128,18 +183,6 @@ class _HomescreenState extends State<Homescreen> {
   void _handleChatListUpdate(List<ChatRoom> updatedChats) {
     print(
         '🔄 Real-time chat list update received: ${updatedChats.length} chats');
-
-    print(
-        "======================================== Chats================================");
-    for (var chat in _chats) {
-      print("Chat: ${chat.chatName}, Last Activity: ${chat.lastActivity}");
-    }
-
-    print(
-        "======================================== Updated Chats================================");
-    for (var chat in updatedChats) {
-      print("Chat: ${chat.chatName}, Last Activity: ${chat.lastActivity}");
-    }
 
     setState(() {
       _chats = updatedChats;
@@ -194,6 +237,63 @@ class _HomescreenState extends State<Homescreen> {
   void _handleBackButton() {
     if (_showChatScreen) {
       _deselectChat();
+    }
+  }
+
+  // Group invitation methods
+  Future<void> _acceptGroupInvitation(ChatRoom invitation) async {
+    try {
+      await ApiService.acceptGroupInvitation(invitation.chatId);
+
+      // Remove from invitations and add to chats
+      setState(() {
+        _groupInvitations.removeWhere((inv) => inv.chatId == invitation.chatId);
+      });
+
+      // Reload chats to include the newly accepted group
+      _loadFreshChats();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Joined ${invitation.chatName}'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      print('❌ Error accepting group invitation: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to join group: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _declineGroupInvitation(ChatRoom invitation) async {
+    try {
+      await ApiService.declineGroupInvitation(invitation.chatId);
+
+      // Remove from invitations
+      setState(() {
+        _groupInvitations.removeWhere((inv) => inv.chatId == invitation.chatId);
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Declined invitation to ${invitation.chatName}'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+    } catch (e) {
+      print('❌ Error declining group invitation: $e');
+      // ignore: use_build_context_synchronously
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to decline invitation: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -270,6 +370,66 @@ class _HomescreenState extends State<Homescreen> {
     );
   }
 
+  Widget _buildInvitationListItem(ChatRoom invitation) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.orange.withOpacity(0.3), width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.orange.withOpacity(0.1),
+            blurRadius: 2,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: _parseColor(invitation.pfpBg),
+          child: Text(
+            invitation.pfpIndex,
+            style: const TextStyle(
+              fontSize: 20,
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+        title: Text(
+          invitation.chatName,
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            color: _brown,
+          ),
+        ),
+        subtitle: Text(
+          'Group Invitation',
+          style: TextStyle(
+            color: Colors.orange[700],
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.check, color: Colors.green),
+              onPressed: () => _acceptGroupInvitation(invitation),
+              tooltip: 'Accept',
+            ),
+            IconButton(
+              icon: const Icon(Icons.close, color: Colors.red),
+              onPressed: () => _declineGroupInvitation(invitation),
+              tooltip: 'Decline',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildChatsList() {
     return Container(
       width: _isLargeScreen ? 350 : double.infinity,
@@ -338,54 +498,175 @@ class _HomescreenState extends State<Homescreen> {
             ),
           ),
 
-          // Chats list
-          Expanded(
-            child: RefreshIndicator(
-              backgroundColor: _beige,
-              color: _brown,
-              onRefresh: () async {
-                _loadChatsFromApi();
-              },
-              child: _chats.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.chat_bubble_outline,
-                            size: 64,
-                            color: _brown.withOpacity(0.5),
+          // Tab bar for Chats vs Invitations
+          Container(
+            color: Colors.white,
+            child: TabBar(
+              controller: _tabController,
+              labelColor: _brown,
+              unselectedLabelColor: Colors.grey,
+              indicatorColor: _brown,
+              tabs: [
+                const Tab(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.chat, size: 18),
+                      SizedBox(width: 4),
+                      Text('Chats'),
+                    ],
+                  ),
+                ),
+                Tab(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.group_add, size: 18),
+                      const SizedBox(width: 4),
+                      const Text('Invitations'),
+                      if (_groupInvitations.isNotEmpty)
+                        Container(
+                          margin: const EdgeInsets.only(left: 4),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.orange,
+                            borderRadius: BorderRadius.circular(10),
                           ),
-                          const SizedBox(height: 16),
-                          Text(
-                            'No chats yet',
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: _brown.withOpacity(0.7),
-                              fontWeight: FontWeight.w500,
+                          child: Text(
+                            _groupInvitations.length.toString(),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
-                          const SizedBox(height: 8),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 32),
-                            child: Text(
-                              'Start a conversation by searching for users',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Tab content
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                // Chats Tab
+                RefreshIndicator(
+                  backgroundColor: _beige,
+                  color: _brown,
+                  onRefresh: () async {
+                    _loadChatsFromApi();
+                  },
+                  child: _chats.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.chat_bubble_outline,
+                                size: 64,
                                 color: _brown.withOpacity(0.5),
                               ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'No chats yet',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: _brown.withOpacity(0.7),
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 32),
+                                child: Text(
+                                  'Start a conversation by searching for users',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: _brown.withOpacity(0.5),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : ListView.builder(
+                          itemCount: _chats.length,
+                          itemBuilder: (context, index) {
+                            final chat = _chats[index];
+                            return _buildChatListItem(chat);
+                          },
+                        ),
+                ),
+
+                // Invitations Tab
+                _isLoadingInvitations
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            CircularProgressIndicator(
+                              valueColor: AlwaysStoppedAnimation<Color>(_brown),
+                            ),
+                            const SizedBox(height: 16),
+                            const Text('Loading invitations...'),
+                          ],
+                        ),
+                      )
+                    : _groupInvitations.isEmpty
+                        ? Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.group_add_outlined,
+                                  size: 64,
+                                  color: _brown.withOpacity(0.5),
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  'No invitations',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: _brown.withOpacity(0.7),
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 32),
+                                  child: Text(
+                                    'You have no pending group invitations',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      color: _brown.withOpacity(0.5),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        : RefreshIndicator(
+                            backgroundColor: _beige,
+                            color: _brown,
+                            onRefresh: () async {
+                              _loadGroupInvitations();
+                            },
+                            child: ListView.builder(
+                              itemCount: _groupInvitations.length,
+                              itemBuilder: (context, index) {
+                                final invitation = _groupInvitations[index];
+                                return _buildInvitationListItem(invitation);
+                              },
                             ),
                           ),
-                        ],
-                      ),
-                    )
-                  : ListView.builder(
-                      itemCount: _chats.length,
-                      itemBuilder: (context, index) {
-                        final chat = _chats[index];
-                        return _buildChatListItem(chat);
-                      },
-                    ),
+              ],
             ),
           ),
         ],
@@ -436,6 +717,53 @@ class _HomescreenState extends State<Homescreen> {
       ),
     );
   }
+
+  void _showCreateGroupDialog() async {
+    final newGroup = await showDialog<GroupChatRoomDTO>(
+      context: context,
+      builder: (context) => CreateGroupDialog(
+        onGroupCreated: (GroupChatRoomDTO group) {
+          ChatRoom chatRoom = ChatRoom(
+            chatId: group.chatId,
+            chatName: group.chatName,
+            isGroup: true,
+            lastMessage: '',
+            lastActivity: DateTime.now(),
+            pfpIndex: group.pfpIndex,
+            pfpBg: group.pfpBg,
+            themeIndex: 0,
+            isDark: true,
+          );
+          // The group will be added to chats list via WebSocket update
+          // or we can manually refresh
+          _loadChatsFromApi();
+        },
+      ),
+    );
+
+    if (newGroup != null) {
+      // Optionally select the new group
+      // _selectChat(newGroup);
+    }
+  }
+
+  // void _showGroupPfpDialog(ChatRoom group) async {
+  //   final updatedGroup = await showDialog<ChatRoom>(
+  //     context: context,
+  //     builder: (context) => GroupPfpDialog(group: group),
+  //   );
+
+  //   if (updatedGroup != null) {
+  //     // Update the group in the chats list
+  //     setState(() {
+  //       final index =
+  //           _chats.indexWhere((chat) => chat.chatId == updatedGroup.chatId);
+  //       if (index != -1) {
+  //         _chats[index] = updatedGroup;
+  //       }
+  //     });
+  //   }
+  // }
 
   Widget _buildSelectedChatView() {
     if (_selectedChat == null) return _buildEmptyChatView();
@@ -530,6 +858,11 @@ class _HomescreenState extends State<Homescreen> {
                 print('   Testing message reception...');
               },
             ),
+            IconButton(
+              icon: const Icon(Icons.group_add),
+              onPressed: _showCreateGroupDialog,
+              tooltip: 'Create Group',
+            ),
             PopupMenuButton<String>(
               icon: const Icon(Icons.more_vert),
               onSelected: (value) {
@@ -616,7 +949,6 @@ class _HomescreenState extends State<Homescreen> {
                     ],
                   ),
                 )
-              // : _buildMobileLayout()
               : _isMobileScreen
                   ? _buildMobileLayout()
                   : _buildDesktopLayout(),
@@ -651,6 +983,7 @@ class _HomescreenState extends State<Homescreen> {
 
   @override
   void dispose() {
+    _tabController.dispose();
     _webSocketService.disconnect();
     super.dispose();
   }

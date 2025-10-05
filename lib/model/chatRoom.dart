@@ -1,3 +1,6 @@
+import 'package:flutter/foundation.dart';
+import 'package:urchat_back_testing/model/dto.dart';
+
 class ChatRoom {
   final String chatId;
   final String chatName;
@@ -62,6 +65,20 @@ class ChatRoom {
       'themeIndex': themeIndex,
       'isDark': isDark,
     };
+  }
+
+  ChatRoom convertToChatRoom(GroupChatRoomDTO groupDTO) {
+    return ChatRoom(
+      chatId: groupDTO.chatId,
+      chatName: groupDTO.chatName,
+      isGroup: groupDTO.isGroup ?? true,
+      lastMessage: '', // or appropriate initial value
+      lastActivity: DateTime.now(),
+      pfpIndex: groupDTO.pfpIndex,
+      pfpBg: groupDTO.pfpBg,
+      themeIndex: 0, // default theme
+      isDark: true, // default dark mode
+    );
   }
 
   @override

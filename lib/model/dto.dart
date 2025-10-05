@@ -241,6 +241,7 @@ class GroupChatRoomDTO {
   final String chatName;
   final String chatId;
   final bool isGroup;
+  final String adminUsername;
   final List<GroupMembersDTO> groupMembers;
   final List<GroupMembersDTO> memberRequests;
   final String pfpIndex;
@@ -250,6 +251,7 @@ class GroupChatRoomDTO {
     required this.chatName,
     required this.chatId,
     required this.isGroup,
+    required this.adminUsername,
     required this.groupMembers,
     required this.memberRequests,
     required this.pfpIndex,
@@ -261,6 +263,7 @@ class GroupChatRoomDTO {
       chatName: json['chatName'] ?? '',
       chatId: json['chatId'] ?? '',
       isGroup: json['isGroup'] ?? false,
+      adminUsername: json['adminUsername'] ?? '',
       groupMembers: (json['groupMembers'] as List<dynamic>?)
               ?.map((e) => GroupMembersDTO.fromJson(e))
               .toList() ??
@@ -279,6 +282,7 @@ class GroupChatRoomDTO {
       'chatName': chatName,
       'chatId': chatId,
       'isGroup': isGroup,
+      'adminUsername': adminUsername,
       'groupMembers': groupMembers.map((e) => e.toJson()).toList(),
       'memberRequests': memberRequests.map((e) => e.toJson()).toList(),
       'pfpIndex': pfpIndex,
@@ -529,13 +533,14 @@ class ChatDTOConvertor {
 
   GroupChatRoomDTO convertToGroupChatRoomDTO(
       Map<String, dynamic> chatRoomData,
-      String admin,
+      String adminUsername,
       List<GroupMembersDTO> groupMembers,
       List<GroupMembersDTO> memberRequests) {
     return GroupChatRoomDTO(
       chatName: chatRoomData['chatName'] ?? '',
       chatId: chatRoomData['chatId'] ?? '',
       isGroup: chatRoomData['isGroup'] ?? false,
+      adminUsername: adminUsername,
       groupMembers: groupMembers,
       memberRequests: memberRequests,
       pfpIndex: chatRoomData['pfpIndex'] ?? '',

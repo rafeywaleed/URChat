@@ -7,6 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:urchat_back_testing/model/ChatRoom.dart';
 import 'package:urchat_back_testing/model/dto.dart';
 import 'package:urchat_back_testing/model/message.dart';
+import 'package:urchat_back_testing/screens/group_management_screen.dart';
 import 'package:urchat_back_testing/service/api_service.dart';
 import 'package:urchat_back_testing/service/chat_cache_service.dart';
 import 'package:urchat_back_testing/service/user_cache_service.dart';
@@ -476,7 +477,9 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     _setupScrollListener();
     _startTypingCleanupTimer();
     _loadInitialMessages();
-    _scrollToBottom();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _scrollToBottom();
+    });
   }
 
   @override
@@ -620,7 +623,8 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       }
 
       if (_scrollController.position.pixels >=
-          _scrollController.position.maxScrollExtent - 100) {
+          _scrollController.position.maxScrollExtent -
+              MediaQuery.of(context).size.height / 2) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           _scrollToBottom();
         });
@@ -759,14 +763,14 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
               actions: [
                 TextButton(
                   onPressed: () {
-                    widget.onThemeCancel?.call(); // revert preview
+                    widget.onThemeCancel?.call();
                     Navigator.of(context).pop();
                   },
                   child: const Text('Cancel'),
                 ),
                 ElevatedButton(
                   onPressed: () {
-                    widget.onThemeSave?.call(); // commit preview
+                    widget.onThemeSave?.call();
                     Navigator.of(context).pop();
                   },
                   child: const Text('Save'),
@@ -1269,8 +1273,8 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
               padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
               decoration: BoxDecoration(
                 color: isOwnMessage
-                    ? colorScheme.primary
-                    : colorScheme.surface.withOpacity(0.9),
+                    ? colorScheme.surface.withOpacity(0.9)
+                    : colorScheme.primary,
                 borderRadius: BorderRadius.only(
                   topLeft: const Radius.circular(18),
                   topRight: const Radius.circular(18),
@@ -1292,15 +1296,15 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (!isOwnMessage)
+                  if (!isOwnMessage && widget.chatRoom.isGroup == true)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 4),
                       child: Text(
                         profile['fullName'] ?? message.sender,
                         style: TextStyle(
                           color: isOwnMessage
-                              ? Colors.white
-                              : colorScheme.onSurface,
+                              ? colorScheme.onSurface
+                              : Colors.white,
                           fontWeight: FontWeight.bold,
                           fontSize: 12,
                         ),
@@ -1310,7 +1314,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                     message.content,
                     style: TextStyle(
                       color:
-                          isOwnMessage ? Colors.white : colorScheme.onSurface,
+                          isOwnMessage ? colorScheme.onSurface : Colors.white,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -1320,7 +1324,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                       Text(
                         _formatMessageTime(message.timestamp),
                         style: TextStyle(
-                          color: isOwnMessage ? Colors.white70 : Colors.grey,
+                          color: isOwnMessage ? Colors.grey : Colors.white70,
                           fontSize: 10,
                         ),
                       ),
@@ -1387,6 +1391,21 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
             icon: const Icon(Iconsax.paintbucket),
             onPressed: _showThemeMenu,
           ),
+          widget.chatRoom.isGroup
+              ? IconButton(
+                  icon: const Icon(Icons.group),
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => GroupManagementScreen(
+                          group: widget.chatRoom,
+                        ),
+                      ),
+                    );
+                  },
+                  tooltip: 'Group Info',
+                )
+              : const SizedBox.shrink(),
         ],
       ),
       body: Stack(

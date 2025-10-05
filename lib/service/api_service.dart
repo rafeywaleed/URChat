@@ -8,7 +8,7 @@ import 'package:urchat_back_testing/model/user.dart';
 import 'storage_service.dart';
 
 class ApiService {
-  static const String baseUrl = 'http://192.168.0.102:8080';
+  static const String baseUrl = 'http://192.168.0.102:8081';
   static final StorageService _storage = StorageService();
 
   static Future<void> init() async {
@@ -348,6 +348,232 @@ class ApiService {
     } else {
       throw Exception(
           'Failed to load paginated messages: ${response.statusCode}');
+    }
+  }
+
+  static Future<GroupChatRoomDTO> createGroup(
+      String name, List<String> participants) async {
+    print('👥 Creating group: $name with ${participants.length} participants');
+
+    final response = await _makeAuthenticatedRequest(() async {
+      return await http.post(
+        Uri.parse('$baseUrl/chat/group'),
+        headers: headers,
+        body: jsonEncode({
+          'name': name,
+          'participants': participants,
+        }),
+      );
+    });
+
+    print('📡 Create group response status: ${response.statusCode}');
+    print('📡 Create group response body: ${response.body}');
+
+    if (response.statusCode == 200) {
+      final Map<String, dynamic> data = jsonDecode(response.body);
+      print('✅ Successfully created group: $name');
+      return GroupChatRoomDTO.fromJson(data);
+    } else {
+      throw Exception(
+          'Failed to create group: ${response.statusCode} - ${response.body}');
+    }
+  }
+
+  static Future<GroupChatRoomDTO> updateGroupPfp(
+      String chatId, String pfpIndex, String pfpBg) async {
+    print('🎨 Updating group pfp for: $chatId');
+
+    final response = await _makeAuthenticatedRequest(() async {
+      return await http.put(
+        Uri.parse('$baseUrl/chat/group/$chatId'),
+        headers: headers,
+        body: jsonEncode({
+          'pfpIndex': pfpIndex,
+          'pfpBg': pfpBg,
+        }),
+      );
+    });
+
+    if (response.statusCode == 200) {
+      final Map<String, dynamic> data = jsonDecode(response.body);
+      print('✅ Successfully updated group pfp');
+      return GroupChatRoomDTO.fromJson(data);
+    } else {
+      throw Exception(
+          'Failed to update group pfp: ${response.statusCode} - ${response.body}');
+    }
+  }
+
+  static Future<GroupChatRoomDTO> getGroupDetails(String chatId) async {
+    print('🔍 Fetching group details for: $chatId');
+    final response = await _makeAuthenticatedRequest(() async {
+      return await http.get(
+        Uri.parse('$baseUrl/chat/group/$chatId/details'),
+        headers: headers,
+      );
+    });
+
+    if (response.statusCode == 200) {
+      final Map<String, dynamic> data = jsonDecode(response.body);
+      print('✅ Successfully loaded group details');
+      return GroupChatRoomDTO.fromJson(data);
+    } else {
+      throw Exception(
+          'Failed to load group details: ${response.statusCode} - ${response.body}');
+    }
+  }
+
+  static Future<void> inviteToGroup(
+      String chatId, String inviteeUsername) async {
+    print('📨 Inviting $inviteeUsername to group: $chatId');
+    final response = await _makeAuthenticatedRequest(() async {
+      return await http.post(
+        Uri.parse(
+            '$baseUrl/chat/group/$chatId/invite?inviteeUsername=${Uri.encodeQueryComponent(inviteeUsername)}'),
+        headers: headers,
+      );
+    });
+
+    if (response.statusCode == 200) {
+      print('✅ Successfully invited user to group');
+    } else {
+      throw Exception(
+          'Failed to invite user to group: ${response.statusCode} - ${response.body}');
+    }
+  }
+
+  static Future<void> removeFromGroup(
+      String chatId, String removeUsername) async {
+    print('🗑️ Removing $removeUsername from group: $chatId');
+    final response = await _makeAuthenticatedRequest(() async {
+      return await http.post(
+        Uri.parse(
+            '$baseUrl/chat/group/$chatId/remove?removeUsername=${Uri.encodeQueryComponent(removeUsername)}'),
+        headers: headers,
+      );
+    });
+
+    if (response.statusCode == 200) {
+      print('✅ Successfully removed user from group');
+    } else {
+      throw Exception(
+          'Failed to remove user from group: ${response.statusCode} - ${response.body}');
+    }
+  }
+
+  static Future<void> leaveGroup(String chatId) async {
+    print('🚪 Leaving group: $chatId');
+    final response = await _makeAuthenticatedRequest(() async {
+      return await http.post(
+        Uri.parse('$baseUrl/chat/group/$chatId/leave'),
+        headers: headers,
+      );
+    });
+
+    if (response.statusCode == 200) {
+      print('✅ Successfully left group');
+    } else {
+      throw Exception(
+          'Failed to leave group: ${response.statusCode} - ${response.body}');
+    }
+  }
+
+  static Future<List<ChatRoom>> searchGroups(String name) async {
+    print('🔍 Searching groups with name: $name');
+    final response = await _makeAuthenticatedRequest(() async {
+      return await http.get(
+        Uri.parse(
+            '$baseUrl/chat/groups/search?name=${Uri.encodeQueryComponent(name)}'),
+        headers: headers,
+      );
+    });
+
+    if (response.statusCode == 200) {
+      final List<dynamic> data = jsonDecode(response.body);
+      print('✅ Found ${data.length} groups');
+      return data.map((json) => ChatRoom.fromJson(json)).toList();
+    } else {
+      throw Exception(
+          'Failed to search groups: ${response.statusCode} - ${response.body}');
+    }
+  }
+
+  static Future<List<ChatRoom>> getGroupInvitations() async {
+    print('🔍 Fetching group invitations...');
+    final response = await _makeAuthenticatedRequest(() async {
+      return await http.get(
+        Uri.parse('$baseUrl/chat/group/invitations'),
+        headers: headers,
+      );
+    });
+
+    print('📡 Group invitations response status: ${response.statusCode}');
+    print('📡 Group invitations response body: ${response.body}');
+
+    if (response.statusCode == 200) {
+      try {
+        final List<dynamic> data = jsonDecode(response.body);
+        print('📦 Parsed ${data.length} group invitations');
+
+        final invitations = data.map((json) {
+          print('🔍 Parsing invitation: $json');
+          return ChatRoom.fromJson(json);
+        }).toList();
+
+        for (var invitation in invitations) {
+          print(
+              '✅ Loaded invitation: ${invitation.chatName} (ID: ${invitation.chatId})');
+        }
+
+        print('✅ Successfully loaded ${invitations.length} group invitations');
+        return invitations;
+      } catch (e) {
+        print('❌ Error parsing group invitations: $e');
+        throw Exception('Failed to parse group invitation data: $e');
+      }
+    } else {
+      throw Exception(
+          'Failed to load group invitations: ${response.statusCode} - ${response.body}');
+    }
+  }
+
+  static Future<void> acceptGroupInvitation(String chatId) async {
+    print('✅ Accepting group invitation for chat: $chatId');
+    final response = await _makeAuthenticatedRequest(() async {
+      return await http.post(
+        Uri.parse('$baseUrl/chat/group/$chatId/accept'),
+        headers: headers,
+      );
+    });
+
+    print('📡 Accept invitation response status: ${response.statusCode}');
+    print('📡 Accept invitation response body: ${response.body}');
+
+    if (response.statusCode == 200) {
+      print('✅ Successfully accepted group invitation');
+    } else {
+      throw Exception(
+          'Failed to accept group invitation: ${response.statusCode} - ${response.body}');
+    }
+  }
+
+  static Future<void> declineGroupInvitation(String chatId) async {
+    print('❌ Declining group invitation for chat: $chatId');
+    final response = await _makeAuthenticatedRequest(() async {
+      return await http.post(
+        Uri.parse('$baseUrl/chat/group/$chatId/decline'),
+        headers: headers,
+      );
+    });
+
+    print('📡 Decline invitation response status: ${response.statusCode}');
+    print('📡 Decline invitation response body: ${response.body}');
+
+    if (response.statusCode == 200) {
+      print('✅ Successfully declined group invitation');
+    } else {
+      throw Exception(
+          'Failed to decline group invitation: ${response.statusCode} - ${response.body}');
     }
   }
 
