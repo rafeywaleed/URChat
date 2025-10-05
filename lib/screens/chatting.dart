@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:async';
 import 'dart:math' as math;
 
@@ -11,6 +12,120 @@ import 'package:iconsax/iconsax.dart';
 import 'package:urchat_back_testing/themes/butter/bfdemo.dart';
 import 'package:urchat_back_testing/themes/grid.dart';
 import 'package:urchat_back_testing/themes/meteor.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+class ChatCacheService {
+  static const String _themePrefix = 'chat_theme_';
+  static const String _messagesPrefix = 'chat_messages_';
+  static const int _maxCachedMessages = 20;
+
+  // Save theme for a specific chat
+  static Future<void> saveChatTheme(
+      String chatId, int themeIndex, bool isDark) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final themeData = {
+        'themeIndex': themeIndex,
+        'isDark': isDark,
+        'lastUpdated': DateTime.now().millisecondsSinceEpoch,
+      };
+      await prefs.setString('$_themePrefix$chatId', json.encode(themeData));
+    } catch (e) {
+      print('❌ Failed to save theme to cache: $e');
+    }
+  }
+
+  // Load theme for a specific chat
+  static Future<Map<String, dynamic>?> loadChatTheme(String chatId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final themeJson = prefs.getString('$_themePrefix$chatId');
+      if (themeJson != null) {
+        return json.decode(themeJson);
+      }
+    } catch (e) {
+      print('❌ Failed to load theme from cache: $e');
+    }
+    return null;
+  }
+
+  // Save initial messages for a specific chat
+  static Future<void> saveChatMessages(
+      String chatId, List<Message> messages) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+
+      // Take only the last _maxCachedMessages messages
+      final messagesToSave = messages.length > _maxCachedMessages
+          ? messages.sublist(messages.length - _maxCachedMessages)
+          : messages;
+
+      final messagesData = {
+        'messages': messagesToSave.map((msg) => msg.toJson()).toList(),
+        'lastUpdated': DateTime.now().millisecondsSinceEpoch,
+        'count': messagesToSave.length,
+      };
+
+      await prefs.setString(
+          '$_messagesPrefix$chatId', json.encode(messagesData));
+    } catch (e) {
+      print('❌ Failed to save messages to cache: $e');
+    }
+  }
+
+  // Load messages for a specific chat
+  static Future<List<Message>?> loadChatMessages(String chatId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final messagesJson = prefs.getString('$_messagesPrefix$chatId');
+      if (messagesJson != null) {
+        final messagesData = json.decode(messagesJson);
+        final List<dynamic> messagesList = messagesData['messages'];
+        return messagesList
+            .map((msgJson) => Message.fromJson(msgJson))
+            .toList();
+      }
+    } catch (e) {
+      print('❌ Failed to load messages from cache: $e');
+    }
+    return null;
+  }
+
+  // Clear cache for a specific chat
+  static Future<void> clearChatCache(String chatId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('$_themePrefix$chatId');
+      await prefs.remove('$_messagesPrefix$chatId');
+    } catch (e) {
+      print('❌ Failed to clear chat cache: $e');
+    }
+  }
+
+  // Get cache info for a specific chat
+  static Future<Map<String, dynamic>> getCacheInfo(String chatId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final themeJson = prefs.getString('$_themePrefix$chatId');
+      final messagesJson = prefs.getString('$_messagesPrefix$chatId');
+
+      return {
+        'hasTheme': themeJson != null,
+        'hasMessages': messagesJson != null,
+        'themeLastUpdated':
+            themeJson != null ? json.decode(themeJson)['lastUpdated'] : null,
+        'messagesLastUpdated': messagesJson != null
+            ? json.decode(messagesJson)['lastUpdated']
+            : null,
+        'cachedMessagesCount':
+            messagesJson != null ? json.decode(messagesJson)['count'] : 0,
+      };
+    } catch (e) {
+      print('❌ Failed to get cache info: $e');
+      return {};
+    }
+  }
+}
 
 class URChatApp extends StatefulWidget {
   final ChatRoom chatRoom;
@@ -54,26 +169,51 @@ class _URChatAppState extends State<URChatApp> {
 
     _initializeThemes();
 
-    // Load theme from API
-    _loadThemeFromApi();
+    // Load theme from cache first, then API
+    _loadTheme();
   }
 
-  Future<void> _loadThemeFromApi() async {
+  Future<void> _loadTheme() async {
     try {
-      final themeData = await ApiService.getChatTheme(widget.chatRoom.chatId);
-      if (themeData.containsKey('themeIndex') &&
-          themeData.containsKey('isDark')) {
+      // First try to load from cache
+      final cachedTheme =
+          await ChatCacheService.loadChatTheme(widget.chatRoom.chatId);
+
+      if (cachedTheme != null) {
         setState(() {
-          _selectedTheme = themeData['themeIndex'] ?? 0;
-          _isDarkMode = themeData['isDark'] ?? true;
+          _selectedTheme = cachedTheme['themeIndex'] ?? 0;
+          _isDarkMode = cachedTheme['isDark'] ?? true;
           _themeMode = _isDarkMode ? ThemeMode.dark : ThemeMode.light;
           _committedTheme = _selectedTheme;
           _committedThemeMode = _themeMode;
         });
       }
+
+      // Then load from API to check for updates
+      final themeData = await ApiService.getChatTheme(widget.chatRoom.chatId);
+      if (themeData.containsKey('themeIndex') &&
+          themeData.containsKey('isDark')) {
+        final apiThemeIndex = themeData['themeIndex'] ?? 0;
+        final apiIsDark = themeData['isDark'] ?? true;
+
+        // Only update if different from cache
+        if (apiThemeIndex != _selectedTheme || apiIsDark != _isDarkMode) {
+          setState(() {
+            _selectedTheme = apiThemeIndex;
+            _isDarkMode = apiIsDark;
+            _themeMode = _isDarkMode ? ThemeMode.dark : ThemeMode.light;
+            _committedTheme = _selectedTheme;
+            _committedThemeMode = _themeMode;
+          });
+
+          // Update cache with fresh data
+          await ChatCacheService.saveChatTheme(
+              widget.chatRoom.chatId, _selectedTheme, _isDarkMode);
+        }
+      }
     } catch (e) {
-      print('❌ Failed to load chat theme from API: $e');
-      // Optionally show a message or fallback to defaults
+      print('❌ Failed to load chat theme: $e');
+      // Fallback to defaults already set in initState
     }
   }
 
@@ -98,6 +238,7 @@ class _URChatAppState extends State<URChatApp> {
     });
 
     try {
+      // Save to API first
       await ApiService.updateChatTheme(
         {
           "themeIndex": _selectedTheme,
@@ -105,11 +246,17 @@ class _URChatAppState extends State<URChatApp> {
         },
         widget.chatRoom.chatId,
       );
-      // Optionally show a success message
-      print('✅ Chat theme updated on server');
+
+      // Only save to cache if API call was successful
+      await ChatCacheService.saveChatTheme(
+          widget.chatRoom.chatId, _selectedTheme, _isDarkMode);
+
+      print('✅ Chat theme updated on server and cache');
     } catch (e) {
-      // Optionally show an error message
       print('❌ Failed to update chat theme: $e');
+      // Revert changes if API call fails
+      _revertThemeChanges();
+      rethrow;
     }
   }
 
@@ -355,8 +502,8 @@ class _URChatAppState extends State<URChatApp> {
         onBack: widget.onBack,
         onThemeModeChanged: _changeThemeMode,
         onThemeChanged: _changeTheme,
-        onThemeSave: _commitThemeChanges, // <-- pass this
-        onThemeCancel: _revertThemeChanges, // <-- pass this
+        onThemeSave: _commitThemeChanges,
+        onThemeCancel: _revertThemeChanges,
         isDarkMode: _isDarkMode,
         selectedTheme: _selectedTheme,
         themeNames: _themeNames,
@@ -456,18 +603,65 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 
   void _loadInitialMessages() async {
     try {
-      int _pageSize = 20;
-      final messages = await ApiService.getPaginatedMessages(
-          widget.chatRoom.chatId, 0, _pageSize);
-      messages.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+      setState(() {
+        _isLoading = true;
+      });
 
-      if (mounted) {
+      // First try to load from cache
+      final cachedMessages =
+          await ChatCacheService.loadChatMessages(widget.chatRoom.chatId);
+
+      if (cachedMessages != null && cachedMessages.isNotEmpty) {
         setState(() {
-          _messages.addAll(messages);
+          _messages.addAll(cachedMessages);
           _isLoading = false;
         });
+
+        // Scroll to bottom after loading cached messages
         WidgetsBinding.instance.addPostFrameCallback((_) {
           _scrollToBottom();
+        });
+      }
+
+      // Then load fresh data from API
+      final int _pageSize = 20;
+      final freshMessages = await ApiService.getPaginatedMessages(
+          widget.chatRoom.chatId, 0, _pageSize);
+
+      if (freshMessages.isNotEmpty) {
+        freshMessages.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+
+        // Merge fresh messages with cached messages
+        final Set<int> existingMessageIds =
+            _messages.map((msg) => msg.id).toSet();
+        final List<Message> newMessages = [];
+
+        for (final message in freshMessages) {
+          if (!existingMessageIds.contains(message.id)) {
+            newMessages.add(message);
+          }
+        }
+
+        if (mounted) {
+          setState(() {
+            _messages.addAll(newMessages);
+            _isLoading = false;
+          });
+
+          // Save updated messages to cache
+          if (_messages.isNotEmpty) {
+            await ChatCacheService.saveChatMessages(
+                widget.chatRoom.chatId, _messages);
+          }
+
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _scrollToBottom();
+          });
+        }
+      } else if (cachedMessages == null) {
+        // No cached messages and no fresh messages
+        setState(() {
+          _isLoading = false;
         });
       }
     } catch (e) {
@@ -522,6 +716,12 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       setState(() {
         _messages.add(message);
       });
+
+      // Update cache when new message is added
+      if (_messages.length <= 20) {
+        // Only cache if we have reasonable number of messages
+        ChatCacheService.saveChatMessages(widget.chatRoom.chatId, _messages);
+      }
 
       if (_scrollController.position.pixels >=
           _scrollController.position.maxScrollExtent - 100) {

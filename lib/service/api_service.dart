@@ -8,7 +8,7 @@ import 'package:urchat_back_testing/model/user.dart';
 import 'storage_service.dart';
 
 class ApiService {
-  static const String baseUrl = 'http://localhost:8080';
+  static const String baseUrl = 'http://192.168.0.102:8080';
   static final StorageService _storage = StorageService();
 
   static Future<void> init() async {
