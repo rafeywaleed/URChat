@@ -28,6 +28,8 @@ class AuthResponse {
   final String username;
   final String email;
   final String fullName;
+  final DateTime accessTokenExpiry;
+  final DateTime refreshTokenExpiry;
 
   AuthResponse({
     required this.accessToken,
@@ -35,6 +37,8 @@ class AuthResponse {
     required this.username,
     required this.email,
     required this.fullName,
+    required this.accessTokenExpiry,
+    required this.refreshTokenExpiry,
   });
 
   factory AuthResponse.fromJson(Map<String, dynamic> json) {
@@ -44,6 +48,8 @@ class AuthResponse {
       username: json['username'] ?? '',
       email: json['email'] ?? '',
       fullName: json['fullName'] ?? '',
+      accessTokenExpiry: DateTime.parse(json['accessTokenExpiry']),
+      refreshTokenExpiry: DateTime.parse(json['refreshTokenExpiry']),
     );
   }
 
@@ -54,6 +60,8 @@ class AuthResponse {
       'username': username,
       'email': email,
       'fullName': fullName,
+      'accessTokenExpiry': accessTokenExpiry.toIso8601String(),
+      'refreshTokenExpiry': refreshTokenExpiry.toIso8601String(),
     };
   }
 }
@@ -119,23 +127,30 @@ class RegisterRequest {
 class TokenRefreshResponse {
   final String refreshToken;
   final String accessToken;
+  final DateTime accessTokenExpiry;
+  final DateTime refreshTokenExpiry;
 
   TokenRefreshResponse({
     required this.refreshToken,
     required this.accessToken,
+    required this.accessTokenExpiry,
+    required this.refreshTokenExpiry,
   });
 
   factory TokenRefreshResponse.fromJson(Map<String, dynamic> json) {
     return TokenRefreshResponse(
-      refreshToken: json['refreshToken'] ?? '',
-      accessToken: json['accessToken'] ?? '',
-    );
+        refreshToken: json['refreshToken'] ?? '',
+        accessToken: json['accessToken'] ?? '',
+        accessTokenExpiry: DateTime.parse(json['accessTokenExpiry']),
+        refreshTokenExpiry: DateTime.parse(json['refreshTokenExpiry']));
   }
 
   Map<String, dynamic> toJson() {
     return {
       'refreshToken': refreshToken,
       'accessToken': accessToken,
+      'accessTokenExpiry': accessTokenExpiry.toIso8601String(),
+      'refreshTokenExpiry': refreshTokenExpiry.toIso8601String(),
     };
   }
 }

@@ -123,9 +123,15 @@ class _HomescreenState extends State<Homescreen>
   }
 
   void _loadFreshChats() async {
+    print('🔄 Fetching fresh chats from API...');
     try {
       final chats = await ApiService.getUserChats();
       chats.sort((a, b) => b.lastActivity.compareTo(a.lastActivity));
+
+      for (var chat in chats) {
+        print(
+            '   Chat: ${chat.chatName}, Chat ID: ${chat.chatId}, pfp: ${chat.pfpIndex}, bg: ${chat.pfpBg}');
+      }
 
       // Cache the chats
       await LocalCacheService.cacheChats(chats);
@@ -431,6 +437,7 @@ class _HomescreenState extends State<Homescreen>
   }
 
   Widget _buildChatsList() {
+    print("🔍 Building chats list UI...");
     return Container(
       width: _isLargeScreen ? 350 : double.infinity,
       decoration: BoxDecoration(
