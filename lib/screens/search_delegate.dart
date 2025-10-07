@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:urchat_back_testing/model/user.dart';
 import 'package:urchat_back_testing/service/api_service.dart';
 
@@ -9,6 +10,7 @@ class SearchScreen extends StatefulWidget {
 }
 
 class _SearchScreenState extends State<SearchScreen> {
+  final ApiService apiService = Get.find<ApiService>();
   final TextEditingController _searchController = TextEditingController();
   Timer? _debounce;
   List<User> _searchResults = [];
@@ -39,7 +41,7 @@ class _SearchScreenState extends State<SearchScreen> {
     });
 
     try {
-      final results = await ApiService.searchUsers(query);
+      final results = await apiService.searchUsers(query);
       setState(() {
         _searchResults = results.cast<User>();
         _isSearching = false;
@@ -54,7 +56,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
   void _startChat(User user) async {
     try {
-      final chat = await ApiService.createIndividualChat(user.username);
+      final chat = await apiService.createIndividualChat(user.username);
       Navigator.pop(context, chat);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(

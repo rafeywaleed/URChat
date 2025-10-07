@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:get/get_core/src/get_main.dart';
 import 'package:urchat_back_testing/screens/home_screen.dart';
 import 'package:urchat_back_testing/service/api_service.dart';
 
@@ -13,6 +15,7 @@ class _AuthScreenState extends State<AuthScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _fullNameController = TextEditingController();
+  final ApiService apiService = Get.find<ApiService>();
   bool _isLogin = true;
   bool _isLoading = false;
 
@@ -28,10 +31,10 @@ class _AuthScreenState extends State<AuthScreen> {
 
     try {
       if (_isLogin) {
-        await ApiService.login(
+        await apiService.login(
             _usernameController.text, _passwordController.text);
       } else {
-        await ApiService.register(
+        await apiService.register(
           _usernameController.text,
           _emailController.text,
           _passwordController.text,

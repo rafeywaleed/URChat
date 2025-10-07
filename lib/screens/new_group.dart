@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:urchat_back_testing/model/dto.dart';
 import 'package:urchat_back_testing/model/user.dart';
 import 'package:urchat_back_testing/service/api_service.dart';
@@ -21,6 +22,8 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
   bool _isSearching = false;
   bool _isCreating = false;
 
+  final ApiService apiService = Get.find<ApiService>();
+
   @override
   void initState() {
     super.initState();
@@ -41,13 +44,13 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
     });
 
     try {
-      final users = await ApiService.searchUsers(query);
+      final users = await apiService.searchUsers(query);
       // Filter out already selected users and current user
       final filteredUsers = users
           .where((user) =>
               !_selectedUsers
                   .any((selected) => selected.username == user.username) &&
-              user.username != ApiService.currentUsername)
+              user.username != apiService.currentUsername)
           .toList();
 
       setState(() {
@@ -99,7 +102,7 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
     try {
       final participantUsernames =
           _selectedUsers.map((user) => user.username).toList();
-      final newGroup = await ApiService.createGroup(
+      final newGroup = await apiService.createGroup(
         _groupNameController.text.trim(),
         participantUsernames,
       );

@@ -9,10 +9,11 @@ class LocalCacheService {
   factory LocalCacheService() => _instance;
   LocalCacheService._internal();
 
-  static late SharedPreferences _prefs;
+  late SharedPreferences _prefs;
 
-  static Future<void> init() async {
+  Future<LocalCacheService> init() async {
     _prefs = await SharedPreferences.getInstance();
+    return this;
   }
 
   // Chat Rooms Cache
@@ -20,15 +21,14 @@ class LocalCacheService {
   static const String _chatsTimestampKey = 'chats_timestamp';
 
   // Messages Cache - per chat
-  static String _messagesKey(String chatId) => 'cached_messages_$chatId';
-  static String _messagesTimestampKey(String chatId) =>
-      'messages_timestamp_$chatId';
+  String _messagesKey(String chatId) => 'cached_messages_$chatId';
+  String _messagesTimestampKey(String chatId) => 'messages_timestamp_$chatId';
 
   // Cache duration (5 minutes)
   static const Duration _cacheDuration = Duration(minutes: 5);
 
   // Save chats to cache
-  static Future<void> cacheChats(List<ChatRoom> chats) async {
+  Future<void> cacheChats(List<ChatRoom> chats) async {
     final chatsJson = chats.map((chat) => chat.toJson()).toList();
     await _prefs.setString(_chatsKey, json.encode(chatsJson));
     await _prefs.setInt(
@@ -36,7 +36,7 @@ class LocalCacheService {
   }
 
   // Get cached chats
-  static Future<List<ChatRoom>?> getCachedChats() async {
+  Future<List<ChatRoom>?> getCachedChats() async {
     final timestamp = _prefs.getInt(_chatsTimestampKey);
     if (timestamp == null) return null;
 
@@ -58,8 +58,7 @@ class LocalCacheService {
   }
 
   // Save messages to cache
-  static Future<void> cacheMessages(
-      String chatId, List<Message> messages) async {
+  Future<void> cacheMessages(String chatId, List<Message> messages) async {
     final messagesJson = messages.map((msg) => msg.toJson()).toList();
     await _prefs.setString(_messagesKey(chatId), json.encode(messagesJson));
     await _prefs.setInt(
@@ -67,7 +66,7 @@ class LocalCacheService {
   }
 
   // Get cached messages
-  static Future<List<Message>?> getCachedMessages(String chatId) async {
+  Future<List<Message>?> getCachedMessages(String chatId) async {
     final timestamp = _prefs.getInt(_messagesTimestampKey(chatId));
     if (timestamp == null) return null;
 
@@ -89,18 +88,18 @@ class LocalCacheService {
   }
 
   // Clear specific cache
-  static Future<void> clearChatCache() async {
+  Future<void> clearChatCache() async {
     await _prefs.remove(_chatsKey);
     await _prefs.remove(_chatsTimestampKey);
   }
 
-  static Future<void> clearMessagesCache(String chatId) async {
+  Future<void> clearMessagesCache(String chatId) async {
     await _prefs.remove(_messagesKey(chatId));
     await _prefs.remove(_messagesTimestampKey(chatId));
   }
 
   // Clear all cache
-  static Future<void> clearAllCache() async {
+  Future<void> clearAllCache() async {
     final keys = _prefs.getKeys();
     for (final key in keys) {
       if (key.startsWith('cached_') || key.contains('timestamp')) {

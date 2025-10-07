@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:stomp_dart_client/stomp_dart_client.dart';
 import 'package:urchat_back_testing/model/ChatRoom.dart';
 import 'package:urchat_back_testing/model/message.dart';
@@ -25,8 +26,17 @@ class WebSocketService {
     required this.onReadReceipt,
   });
 
+  @override
+  Future<WebSocketService> onInit() async {
+    print('🔄 Initializing WebSocketService...');
+    connect();
+    return this;
+  }
+
+  final ApiService apiService = Get.find<ApiService>();
+
   void connect() {
-    final token = ApiService.accessToken;
+    final token = apiService.accessToken;
     if (token == null) {
       print('❌ No access token available for WebSocket connection');
       return;

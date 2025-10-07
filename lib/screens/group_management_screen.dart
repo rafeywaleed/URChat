@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:urchat_back_testing/model/ChatRoom.dart';
 import 'package:urchat_back_testing/model/dto.dart';
 import 'package:urchat_back_testing/screens/group_pfp_dialog.dart';
@@ -17,21 +18,23 @@ class _GroupManagementScreenState extends State<GroupManagementScreen> {
   late Future<GroupChatRoomDTO> _groupDetailsFuture;
   final TextEditingController _searchController = TextEditingController();
 
+  final ApiService apiService = Get.find<ApiService>();
+
   @override
   void initState() {
     super.initState();
-    _groupDetailsFuture = ApiService.getGroupDetails(widget.group.chatId);
+    _groupDetailsFuture = apiService.getGroupDetails(widget.group.chatId);
   }
 
   void _refreshGroupDetails() {
     setState(() {
-      _groupDetailsFuture = ApiService.getGroupDetails(widget.group.chatId);
+      _groupDetailsFuture = apiService.getGroupDetails(widget.group.chatId);
     });
   }
 
   Future<void> _inviteUser(String username) async {
     try {
-      await ApiService.inviteToGroup(widget.group.chatId, username);
+      await apiService.inviteToGroup(widget.group.chatId, username);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Invitation sent to $username')),
       );
@@ -65,7 +68,7 @@ class _GroupManagementScreenState extends State<GroupManagementScreen> {
 
     if (confirmed == true) {
       try {
-        await ApiService.removeFromGroup(widget.group.chatId, username);
+        await apiService.removeFromGroup(widget.group.chatId, username);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('User removed from group')),
         );
@@ -99,7 +102,7 @@ class _GroupManagementScreenState extends State<GroupManagementScreen> {
 
     if (confirmed == true) {
       try {
-        await ApiService.leaveGroup(widget.group.chatId);
+        await apiService.leaveGroup(widget.group.chatId);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('You left the group')),
         );
@@ -114,7 +117,7 @@ class _GroupManagementScreenState extends State<GroupManagementScreen> {
 
   // Helper method to check if current user is admin
   bool _isCurrentUserAdmin(GroupChatRoomDTO groupDetails) {
-    return groupDetails.adminUsername == ApiService.currentUsername;
+    return groupDetails.adminUsername == apiService.currentUsername;
   }
 
   Widget _buildMemberList(GroupChatRoomDTO groupDetails) {

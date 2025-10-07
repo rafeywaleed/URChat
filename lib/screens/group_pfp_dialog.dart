@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:urchat_back_testing/model/ChatRoom.dart';
 import 'package:urchat_back_testing/service/api_service.dart';
 
@@ -15,6 +16,8 @@ class _GroupPfpDialogState extends State<GroupPfpDialog> {
   late String _selectedPfpIndex;
   late String _selectedPfpBg;
   bool _isUpdating = false;
+
+  final ApiService apiService = Get.find<ApiService>();
 
   final List<String> _emojiOptions = [
     '👥',
@@ -58,7 +61,7 @@ class _GroupPfpDialogState extends State<GroupPfpDialog> {
     });
 
     try {
-      final updatedGroup = await ApiService.updateGroupPfp(
+      final updatedGroup = await apiService.updateGroupPfp(
         widget.group.chatId,
         _selectedPfpIndex,
         _selectedPfpBg,

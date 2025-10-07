@@ -1,6 +1,8 @@
+// service/storage_service.dart
+import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class StorageService {
+class StorageService extends GetxService {
   static final StorageService _instance = StorageService._internal();
   factory StorageService() => _instance;
   StorageService._internal();
@@ -13,8 +15,17 @@ class StorageService {
 
   late SharedPreferences _prefs;
 
-  Future<void> init() async {
-    _prefs = await SharedPreferences.getInstance();
+  @override
+  Future<StorageService> init() async {
+    print('🔄 Initializing StorageService...');
+    try {
+      _prefs = await SharedPreferences.getInstance();
+      print('✅ StorageService initialized successfully');
+      return this;
+    } catch (e) {
+      print('❌ Error initializing StorageService: $e');
+      rethrow;
+    }
   }
 
   Future<void> saveAuthData({

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:urchat_back_testing/service/api_service.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -53,6 +54,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Map<String, dynamic>? _userData;
   String? _email;
 
+  final ApiService apiService = Get.find<ApiService>();
+
   @override
   void initState() {
     super.initState();
@@ -70,7 +73,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     });
 
     try {
-      final userData = await ApiService.getCurrentUserProfile();
+      final userData = await apiService.getCurrentUserProfile();
       setState(() {
         _userData = userData;
         _fullNameController.text = userData['fullName'] ?? '';
@@ -127,7 +130,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     });
 
     try {
-      await ApiService.updateProfile({
+      await apiService.updateProfile({
         'fullName': _fullNameController.text,
         'bio': _bioController.text,
         'pfpIndex': _selectedEmoji,
@@ -296,7 +299,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
         SizedBox(height: 16),
         Text(
-          _userData?['username'] ?? ApiService.currentUsername ?? 'Unknown',
+          _userData?['username'] ?? apiService.currentUsername ?? 'Unknown',
           style: TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.bold,

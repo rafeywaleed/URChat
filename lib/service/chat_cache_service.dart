@@ -8,7 +8,6 @@ class ChatCacheService {
   static const String _messagesPrefix = 'chat_messages_';
   static const int _maxCachedMessages = 20;
 
-  // Save theme for a specific chat
   static Future<void> saveChatTheme(
       String chatId, int themeIndex, bool isDark) async {
     try {

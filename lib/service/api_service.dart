@@ -1,4 +1,6 @@
+// service/api_service.dart - Convert to instance-based
 import 'dart:convert';
+import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:urchat_back_testing/model/ChatRoom.dart';
 import 'package:urchat_back_testing/model/dto.dart';
@@ -6,38 +8,59 @@ import 'package:urchat_back_testing/model/message.dart';
 import 'package:urchat_back_testing/model/user.dart';
 import 'storage_service.dart';
 
-class ApiService {
+class ApiService extends GetxService {
+  final StorageService _storage = Get.find<StorageService>();
+
   static const String baseUrl = 'http://192.168.0.102:8081';
-  static final StorageService _storage = StorageService();
 
-  static String? accessToken;
-  static String? refreshToken;
-  static String? currentUsername;
+  String? accessToken;
+  String? refreshToken;
+  String? currentUsername;
 
-  static Future<void> init() async {
-    await _storage.init();
-    accessToken = _storage.accessToken;
-    refreshToken = _storage.refreshToken;
-    currentUsername = _storage.currentUsername;
+  @override
+  Future<ApiService> onInit() async {
+    print('🔄 Initializing ApiService...');
+    try {
+      // Wait for StorageService to be ready
+      final storageService = Get.find<StorageService>();
+
+      accessToken = storageService.accessToken;
+      refreshToken = storageService.refreshToken;
+      currentUsername = storageService.currentUsername;
+
+      print('✅ ApiService initialized successfully');
+      print('   Access Token: ${accessToken != null ? "Present" : "Null"}');
+      print('   Refresh Token: ${refreshToken != null ? "Present" : "Null"}');
+      print('   Username: $currentUsername');
+
+      return this;
+    } catch (e) {
+      print('❌ Error initializing ApiService: $e');
+      rethrow;
+    }
   }
 
-  static Map<String, String> get headers {
+  Map<String, String> get headers {
     return {
       'Content-Type': 'application/json',
       if (accessToken != null) 'Authorization': 'Bearer $accessToken',
     };
   }
 
-  static bool get isAuthenticated {
+  bool get isAuthenticated {
+    final storageService = Get.find<StorageService>();
     return accessToken != null &&
         refreshToken != null &&
-        !_storage.isRefreshTokenExpired;
+        !storageService.isRefreshTokenExpired;
   }
 
-  static bool get hasStoredAuth => _storage.isLoggedIn;
+  bool get hasStoredAuth {
+    final storageService = Get.find<StorageService>();
+    return storageService.isLoggedIn;
+  }
 
   // ============ AUTH METHODS ============
-  static Future<AuthResponse> register(
+  Future<AuthResponse> register(
       String username, String email, String password, String fullName) async {
     final response = await http.post(
       Uri.parse('$baseUrl/auth/register'),
@@ -62,7 +85,7 @@ class ApiService {
     }
   }
 
-  static Future<AuthResponse> login(String username, String password) async {
+  Future<AuthResponse> login(String username, String password) async {
     final response = await http.post(
       Uri.parse('$baseUrl/auth/login'),
       headers: headers,
@@ -81,7 +104,7 @@ class ApiService {
     }
   }
 
-  static Future<void> logout() async {
+  Future<void> logout() async {
     try {
       await http.post(
         Uri.parse('$baseUrl/auth/logout'),
@@ -98,7 +121,7 @@ class ApiService {
   }
 
   // ============ CHAT METHODS ============
-  static Future<List<ChatRoom>> getUserChats() async {
+  Future<List<ChatRoom>> getUserChats() async {
     final response = await _makeAuthenticatedRequest(() async {
       return await http.get(
         Uri.parse('$baseUrl/chat/chats'),
@@ -114,7 +137,7 @@ class ApiService {
     }
   }
 
-  static Future<ChatRoomDTO> createIndividualChat(String withUser) async {
+  Future<ChatRoomDTO> createIndividualChat(String withUser) async {
     final response = await _makeAuthenticatedRequest(() async {
       return await http.post(
         Uri.parse('$baseUrl/chat/individual?withUser=$withUser'),
@@ -129,7 +152,7 @@ class ApiService {
     }
   }
 
-  static Future<List<Message>> getChatMessages(String chatId) async {
+  Future<List<Message>> getChatMessages(String chatId) async {
     final response = await _makeAuthenticatedRequest(() async {
       return await http.get(
         Uri.parse('$baseUrl/chat/$chatId/messages'),
@@ -145,7 +168,7 @@ class ApiService {
     }
   }
 
-  static Future<List<Message>> getPaginatedMessages(
+  Future<List<Message>> getPaginatedMessages(
       String chatId, int page, int size) async {
     final response = await _makeAuthenticatedRequest(() async {
       return await http.get(
@@ -165,7 +188,7 @@ class ApiService {
   }
 
   // ============ USER METHODS ============
-  static Future<List<User>> searchUsers(String query) async {
+  Future<List<User>> searchUsers(String query) async {
     if (query.length < 2) return [];
 
     final response = await _makeAuthenticatedRequest(() async {
@@ -185,7 +208,7 @@ class ApiService {
     }
   }
 
-  static Future<Map<String, dynamic>> getCurrentUserProfile() async {
+  Future<Map<String, dynamic>> getCurrentUserProfile() async {
     final response = await _makeAuthenticatedRequest(() async {
       return await http.get(
         Uri.parse('$baseUrl/users/self/profile'),
@@ -200,7 +223,7 @@ class ApiService {
     }
   }
 
-  static Future<Map<String, dynamic>> getUserProfile(String username) async {
+  Future<Map<String, dynamic>> getUserProfile(String username) async {
     final response = await _makeAuthenticatedRequest(() async {
       return await http.get(
         Uri.parse('$baseUrl/users/$username/profile'),
@@ -215,7 +238,7 @@ class ApiService {
     }
   }
 
-  static Future<void> updateProfile(Map<String, dynamic> profileData) async {
+  Future<void> updateProfile(Map<String, dynamic> profileData) async {
     final response = await _makeAuthenticatedRequest(() async {
       return await http.put(
         Uri.parse('$baseUrl/users/profile'),
@@ -230,7 +253,7 @@ class ApiService {
   }
 
   // ============ GROUP METHODS ============
-  static Future<GroupChatRoomDTO> createGroup(
+  Future<GroupChatRoomDTO> createGroup(
       String name, List<String> participants) async {
     final response = await _makeAuthenticatedRequest(() async {
       return await http.post(
@@ -250,7 +273,7 @@ class ApiService {
     }
   }
 
-  static Future<GroupChatRoomDTO> updateGroupPfp(
+  Future<GroupChatRoomDTO> updateGroupPfp(
       String chatId, String pfpIndex, String pfpBg) async {
     final response = await _makeAuthenticatedRequest(() async {
       return await http.put(
@@ -270,7 +293,7 @@ class ApiService {
     }
   }
 
-  static Future<GroupChatRoomDTO> getGroupDetails(String chatId) async {
+  Future<GroupChatRoomDTO> getGroupDetails(String chatId) async {
     final response = await _makeAuthenticatedRequest(() async {
       return await http.get(
         Uri.parse('$baseUrl/chat/group/$chatId/details'),
@@ -285,8 +308,7 @@ class ApiService {
     }
   }
 
-  static Future<void> inviteToGroup(
-      String chatId, String inviteeUsername) async {
+  Future<void> inviteToGroup(String chatId, String inviteeUsername) async {
     final response = await _makeAuthenticatedRequest(() async {
       return await http.post(
         Uri.parse(
@@ -300,8 +322,7 @@ class ApiService {
     }
   }
 
-  static Future<void> removeFromGroup(
-      String chatId, String removeUsername) async {
+  Future<void> removeFromGroup(String chatId, String removeUsername) async {
     final response = await _makeAuthenticatedRequest(() async {
       return await http.post(
         Uri.parse(
@@ -315,7 +336,7 @@ class ApiService {
     }
   }
 
-  static Future<void> leaveGroup(String chatId) async {
+  Future<void> leaveGroup(String chatId) async {
     final response = await _makeAuthenticatedRequest(() async {
       return await http.post(
         Uri.parse('$baseUrl/chat/group/$chatId/leave'),
@@ -328,7 +349,7 @@ class ApiService {
     }
   }
 
-  static Future<List<ChatRoom>> searchGroups(String name) async {
+  Future<List<ChatRoom>> searchGroups(String name) async {
     final response = await _makeAuthenticatedRequest(() async {
       return await http.get(
         Uri.parse(
@@ -345,7 +366,7 @@ class ApiService {
     }
   }
 
-  static Future<List<ChatRoom>> getGroupInvitations() async {
+  Future<List<ChatRoom>> getGroupInvitations() async {
     final response = await _makeAuthenticatedRequest(() async {
       return await http.get(
         Uri.parse('$baseUrl/chat/group/invitations'),
@@ -361,7 +382,7 @@ class ApiService {
     }
   }
 
-  static Future<void> acceptGroupInvitation(String chatId) async {
+  Future<void> acceptGroupInvitation(String chatId) async {
     final response = await _makeAuthenticatedRequest(() async {
       return await http.post(
         Uri.parse('$baseUrl/chat/group/$chatId/accept'),
@@ -374,7 +395,7 @@ class ApiService {
     }
   }
 
-  static Future<void> declineGroupInvitation(String chatId) async {
+  Future<void> declineGroupInvitation(String chatId) async {
     final response = await _makeAuthenticatedRequest(() async {
       return await http.post(
         Uri.parse('$baseUrl/chat/group/$chatId/decline'),
@@ -388,7 +409,7 @@ class ApiService {
   }
 
   // ============ THEME METHODS ============
-  static Future<void> updateChatTheme(
+  Future<void> updateChatTheme(
       Map<String, dynamic> chatTheme, String chatId) async {
     final response = await _makeAuthenticatedRequest(() async {
       return await http.put(
@@ -403,7 +424,7 @@ class ApiService {
     }
   }
 
-  static Future<Map<String, dynamic>> getChatTheme(String chatId) async {
+  Future<Map<String, dynamic>> getChatTheme(String chatId) async {
     final response = await _makeAuthenticatedRequest(() async {
       return await http.get(
         Uri.parse('$baseUrl/chat/theme/$chatId'),
@@ -419,7 +440,7 @@ class ApiService {
   }
 
   // ============ CORE AUTH LOGIC ============
-  static Future<http.Response> _makeAuthenticatedRequest(
+  Future<http.Response> _makeAuthenticatedRequest(
     Future<http.Response> Function() requestFn,
   ) async {
     // Check if we need to refresh access token before making request
@@ -448,7 +469,7 @@ class ApiService {
     return response;
   }
 
-  static Future<bool> _refreshAccessToken() async {
+  Future<bool> _refreshAccessToken() async {
     try {
       print('🔄 Refreshing access token...');
 
@@ -482,7 +503,7 @@ class ApiService {
   }
 
   // ============ HELPER METHODS ============
-  static Future<void> _saveAuthData(AuthResponse authResponse) async {
+  Future<void> _saveAuthData(AuthResponse authResponse) async {
     await _storage.saveAuthData(
       accessToken: authResponse.accessToken,
       refreshToken: authResponse.refreshToken,
@@ -495,7 +516,7 @@ class ApiService {
     currentUsername = authResponse.username;
   }
 
-  static Future<void> _saveTokenData(TokenRefreshResponse tokenResponse) async {
+  Future<void> _saveTokenData(TokenRefreshResponse tokenResponse) async {
     await _storage.saveAuthData(
       accessToken: tokenResponse.accessToken,
       refreshToken: tokenResponse.refreshToken,

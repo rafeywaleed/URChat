@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:urchat_back_testing/model/ChatRoom.dart';
@@ -57,6 +58,8 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 
   late int _selectedTheme;
   late bool _isDarkMode;
+
+  final ApiService apiService = Get.find<ApiService>();
 
   @override
   void initState() {
@@ -121,7 +124,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         _hasMoreMessages = true;
       });
 
-      final messages = await ApiService.getPaginatedMessages(
+      final messages = await apiService.getPaginatedMessages(
           widget.chatRoom.chatId, 0, _pageSize);
 
       messages.sort((a, b) => a.timestamp.compareTo(b.timestamp));
@@ -153,7 +156,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       });
 
       final nextPage = _currentPage + 1;
-      final messages = await ApiService.getPaginatedMessages(
+      final messages = await apiService.getPaginatedMessages(
           widget.chatRoom.chatId, nextPage, _pageSize);
 
       if (messages.isNotEmpty) {
@@ -231,7 +234,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 
       if (mounted) {
         setState(() {
-          if (isTyping && username != ApiService.currentUsername) {
+          if (isTyping && username != apiService.currentUsername) {
             _typingUsers[username] = {
               'username': username,
               'profile': userProfile ??
@@ -319,7 +322,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   }
 
   Widget _buildMessageBubble(Message message, int index) {
-    final isOwnMessage = message.sender == ApiService.currentUsername;
+    final isOwnMessage = message.sender == apiService.currentUsername;
     final showAvatar = !isOwnMessage;
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
@@ -846,7 +849,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   // THEMING METHODS
   Future<void> _changeTheme(int themeIndex) async {
     try {
-      await ApiService.updateChatTheme({
+      await apiService.updateChatTheme({
         'themeIndex': themeIndex,
         'isDark': widget.chatRoom.isDark,
       }, widget.chatRoom.chatId);
@@ -875,7 +878,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     try {
       final newDarkMode = !widget.chatRoom.isDark;
 
-      await ApiService.updateChatTheme({
+      await apiService.updateChatTheme({
         'themeIndex': widget.chatRoom.themeIndex,
         'isDark': newDarkMode,
       }, widget.chatRoom.chatId);
@@ -1007,7 +1010,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 
   // Future<void> _loadChatTheme() async {
   //   try {
-  //     final chatTheme = await ApiService.getChatTheme(widget.chatRoom.chatId);
+  //     final chatTheme = await apiService.getChatTheme(widget.chatRoom.chatId);
   //     if (chatTheme.containsKey('themeIndex')) {
   //       final themeIndex = chatTheme['themeIndex'] as int;
   //       final isDark = chatTheme['isDark'] as bool? ?? false;
