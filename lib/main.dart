@@ -114,4 +114,3 @@ Future<User> getUserProfile(String username) async {
   }
 }
 
-// Extension for API service

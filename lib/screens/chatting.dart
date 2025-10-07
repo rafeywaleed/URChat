@@ -44,7 +44,7 @@ class _URChatAppState extends State<URChatApp> {
 
   final List<ThemeData> _lightThemes = [];
   final List<ThemeData> _darkThemes = [];
-  final List<String> _themeNames = ['Cute', 'Modern', 'Elegant'];
+  final List<String> _themeNames = ['Simple', 'Modern', 'Elegant', 'Cute'];
 
   @override
   void initState() {
@@ -163,78 +163,163 @@ class _URChatAppState extends State<URChatApp> {
     _lightThemes.clear();
     _darkThemes.clear();
 
-    // Theme 0: Cute
+    // ---------------------
+    // Theme 0: SIMPLE (Default)
+    // ---------------------
+// ---------- MONO MINIMAL THEME ---------- //
+
     _lightThemes.add(ThemeData(
-      primaryColor: const Color(0xFFE91E63),
-      colorScheme: const ColorScheme.light(
-        primary: Color(0xFFE91E63),
-        secondary: Color(0xFFEC407A),
-        surface: Color(0xFFFFF5F7),
-        background: Color(0xFFFFF9FB),
-        onSurface: Color(0xFF333333),
+      brightness: Brightness.light,
+      useMaterial3: true,
+      primaryColor: const Color(0xFF2C2C2C),
+      scaffoldBackgroundColor: const Color(0xFFF8F9FA),
+      colorScheme: ColorScheme.light(
+        primary: const Color(0xFF2C2C2C),
+        secondary: const Color(0xFF555555),
+        surface: Colors.white,
+        background: const Color(0xFFF8F9FA),
+        onSurface: const Color(0xFF2C2C2C),
+        onBackground: const Color(0xFF2C2C2C),
+        onPrimary: Colors.white,
+        onSecondary: Colors.white,
       ),
-      textTheme: GoogleFonts.poppinsTextTheme().apply(
-        bodyColor: const Color(0xFF333333),
-        displayColor: const Color(0xFF333333),
+      textTheme: GoogleFonts.interTextTheme().apply(
+        bodyColor: const Color(0xFF2C2C2C),
+        displayColor: const Color(0xFF2C2C2C),
       ),
       cardTheme: CardThemeData(
-        elevation: 1,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         color: Colors.white,
-      ),
-      floatingActionButtonTheme: const FloatingActionButtonThemeData(
-        backgroundColor: Color(0xFFE91E63),
-        elevation: 4,
+        elevation: 1,
+        margin: const EdgeInsets.all(8),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: Colors.grey[300]!, width: 0.5),
+        ),
       ),
       appBarTheme: AppBarTheme(
-        backgroundColor: const Color(0xFFE91E63),
-        elevation: 0,
+        backgroundColor: const Color(0xFF2C2C2C),
+        elevation: 1,
         centerTitle: true,
-        titleTextStyle: GoogleFonts.poppins(
-          fontSize: 20,
-          fontWeight: FontWeight.w600,
+        titleTextStyle: GoogleFonts.inter(
           color: Colors.white,
+          fontSize: 18,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.2,
+        ),
+        // FIX: Online status text color
+        toolbarTextStyle: TextStyle(
+          color: Colors.white
+              .withOpacity(0.8), // This will make online status visible
         ),
         iconTheme: const IconThemeData(color: Colors.white),
+      ),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: const Color(0xFF2C2C2C),
+        foregroundColor: Colors.white,
+        elevation: 2,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+      ),
+      dividerColor: const Color(0xFFE0E0E0),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: Colors.white,
+        border: OutlineInputBorder(
+          borderSide: BorderSide(color: Colors.grey[400]!, width: 1),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderSide: BorderSide(color: Colors.grey[400]!, width: 1),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderSide: const BorderSide(color: Color(0xFF2C2C2C), width: 1.5),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),
     ));
 
     _darkThemes.add(ThemeData(
-      primaryColor: const Color(0xFFEC407A),
-      colorScheme: const ColorScheme.dark(
-        primary: Color(0xFFEC407A),
-        secondary: Color(0xFFF06292),
-        surface: Color(0xFF1E1E2E),
-        background: Color(0xFF121212),
-        onSurface: Color(0xFFE0E0E0),
+      brightness: Brightness.dark,
+      useMaterial3: true,
+      primaryColor: const Color.fromARGB(255, 102, 102, 102),
+      scaffoldBackgroundColor: const Color(0xFF121212),
+      colorScheme: ColorScheme.dark(
+        primary: const Color.fromARGB(255, 71, 71, 71),
+        secondary: const Color(0xFFB0B0B0),
+        surface: const Color(0xFF1E1E1E),
+        background: const Color(0xFF121212),
+        onSurface: const Color(0xFFE0E0E0),
+        onBackground: const Color(0xFFE0E0E0),
+        onPrimary: const Color(0xFF121212),
+        onSecondary: const Color(0xFF121212),
       ),
-      textTheme: GoogleFonts.poppinsTextTheme().apply(
+      textTheme: GoogleFonts.interTextTheme().apply(
         bodyColor: const Color(0xFFE0E0E0),
-        displayColor: Colors.white,
+        displayColor: const Color(0xFFE0E0E0),
       ),
       cardTheme: CardThemeData(
-        elevation: 2,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        color: const Color(0xFF1E1E2E),
-      ),
-      floatingActionButtonTheme: const FloatingActionButtonThemeData(
-        backgroundColor: Color(0xFFEC407A),
-        elevation: 4,
+        color: const Color(0xFF1E1E1E),
+        elevation: 1,
+        margin: const EdgeInsets.all(8),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: Colors.grey[800]!, width: 0.5),
+        ),
       ),
       appBarTheme: AppBarTheme(
-        backgroundColor: const Color(0xFFEC407A),
-        elevation: 0,
+        backgroundColor: const Color(0xFF1E1E1E),
+        elevation: 1,
         centerTitle: true,
-        titleTextStyle: GoogleFonts.poppins(
-          fontSize: 20,
+        titleTextStyle: GoogleFonts.inter(
+          color: const Color(0xFFE0E0E0),
+          fontSize: 18,
           fontWeight: FontWeight.w600,
-          color: Colors.white,
+          letterSpacing: 0.2,
         ),
-        iconTheme: const IconThemeData(color: Colors.white),
+        // FIX: Online status text color
+        toolbarTextStyle: TextStyle(
+          color: const Color(0xFFE0E0E0)
+              .withOpacity(0.8), // This will make online status visible
+        ),
+        iconTheme: const IconThemeData(color: Color(0xFFE0E0E0)),
+      ),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: const Color(0xFFE0E0E0),
+        foregroundColor: const Color(0xFF121212),
+        elevation: 2,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+      ),
+      dividerColor: const Color(0xFF333333),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: const Color(0xFF1E1E1E),
+        border: OutlineInputBorder(
+          borderSide: BorderSide(color: Colors.grey[700]!, width: 1),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderSide: BorderSide(color: Colors.grey[700]!, width: 1),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderSide: const BorderSide(color: Color(0xFFE0E0E0), width: 1.5),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        hintStyle: const TextStyle(color: Color(0xFF888888)),
       ),
     ));
 
-    // Theme 1: Modern
+    // ---------------------
+    // Theme 1: MODERN
+    // ---------------------
     _lightThemes.add(ThemeData(
       primaryColor: const Color(0xFF2E4057),
       colorScheme: const ColorScheme.light(
@@ -245,8 +330,8 @@ class _URChatAppState extends State<URChatApp> {
         onSurface: Color(0xFF212529),
       ),
       textTheme: GoogleFonts.robotoTextTheme().apply(
-        bodyColor: const Color(0xFF212529),
-        displayColor: const Color(0xFF212529),
+        bodyColor: Color(0xFF212529),
+        displayColor: Color(0xFF212529),
       ),
       cardTheme: CardThemeData(
         elevation: 1,
@@ -280,7 +365,7 @@ class _URChatAppState extends State<URChatApp> {
         onSurface: Color(0xFFE0E0E0),
       ),
       textTheme: GoogleFonts.robotoTextTheme().apply(
-        bodyColor: const Color(0xFFE0E0E0),
+        bodyColor: Color(0xFFE0E0E0),
         displayColor: Colors.white,
       ),
       cardTheme: CardThemeData(
@@ -305,7 +390,9 @@ class _URChatAppState extends State<URChatApp> {
       ),
     ));
 
-    // Theme 2: Elegant
+    // ---------------------
+    // Theme 2: ELEGANT
+    // ---------------------
     _lightThemes.add(ThemeData(
       primaryColor: const Color(0xFF5D737E),
       colorScheme: const ColorScheme.light(
@@ -316,8 +403,8 @@ class _URChatAppState extends State<URChatApp> {
         onSurface: Color(0xFF3A3A3A),
       ),
       textTheme: GoogleFonts.robotoTextTheme().apply(
-        bodyColor: const Color(0xFF3A3A3A),
-        displayColor: const Color(0xFF3A3A3A),
+        bodyColor: Color(0xFF3A3A3A),
+        displayColor: Color(0xFF3A3A3A),
       ),
       cardTheme: CardThemeData(
         elevation: 0,
@@ -351,7 +438,7 @@ class _URChatAppState extends State<URChatApp> {
         onSurface: Color(0xFFE0E3E7),
       ),
       textTheme: GoogleFonts.robotoTextTheme().apply(
-        bodyColor: const Color(0xFFE0E3E7),
+        bodyColor: Color(0xFFE0E3E7),
         displayColor: Colors.white,
       ),
       cardTheme: CardThemeData(
@@ -371,6 +458,79 @@ class _URChatAppState extends State<URChatApp> {
         titleTextStyle: GoogleFonts.roboto(
           fontSize: 20,
           fontWeight: FontWeight.w500,
+          color: Colors.white,
+        ),
+        iconTheme: const IconThemeData(color: Colors.white),
+      ),
+    ));
+
+    // ---------------------
+    // Theme 3: CUTE
+    // ---------------------
+    _lightThemes.add(ThemeData(
+      primaryColor: const Color(0xFFE91E63),
+      colorScheme: const ColorScheme.light(
+        primary: Color(0xFFE91E63),
+        secondary: Color(0xFFEC407A),
+        surface: Color(0xFFFFF5F7),
+        background: Color(0xFFFFF9FB),
+        onSurface: Color(0xFF333333),
+      ),
+      textTheme: GoogleFonts.poppinsTextTheme().apply(
+        bodyColor: Color(0xFF333333),
+        displayColor: Color(0xFF333333),
+      ),
+      cardTheme: CardThemeData(
+        elevation: 1,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        color: Colors.white,
+      ),
+      floatingActionButtonTheme: const FloatingActionButtonThemeData(
+        backgroundColor: Color(0xFFE91E63),
+        elevation: 4,
+      ),
+      appBarTheme: AppBarTheme(
+        backgroundColor: const Color(0xFFE91E63),
+        elevation: 0,
+        centerTitle: true,
+        titleTextStyle: GoogleFonts.poppins(
+          fontSize: 20,
+          fontWeight: FontWeight.w600,
+          color: Colors.white,
+        ),
+        iconTheme: const IconThemeData(color: Colors.white),
+      ),
+    ));
+
+    _darkThemes.add(ThemeData(
+      primaryColor: const Color(0xFFEC407A),
+      colorScheme: const ColorScheme.dark(
+        primary: Color(0xFFEC407A),
+        secondary: Color(0xFFF06292),
+        surface: Color(0xFF1E1E2E),
+        background: Color(0xFF121212),
+        onSurface: Color(0xFFE0E0E0),
+      ),
+      textTheme: GoogleFonts.poppinsTextTheme().apply(
+        bodyColor: Color(0xFFE0E0E0),
+        displayColor: Colors.white,
+      ),
+      cardTheme: CardThemeData(
+        elevation: 2,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        color: const Color(0xFF1E1E2E),
+      ),
+      floatingActionButtonTheme: const FloatingActionButtonThemeData(
+        backgroundColor: Color(0xFFEC407A),
+        elevation: 4,
+      ),
+      appBarTheme: AppBarTheme(
+        backgroundColor: const Color(0xFFEC407A),
+        elevation: 0,
+        centerTitle: true,
+        titleTextStyle: GoogleFonts.poppins(
+          fontSize: 20,
+          fontWeight: FontWeight.w600,
           color: Colors.white,
         ),
         iconTheme: const IconThemeData(color: Colors.white),
@@ -800,7 +960,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
           gridSize: 40,
           skewAngle: 12,
         );
-      case 0:
+      case 3:
         return const ButterflyDemo();
       default:
         return const SizedBox.shrink();

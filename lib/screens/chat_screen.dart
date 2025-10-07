@@ -52,7 +52,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   int _pageSize = 20;
   bool _hasMoreMessages = true;
   bool _isLoadingMore = false;
-  final List<String> _themeNames = ['Modern', 'Cute', 'Elegant'];
+  final List<String> _themeNames = ['Simple' 'Modern', 'Cute', 'Elegant'];
   late final Widget _backgroundWidget;
 
   late int _selectedTheme;
@@ -986,20 +986,21 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
           duration: const Duration(seconds: 5),
           child: Container(),
         );
-      case 0: // Modern
+      case 1: // Modern
         return AnimatedGridPattern(
           key: ValueKey('modern-$isDark'),
           squares: List.generate(20, (index) => [index % 5, index ~/ 5]),
           gridSize: 40,
           skewAngle: 12,
         );
-      case 1: // Cute
+      case 3: // Cute
         return ButterflyDemo(
           key: ValueKey('cute-$isDark'),
         );
+      case 0: // Simple (new)
       default:
         return Container(
-            key: ValueKey('default-$isDark'),
+            key: ValueKey('simple-$isDark'),
             color: Theme.of(context).scaffoldBackgroundColor);
     }
   }

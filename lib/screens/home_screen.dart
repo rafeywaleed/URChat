@@ -1,5 +1,3 @@
-// ignore_for_file: use_build_context_synchronously, deprecated_member_use
-
 import 'package:flutter/material.dart';
 import 'package:urchat_back_testing/model/ChatRoom.dart';
 import 'package:urchat_back_testing/model/dto.dart';

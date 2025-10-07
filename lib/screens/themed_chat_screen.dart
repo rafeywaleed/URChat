@@ -61,13 +61,15 @@ class _ChatThemeWrapperState extends State<ChatThemeWrapper> {
 
   ThemeData _getChatTheme(int themeIndex, bool isDark) {
     switch (themeIndex) {
-      case 1: // Cute
+      case 3: // Cute
         return isDark ? _cuteDarkTheme : _cuteLightTheme;
       case 2: // Elegant
         return isDark ? _elegantDarkTheme : _elegantLightTheme;
-      case 0: // Modern (default)
-      default:
+      case 1: // Modern (default)
         return isDark ? _modernDarkTheme : _modernLightTheme;
+      case 0:
+      default: // Simple (new)
+        return isDark ? _simpleDarkTheme : _simpleLightTheme;
     }
   }
 
@@ -278,6 +280,75 @@ class _ChatThemeWrapperState extends State<ChatThemeWrapper> {
             color: Colors.white,
           ),
           iconTheme: const IconThemeData(color: Colors.white),
+        ),
+      );
+
+  // 🩶 SIMPLE THEME (NEW)
+  ThemeData get _simpleLightTheme => ThemeData.light().copyWith(
+        useMaterial3: true,
+        primaryColor: Colors.blueGrey[600],
+        colorScheme: ColorScheme.light(
+          primary: Colors.blueGrey[600]!,
+          secondary: Colors.blueGrey[400]!,
+          surface: Colors.grey[100]!,
+          background: Colors.white,
+          onSurface: Colors.grey[900]!,
+        ),
+        scaffoldBackgroundColor: Colors.white,
+        textTheme: GoogleFonts.interTextTheme(ThemeData.light().textTheme),
+        cardTheme: CardThemeData(
+          elevation: 0.5,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          color: Colors.grey[50],
+        ),
+        appBarTheme: AppBarTheme(
+          backgroundColor: Colors.blueGrey[600],
+          elevation: 0,
+          centerTitle: true,
+          titleTextStyle: GoogleFonts.inter(
+            fontSize: 18,
+            fontWeight: FontWeight.w500,
+            color: Colors.white,
+          ),
+          iconTheme: const IconThemeData(color: Colors.white),
+        ),
+        floatingActionButtonTheme: FloatingActionButtonThemeData(
+          backgroundColor: Colors.blueGrey[600],
+          elevation: 2,
+        ),
+      );
+
+  ThemeData get _simpleDarkTheme => ThemeData.dark().copyWith(
+        useMaterial3: true,
+        primaryColor: Colors.blueGrey[400],
+        colorScheme: ColorScheme.dark(
+          primary: Colors.blueGrey[400]!,
+          secondary: Colors.blueGrey[300]!,
+          surface: Colors.grey[900]!,
+          background: Colors.black,
+          onSurface: Colors.grey[200]!,
+        ),
+        scaffoldBackgroundColor: Colors.black,
+        textTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme),
+        cardTheme: CardThemeData(
+          elevation: 1,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          color: Colors.grey[850],
+        ),
+        appBarTheme: AppBarTheme(
+          backgroundColor: Colors.blueGrey[400],
+          elevation: 0,
+          centerTitle: true,
+          titleTextStyle: GoogleFonts.inter(
+            fontSize: 18,
+            fontWeight: FontWeight.w500,
+            color: Colors.white,
+          ),
+          iconTheme: const IconThemeData(color: Colors.white),
+        ),
+        floatingActionButtonTheme: FloatingActionButtonThemeData(
+          backgroundColor: Colors.blueGrey[400],
+          elevation: 2,
         ),
       );
 }
