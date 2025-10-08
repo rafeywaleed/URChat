@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:urchat_back_testing/model/ChatRoom.dart';
 import 'package:urchat_back_testing/model/dto.dart';
@@ -11,6 +14,7 @@ import 'package:urchat_back_testing/screens/search_delegate.dart';
 import 'package:urchat_back_testing/service/api_service.dart';
 import 'package:urchat_back_testing/service/local_cache_service.dart';
 import 'package:urchat_back_testing/service/websocket_service.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 class Homescreen extends StatefulWidget {
   @override
@@ -29,6 +33,19 @@ class _HomescreenState extends State<Homescreen>
   String _errorMessage = '';
   late WebSocketService _webSocketService;
   String? _selectedChatId;
+  String? _hoveredChatId;
+
+  // Theme colors based on the mono-classy palette
+  final Color _accent = const Color(0xFF4E342E);
+  final Color _secondaryAccent = const Color(0xFF6D4C41);
+  final Color _bgLight = const Color(0xFFFDFBF8);
+  final Color _surface = Colors.white;
+  final Color _mutedText = Colors.black87;
+  final Color _highlight = Color(0xFF4E342E);
+
+  // For message notifications
+  final List<Map<String, dynamic>> _messageNotifications = [];
+  OverlayEntry? _notificationOverlay;
 
   // Tab controller for chats vs invitations
   late TabController _tabController;
@@ -45,12 +62,48 @@ class _HomescreenState extends State<Homescreen>
     }
   }
 
+  final _lightTheme = ThemeData(
+    useMaterial3: true,
+    colorScheme: const ColorScheme.light(
+      primary: Color(0xFF4E342E),
+      secondary: Color(0xFF6D4C41),
+      background: Color(0xFFFDFBF8),
+      surface: Color(0xFFFFFFFF),
+      onPrimary: Colors.white,
+      onSurface: Colors.black87,
+    ),
+    scaffoldBackgroundColor: const Color(0xFFFDFBF8),
+    textTheme: const TextTheme(
+      titleLarge: TextStyle(fontWeight: FontWeight.w700, fontSize: 22),
+      bodyMedium: TextStyle(fontSize: 15, color: Colors.black87),
+    ),
+    appBarTheme: AppBarTheme(
+      backgroundColor: Colors.white.withOpacity(0.7),
+      elevation: 0,
+      titleTextStyle: const TextStyle(
+        color: Colors.black87,
+        fontWeight: FontWeight.bold,
+        fontSize: 20,
+      ),
+    ),
+    pageTransitionsTheme: const PageTransitionsTheme(
+      builders: {
+        TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+        TargetPlatform.android: CupertinoPageTransitionsBuilder(),
+      },
+    ),
+  );
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _initializeWebSocket();
     _loadInitialData();
+
+    Timer.periodic(Duration(seconds: 10), (timer) {
+      _debugSubscriptions();
+    });
   }
 
   void _initializeWebSocket() {
@@ -77,7 +130,6 @@ class _HomescreenState extends State<Homescreen>
         _isLoading = true;
       });
 
-      // Load chats and invitations in parallel
       await Future.wait([
         _loadChats(),
         _loadGroupInvitations(),
@@ -86,6 +138,9 @@ class _HomescreenState extends State<Homescreen>
       setState(() {
         _isLoading = false;
       });
+
+      // Debug: show current subscriptions
+      _debugSubscriptions();
     } catch (e) {
       print('❌ Error loading initial data: $e');
       setState(() {
@@ -97,7 +152,6 @@ class _HomescreenState extends State<Homescreen>
 
   void _loadChats() async {
     try {
-      // Try cache first
       final cachedChats = await LocalCacheService.getCachedChats();
 
       if (cachedChats != null && cachedChats.isNotEmpty) {
@@ -106,8 +160,6 @@ class _HomescreenState extends State<Homescreen>
           _chats = cachedChats;
           _errorMessage = '';
         });
-
-        // Load fresh data in background
         _loadFreshChats();
       } else {
         _loadFreshChats();
@@ -126,12 +178,6 @@ class _HomescreenState extends State<Homescreen>
       final chats = await ApiService.getUserChats();
       chats.sort((a, b) => b.lastActivity.compareTo(a.lastActivity));
 
-      for (var chat in chats) {
-        print(
-            '   Chat: ${chat.chatName}, Chat ID: ${chat.chatId}, pfp: ${chat.pfpIndex}, bg: ${chat.pfpBg}');
-      }
-
-      // Cache the chats
       await LocalCacheService.cacheChats(chats);
 
       if (mounted) {
@@ -181,7 +227,39 @@ class _HomescreenState extends State<Homescreen>
 
   void _handleNewMessage(Message message) {
     print('💬 New message received: ${message.content}');
-    // Don't manually update chat order - wait for WebSocket update from backend
+
+    // FIX: Simplify the notification logic
+    final bool shouldShowNotification = _selectedChatId != message.chatId;
+
+    if (shouldShowNotification) {
+      _showMessageNotification(message);
+    }
+
+    // Also update the chat list to show new message preview
+    _refreshChatListForMessage(message);
+  }
+
+// Add this method to refresh chat list when new message arrives
+  void _refreshChatListForMessage(Message message) {
+    // Find and update the chat that received the message
+    final chatIndex =
+        _chats.indexWhere((chat) => chat.chatId == message.chatId);
+    if (chatIndex != -1) {
+      setState(() {
+        // _chats[chatIndex] = _chats[chatIndex].copyWith(
+        //   lastMessage: message.content,
+        //   lastActivity: message.timestamp,
+        // );
+        // Sort by last activity
+        _chats.sort((a, b) => b.lastActivity.compareTo(a.lastActivity));
+      });
+    }
+  }
+
+  bool _isChatScreenFocused() {
+    // Check if the chat screen is currently focused/visible
+    // This is a simplified check - you might want to enhance this
+    return _showChatScreen && _selectedChatId != null;
   }
 
   void _handleChatListUpdate(List<ChatRoom> updatedChats) {
@@ -192,13 +270,9 @@ class _HomescreenState extends State<Homescreen>
       _chats = updatedChats;
       _errorMessage = '';
 
-      // Update selected chat reference if it exists
       if (_selectedChatId != null) {
         try {
-          final updatedSelectedChat = _chats.firstWhere(
-            (chat) => chat.chatId == _selectedChatId,
-          );
-          // The Key in ChatScreen will handle the widget recreation
+          _chats.firstWhere((chat) => chat.chatId == _selectedChatId);
         } catch (e) {
           print('⚠️ Selected chat no longer exists: $_selectedChatId');
           _selectedChatId = null;
@@ -209,29 +283,44 @@ class _HomescreenState extends State<Homescreen>
   }
 
   void _selectChat(ChatRoom chat) {
+    if (_selectedChatId == chat.chatId && _showChatScreen) {
+      _deselectChat();
+      return;
+    }
+
     print('👆 Selecting chat: ${chat.chatName} (ID: ${chat.chatId})');
+
+    // Force unsubscribe first, then subscribe to ensure clean state
+    if (_selectedChatId != null) {
+      _webSocketService.unsubscribeFromChatRoom(_selectedChatId!);
+    }
+
+    // Subscribe to the new chat
+    _webSocketService.subscribeToChatRoom(chat.chatId);
+
     setState(() {
       _selectedChatId = chat.chatId;
       _showChatScreen = true;
     });
 
-    _webSocketService.subscribeToChatRoom(chat.chatId);
+    // Debug current subscriptions
+    _debugSubscriptions();
+  }
+
+  void _debugSubscriptions() {
+    print(
+        '🔍 CURRENT SUBSCRIPTIONS: ${_webSocketService.getSubscribedChats()}');
   }
 
   void _refreshSelectedChat() {
     if (_selectedChatId != null) {
-      setState(() {
-        // This will force ChatThemeWrapper to rebuild with updated theme
-      });
+      setState(() {});
     }
     _loadChatsFromApi();
   }
 
   void _deselectChat() {
     print('👈 Deselecting chat');
-    if (_selectedChatId != null) {
-      _webSocketService.unsubscribeFromChatRoom(_selectedChatId!);
-    }
     setState(() {
       _selectedChatId = null;
       _showChatScreen = false;
@@ -249,12 +338,10 @@ class _HomescreenState extends State<Homescreen>
     try {
       await ApiService.acceptGroupInvitation(invitation.chatId);
 
-      // Remove from invitations and add to chats
       setState(() {
         _groupInvitations.removeWhere((inv) => inv.chatId == invitation.chatId);
       });
 
-      // Reload chats to include the newly accepted group
       _loadFreshChats();
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -278,7 +365,6 @@ class _HomescreenState extends State<Homescreen>
     try {
       await ApiService.declineGroupInvitation(invitation.chatId);
 
-      // Remove from invitations
       setState(() {
         _groupInvitations.removeWhere((inv) => inv.chatId == invitation.chatId);
       });
@@ -291,7 +377,6 @@ class _HomescreenState extends State<Homescreen>
       );
     } catch (e) {
       print('❌ Error declining group invitation: $e');
-      // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Failed to decline invitation: $e'),
@@ -304,7 +389,7 @@ class _HomescreenState extends State<Homescreen>
   // Check if we're on mobile screen
   bool get _isMobileScreen {
     final mediaQuery = MediaQuery.of(context);
-    return mediaQuery.size.width < 768; // Typical tablet breakpoint
+    return mediaQuery.size.width < 768;
   }
 
   // Check if we're on tablet or desktop
@@ -312,64 +397,321 @@ class _HomescreenState extends State<Homescreen>
     return !_isMobileScreen;
   }
 
+  Widget _buildTabBar() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: _surface,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: TabBar(
+        controller: _tabController,
+        indicator: BoxDecoration(
+          borderRadius: BorderRadius.circular(8),
+          color: _accent,
+        ),
+        labelColor: Colors.white,
+        unselectedLabelColor: _mutedText,
+        indicatorSize: TabBarIndicatorSize.tab,
+        labelStyle: const TextStyle(
+          fontWeight: FontWeight.w600,
+          fontSize: 14,
+        ),
+        unselectedLabelStyle: const TextStyle(
+          fontWeight: FontWeight.w500,
+          fontSize: 14,
+        ),
+        tabs: const [
+          Tab(
+            icon: Icon(Icons.chat_rounded, size: 20),
+            text: "Chats",
+          ),
+          Tab(
+            icon: Icon(Icons.group_rounded, size: 20),
+            text: "Invitations",
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showMessageNotification(Message message) {
+    // Don't show notification if we're currently viewing this chat
+    if (_selectedChatId == message.chatId && _showChatScreen) {
+      print('🔕 Skipping notification - currently viewing this chat');
+      return;
+    }
+
+    // Find the chat room for this message
+    final chatRoom = _chats.firstWhere(
+      (chat) => chat.chatId == message.chatId,
+      orElse: () => ChatRoom(
+        chatId: message.chatId,
+        chatName: 'Unknown Chat',
+        isGroup: false,
+        lastMessage: '',
+        lastActivity: DateTime.now(),
+        pfpIndex: '💬',
+        pfpBg: '#4CAF50',
+        themeIndex: 0,
+        isDark: true,
+      ),
+    );
+
+    final notification = {
+      'id': DateTime.now().millisecondsSinceEpoch,
+      'chatName': chatRoom.chatName,
+      'message': message.content,
+      'sender': message.sender,
+      'chatId': message.chatId,
+      'timestamp': DateTime.now(),
+    };
+
+    print(
+        '🔔 Showing notification: ${notification['chatName']} - ${notification['message']}');
+
+    setState(() {
+      _messageNotifications.add(notification);
+    });
+
+    // Auto-remove after 5 seconds
+    Future.delayed(Duration(seconds: 5), () {
+      if (mounted) {
+        setState(() {
+          _messageNotifications
+              .removeWhere((n) => n['id'] == notification['id']);
+        });
+      }
+    });
+  }
+
+  Widget _buildMessageNotifications() {
+    if (_messageNotifications.isEmpty) return SizedBox();
+
+    return Positioned(
+      top: MediaQuery.of(context).padding.top + 8,
+      left: 16,
+      right: 16,
+      child: Column(
+        children: _messageNotifications.map((notification) {
+          return _buildGlassNotification(notification);
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildGlassNotification(Map<String, dynamic> notification) {
+    return GestureDetector(
+      onTap: () {
+        // Find and select the chat when notification is tapped
+        final chat = _chats.firstWhere(
+          (chat) => chat.chatId == notification['chatId'],
+          orElse: () => ChatRoom(
+            chatId: notification['chatId'],
+            chatName: notification['chatName'],
+            isGroup: false,
+            lastMessage: '',
+            lastActivity: DateTime.now(),
+            pfpIndex: '💬',
+            pfpBg: '#4CAF50',
+            themeIndex: 0,
+            isDark: true,
+          ),
+        );
+
+        _selectChat(chat);
+        setState(() {
+          _messageNotifications.remove(notification);
+        });
+      },
+      child: Card(
+        margin: const EdgeInsets.only(bottom: 8),
+        elevation: 4,
+        color: Colors.white.withOpacity(0.95),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.white.withOpacity(0.3)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    backgroundColor: _accent,
+                    child:
+                        const Icon(Icons.chat, color: Colors.white, size: 16),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          notification['chatName'],
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: _accent,
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          notification['message'],
+                          style: TextStyle(
+                            color: _mutedText,
+                            fontSize: 12,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, size: 16),
+                    onPressed: () {
+                      setState(() {
+                        _messageNotifications.remove(notification);
+                      });
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ).animate().slideX(
+            begin: -1,
+            end: 0,
+            curve: Curves.easeOut,
+            duration: 300.ms,
+          ),
+    );
+  }
+
   Widget _buildChatListItem(ChatRoom chat) {
     final isSelected = _selectedChatId == chat.chatId;
+    final isHovered = _hoveredChatId == chat.chatId;
 
-    return Hero(
-      tag: chat.chatId,
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        decoration: BoxDecoration(
-          color: isSelected ? _brown.withOpacity(0.1) : Colors.white,
-          borderRadius: BorderRadius.circular(8),
-          border: isSelected
-              ? Border.all(color: _brown.withOpacity(0.3), width: 1)
-              : null,
-          boxShadow: [
-            if (!isSelected)
-              BoxShadow(
-                color: Colors.grey.withOpacity(0.1),
-                blurRadius: 2,
-                offset: const Offset(0, 1),
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hoveredChatId = chat.chatId),
+      onExit: (_) => setState(() => _hoveredChatId = null),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () => _selectChat(chat),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 250),
+          margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? _highlight.withOpacity(0.4)
+                : isHovered
+                    ? Colors.white.withOpacity(0.8)
+                    : _surface,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              if (isHovered || isSelected)
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.12),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                )
+              else
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
+                ),
+            ],
+          ),
+          child: ListTile(
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            leading: CircleAvatar(
+              radius: 22,
+              backgroundColor: _parseColor(chat.pfpBg),
+              child: Text(
+                chat.pfpIndex,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                ),
               ),
-          ],
-        ),
-        child: ListTile(
-          leading: CircleAvatar(
-            backgroundColor: _parseColor(chat.pfpBg),
-            child: Text(
-              chat.pfpIndex,
-              style: const TextStyle(
-                fontSize: 20,
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
+            ),
+            title: Text(
+              chat.chatName,
+              style: TextStyle(
+                color: _accent,
+                fontWeight: FontWeight.w600,
+                fontSize: 16,
+              ),
+            ),
+            subtitle: Text(
+              chat.lastMessage.isNotEmpty
+                  ? chat.lastMessage
+                  : 'No messages yet',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: _mutedText,
+                fontSize: 13,
+              ),
+            ),
+            trailing: Text(
+              _formatTime(chat.lastActivity),
+              style: TextStyle(
+                fontSize: 12,
+                color: _mutedText,
               ),
             ),
           ),
-          title: Text(
-            chat.chatName,
-            style: TextStyle(
-              fontWeight: FontWeight.w600,
-              color: _brown,
-            ),
-          ),
-          subtitle: Text(
-            chat.lastMessage.isNotEmpty ? chat.lastMessage : 'No messages yet',
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: isSelected ? _brown.withOpacity(0.8) : Colors.grey[700],
-            ),
-          ),
-          trailing: Text(
-            _formatTime(chat.lastActivity),
-            style: TextStyle(
-              color: isSelected ? _brown : Colors.grey[600],
-              fontSize: 12,
-              fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-            ),
-          ),
-          onTap: () => _selectChat(chat),
         ),
+      ),
+    );
+  }
+
+  Widget _connectionStatusBar() {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 600),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        color: _webSocketService.isConnected
+            ? Colors.green[50]
+            : Colors.orange[50],
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            _webSocketService.isConnected ? Icons.check_circle : Icons.sync,
+            size: 18,
+            color: _webSocketService.isConnected ? Colors.green : Colors.orange,
+          ),
+          const SizedBox(width: 8),
+          Text(
+            _webSocketService.isConnected ? 'Connected' : 'Reconnecting...',
+            style: TextStyle(
+              color: _webSocketService.isConnected
+                  ? Colors.green[700]
+                  : Colors.orange[700],
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -435,243 +777,194 @@ class _HomescreenState extends State<Homescreen>
   }
 
   Widget _buildChatsList() {
-    print("🔍 Building chats list UI...");
-    return Container(
-      width: _isLargeScreen ? 350 : double.infinity,
-      decoration: BoxDecoration(
-        color: _beige,
-        border: _isLargeScreen
-            ? Border(
-                right: BorderSide(
-                  color: Colors.grey.shade300,
-                  width: 1,
-                ),
-              )
-            : null,
-      ),
-      child: Column(
-        children: [
-          // Connection status bar
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border(
-                bottom: BorderSide(
-                  color: Colors.grey.shade300,
-                  width: 1,
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      width: _isLargeScreen ? 360 : double.infinity,
+      curve: Curves.easeOutCubic,
+      child: Container(
+        decoration: BoxDecoration(
+          color: _bgLight,
+          border: _isLargeScreen
+              ? Border(
+                  right: BorderSide(
+                    color: Colors.grey.shade300,
+                    width: 1,
+                  ),
+                )
+              : null,
+        ),
+        child: Column(
+          children: [
+            // Connection status bar
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                border: Border(
+                  bottom: BorderSide(
+                    color: Colors.grey.shade300,
+                    width: 1,
+                  ),
                 ),
               ),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  _webSocketService.isConnected
-                      ? Icons.circle
-                      : Icons.circle_outlined,
-                  size: 12,
-                  color: _webSocketService.isConnected
-                      ? Colors.green
-                      : Colors.orange,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
+              child: Row(
+                children: [
+                  Icon(
                     _webSocketService.isConnected
-                        ? 'Connected'
-                        : 'Connecting...',
-                    style: TextStyle(
-                      color: _webSocketService.isConnected
-                          ? Colors.green
-                          : Colors.orange,
-                      fontWeight: FontWeight.w500,
+                        ? Icons.circle
+                        : Icons.circle_outlined,
+                    size: 12,
+                    color: _webSocketService.isConnected
+                        ? Colors.green
+                        : Colors.orange,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _webSocketService.isConnected
+                          ? 'Connected'
+                          : 'Connecting...',
+                      style: TextStyle(
+                        color: _webSocketService.isConnected
+                            ? Colors.green
+                            : Colors.orange,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ),
-                ),
-                IconButton(
-                  icon: Icon(Icons.search, color: _brown),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => SearchScreen()),
-                    ).then((_) {
-                      _loadChatsFromApi();
-                    });
-                  },
-                ),
-              ],
+                  IconButton(
+                    icon: Icon(Icons.search, color: _brown),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => SearchScreen()),
+                      ).then((_) {
+                        _loadChatsFromApi();
+                      });
+                    },
+                  ),
+                ],
+              ),
+            ),
+
+            // Improved Tab bar
+            _buildTabBar(),
+
+            // Tab content
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  // Chats Tab
+                  _buildChatsTab(),
+                  // Invitations Tab
+                  _buildInvitationsTab(),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChatsTab() {
+    return RefreshIndicator(
+      backgroundColor: _beige,
+      color: _brown,
+      onRefresh: () async {
+        _loadChatsFromApi();
+      },
+      child: _chats.isEmpty
+          ? _buildEmptyState(
+              icon: Icons.chat_bubble_outline,
+              title: 'No chats yet',
+              subtitle: 'Start a conversation by searching for users',
+            )
+          : ListView.builder(
+              physics: const BouncingScrollPhysics(
+                  parent: AlwaysScrollableScrollPhysics()),
+              itemCount: _chats.length,
+              itemBuilder: (context, index) {
+                final chat = _chats[index];
+                return _buildChatListItem(chat);
+              },
+            ),
+    );
+  }
+
+  Widget _buildInvitationsTab() {
+    if (_isLoadingInvitations) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(_brown),
+            ),
+            const SizedBox(height: 16),
+            const Text('Loading invitations...'),
+          ],
+        ),
+      );
+    }
+
+    return _groupInvitations.isEmpty
+        ? _buildEmptyState(
+            icon: Icons.group_add_outlined,
+            title: 'No invitations',
+            subtitle: 'You have no pending group invitations',
+          )
+        : RefreshIndicator(
+            backgroundColor: _beige,
+            color: _brown,
+            onRefresh: () async {
+              _loadGroupInvitations();
+            },
+            child: ListView.builder(
+              physics: const BouncingScrollPhysics(
+                  parent: AlwaysScrollableScrollPhysics()),
+              itemCount: _groupInvitations.length,
+              itemBuilder: (context, index) {
+                final invitation = _groupInvitations[index];
+                return _buildInvitationListItem(invitation);
+              },
+            ),
+          );
+  }
+
+  Widget _buildEmptyState({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+  }) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            icon,
+            size: 64,
+            color: _brown.withOpacity(0.5),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 16,
+              color: _brown.withOpacity(0.7),
+              fontWeight: FontWeight.w500,
             ),
           ),
-
-          // Tab bar for Chats vs Invitations
-          Container(
-            color: Colors.white,
-            child: TabBar(
-              controller: _tabController,
-              labelColor: _brown,
-              unselectedLabelColor: Colors.grey,
-              indicatorColor: _brown,
-              tabs: [
-                const Tab(
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.chat, size: 18),
-                      SizedBox(width: 4),
-                      Text('Chats'),
-                    ],
-                  ),
-                ),
-                Tab(
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.group_add, size: 18),
-                      const SizedBox(width: 4),
-                      const Text('Invitations'),
-                      if (_groupInvitations.isNotEmpty)
-                        Container(
-                          margin: const EdgeInsets.only(left: 4),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: Colors.orange,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Text(
-                            _groupInvitations.length.toString(),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Tab content
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                // Chats Tab
-                RefreshIndicator(
-                  backgroundColor: _beige,
-                  color: _brown,
-                  onRefresh: () async {
-                    _loadChatsFromApi();
-                  },
-                  child: _chats.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.chat_bubble_outline,
-                                size: 64,
-                                color: _brown.withOpacity(0.5),
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                'No chats yet',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: _brown.withOpacity(0.7),
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 32),
-                                child: Text(
-                                  'Start a conversation by searching for users',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    color: _brown.withOpacity(0.5),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        )
-                      : ListView.builder(
-                          itemCount: _chats.length,
-                          itemBuilder: (context, index) {
-                            final chat = _chats[index];
-                            return _buildChatListItem(chat);
-                          },
-                        ),
-                ),
-
-                // Invitations Tab
-                _isLoadingInvitations
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            CircularProgressIndicator(
-                              valueColor: AlwaysStoppedAnimation<Color>(_brown),
-                            ),
-                            const SizedBox(height: 16),
-                            const Text('Loading invitations...'),
-                          ],
-                        ),
-                      )
-                    : _groupInvitations.isEmpty
-                        ? Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.group_add_outlined,
-                                  size: 64,
-                                  color: _brown.withOpacity(0.5),
-                                ),
-                                const SizedBox(height: 16),
-                                Text(
-                                  'No invitations',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    color: _brown.withOpacity(0.7),
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 32),
-                                  child: Text(
-                                    'You have no pending group invitations',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      color: _brown.withOpacity(0.5),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          )
-                        : RefreshIndicator(
-                            backgroundColor: _beige,
-                            color: _brown,
-                            onRefresh: () async {
-                              _loadGroupInvitations();
-                            },
-                            child: ListView.builder(
-                              itemCount: _groupInvitations.length,
-                              itemBuilder: (context, index) {
-                                final invitation = _groupInvitations[index];
-                                return _buildInvitationListItem(invitation);
-                              },
-                            ),
-                          ),
-              ],
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Text(
+              subtitle,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: _brown.withOpacity(0.5),
+              ),
             ),
           ),
         ],
@@ -682,126 +975,94 @@ class _HomescreenState extends State<Homescreen>
   Widget _buildEmptyChatView() {
     return Expanded(
       child: Container(
-        color: Colors.white,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [_bgLight, Colors.white],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                Icons.chat_bubble_outline_rounded,
-                size: 120,
-                color: _brown.withOpacity(0.2),
-              ),
+              Icon(Icons.chat_bubble_outline_rounded,
+                  size: 100, color: _accent.withOpacity(0.2)),
               const SizedBox(height: 24),
-              Text(
-                'Welcome to URChat',
-                style: TextStyle(
-                  fontSize: 24,
-                  color: _brown,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'Select a chat from the list to start messaging',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: _brown.withOpacity(0.6),
-                ),
-              ),
+              Text("Welcome to URChat",
+                  style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: _accent)),
               const SizedBox(height: 8),
               Text(
-                'or start a new conversation',
-                style: TextStyle(
-                  color: _brown.withOpacity(0.4),
-                ),
+                "Select a chat or start a new one",
+                style: TextStyle(color: _mutedText, fontSize: 14),
               ),
             ],
-          ),
+          )
+              .animate()
+              .fadeIn(duration: 800.ms)
+              .moveY(begin: 10, curve: Curves.easeOutQuart),
         ),
       ),
     );
   }
-
-  void _showCreateGroupDialog() async {
-    final newGroup = await showDialog<GroupChatRoomDTO>(
-      context: context,
-      builder: (context) => CreateGroupDialog(
-        onGroupCreated: (GroupChatRoomDTO group) {
-          ChatRoom chatRoom = ChatRoom(
-            chatId: group.chatId,
-            chatName: group.chatName,
-            isGroup: true,
-            lastMessage: '',
-            lastActivity: DateTime.now(),
-            pfpIndex: group.pfpIndex,
-            pfpBg: group.pfpBg,
-            themeIndex: 0,
-            isDark: true,
-          );
-          // The group will be added to chats list via WebSocket update
-          // or we can manually refresh
-          _loadChatsFromApi();
-        },
-      ),
-    );
-
-    if (newGroup != null) {
-      // Optionally select the new group
-      // _selectChat(newGroup);
-    }
-  }
-
-  // void _showGroupPfpDialog(ChatRoom group) async {
-  //   final updatedGroup = await showDialog<ChatRoom>(
-  //     context: context,
-  //     builder: (context) => GroupPfpDialog(group: group),
-  //   );
-
-  //   if (updatedGroup != null) {
-  //     // Update the group in the chats list
-  //     setState(() {
-  //       final index =
-  //           _chats.indexWhere((chat) => chat.chatId == updatedGroup.chatId);
-  //       if (index != -1) {
-  //         _chats[index] = updatedGroup;
-  //       }
-  //     });
-  //   }
-  // }
 
   Widget _buildSelectedChatView() {
     if (_selectedChat == null) return _buildEmptyChatView();
 
     return Expanded(
       child: URChatApp(
-          key: ValueKey(_selectedChat!.chatId),
-          chatRoom: _selectedChat!,
-          webSocketService: _webSocketService),
+        key: ValueKey(_selectedChat!.chatId),
+        chatRoom: _selectedChat!,
+        webSocketService: _webSocketService,
+        onBack:
+            _isMobileScreen ? _deselectChat : null, // Only show back on mobile
+      ),
     );
   }
 
   Widget _buildMobileLayout() {
-    if (_showChatScreen && _selectedChat != null) {
-      // Show chat screen on mobile
-      return _buildSelectedChatView();
-    } else {
-      // Show chat list on mobile
-      return _buildChatsList();
-    }
-  }
-
-  Widget _buildDesktopLayout() {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    return Stack(
       children: [
-        _buildChatsList(),
-        _selectedChatId != null
+        // Main content
+        _showChatScreen && _selectedChat != null
             ? _buildSelectedChatView()
-            : _buildEmptyChatView(),
+            : _buildChatsList(),
+
+        // Message notifications
+        _buildMessageNotifications(),
       ],
     );
   }
+
+  Widget _buildDesktopLayout() {
+    return Stack(
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _buildChatsList(),
+            _selectedChatId != null
+                ? _buildSelectedChatView()
+                : _buildEmptyChatView(),
+          ],
+        ),
+
+        // Message notifications
+        _buildMessageNotifications(),
+      ],
+    );
+  }
+
+  // Check if we're on mobile screen
+  // bool get _isMobileScreen {
+  //   final mediaQuery = MediaQuery.of(context);
+  //   return mediaQuery.size.width < 768;
+  // }
+
+  // bool get _isLargeScreen => !_isMobileScreen;
 
   Color _parseColor(String colorString) {
     try {
@@ -829,134 +1090,131 @@ class _HomescreenState extends State<Homescreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: _beige,
-      appBar: AppBar(
-        backgroundColor: _brown,
-        foregroundColor: Colors.white,
-        title: const Text(
-          'URChat',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
-          ),
+    return MaterialApp(
+      theme: ThemeData(
+        useMaterial3: true,
+        colorScheme: const ColorScheme.light(
+          primary: Color(0xFF4E342E),
+          secondary: Color(0xFF6D4C41),
+          background: Color(0xFFFDFBF8),
+          surface: Color(0xFFFFFFFF),
+          onPrimary: Colors.white,
+          onSurface: Colors.black87,
         ),
-        leading: _isMobileScreen && _showChatScreen
-            ? IconButton(
-                icon: const Icon(Icons.arrow_back),
-                onPressed: _handleBackButton,
-              )
-            : null,
-        actions: [
-          if (!_isMobileScreen || !_showChatScreen) ...[
-            IconButton(
-              icon: const Icon(Icons.wifi_find),
-              onPressed: () {
-                print('🔍 === MANUAL WEB SOCKET TEST ===');
-                print('   Current chats: ${_chats.length}');
-                print(
-                    '   WebSocket connected: ${_webSocketService.isConnected}');
-                print('   Selected chat: $_selectedChatId');
-
-                _loadChatsFromApi();
-
-                print('   Testing message reception...');
-              },
-            ),
-            IconButton(
-              icon: const Icon(Icons.group_add),
-              onPressed: _showCreateGroupDialog,
-              tooltip: 'Create Group',
-            ),
-            PopupMenuButton<String>(
-              icon: const Icon(Icons.more_vert),
-              onSelected: (value) {
-                if (value == 'profile') {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => ProfileScreen()),
-                  );
-                } else if (value == 'logout') {
-                  _logout();
-                }
-              },
-              itemBuilder: (context) => [
-                PopupMenuItem(
-                  value: 'profile',
-                  child: Row(
-                    children: [
-                      Icon(Icons.person, color: _brown),
-                      const SizedBox(width: 8),
-                      const Text('Profile'),
-                    ],
-                  ),
-                ),
-                const PopupMenuItem(
-                  value: 'logout',
-                  child: Row(
-                    children: [
-                      Icon(Icons.logout, color: Colors.red),
-                      SizedBox(width: 8),
-                      Text('Logout'),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ],
+        scaffoldBackgroundColor: const Color(0xFFFDFBF8),
+        pageTransitionsTheme: const PageTransitionsTheme(
+          builders: {
+            TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+            TargetPlatform.android: CupertinoPageTransitionsBuilder(),
+          },
+        ),
       ),
-      body: _isLoading
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(_brown),
+      home: Scaffold(
+        backgroundColor: _beige,
+        appBar: _showChatScreen && _isMobileScreen
+            ? null // Hide main app bar when in chat view on mobile
+            : AppBar(
+                backgroundColor: _accent,
+                foregroundColor: Colors.white,
+                title: const Text(
+                  'URChat',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
                   ),
-                  const SizedBox(height: 16),
-                  const Text('Loading chats...'),
+                ),
+                actions: [
+                  IconButton(
+                    icon: const Icon(Icons.search_rounded),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => SearchScreen()),
+                      ).then((_) {
+                        _loadChatsFromApi();
+                      });
+                    },
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.group_add_rounded),
+                    onPressed: _showCreateGroupDialog,
+                  ),
+                  PopupMenuButton(
+                    itemBuilder: (_) => [
+                      const PopupMenuItem(
+                          value: 'profile', child: Text('Profile')),
+                      const PopupMenuItem(
+                          value: 'logout', child: Text('Logout')),
+                    ],
+                    onSelected: (value) {
+                      if (value == 'profile') {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => ProfileScreen()),
+                        );
+                      } else if (value == 'logout') {
+                        _logout();
+                      }
+                    },
+                  ),
                 ],
               ),
-            )
-          : _errorMessage.isNotEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(
-                        Icons.error_outline,
-                        size: 64,
-                        color: Colors.red,
-                      ),
-                      const SizedBox(height: 16),
-                      const Text(
-                        'Error loading chats',
-                        style: TextStyle(
-                          fontSize: 18,
-                          color: Colors.red,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        _errorMessage,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(color: Colors.grey),
-                      ),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: _loadChatsFromApi,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: _brown,
-                        ),
-                        child: const Text('Retry'),
-                      ),
-                    ],
-                  ),
-                )
+        body: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 350),
+          switchInCurve: Curves.easeOutQuart,
+          switchOutCurve: Curves.easeInQuart,
+          child: _isLoading
+              ? _buildLoadingState().animate().fade(duration: 350.ms)
               : _isMobileScreen
-                  ? _buildMobileLayout()
-                  : _buildDesktopLayout(),
+                  ? _buildMobileLayout().animate().fadeIn(duration: 400.ms)
+                  : _buildDesktopLayout()
+                      .animate()
+                      .slideY(begin: 0.05, duration: 500.ms),
+        ),
+        floatingActionButton: _isMobileScreen && !_showChatScreen
+            ? FloatingActionButton.extended(
+                backgroundColor: Colors.white,
+                elevation: 8,
+                icon: const Icon(Icons.add_comment_outlined,
+                    color: Colors.black87),
+                label: const Text("New Chat",
+                    style: TextStyle(color: Colors.black87)),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => SearchScreen()),
+                  );
+                },
+              )
+            : null,
+      ),
+    );
+  }
+
+  void _showCreateGroupDialog() async {
+    final newGroup = await showDialog<GroupChatRoomDTO>(
+      context: context,
+      builder: (context) => CreateGroupDialog(
+        onGroupCreated: (GroupChatRoomDTO group) {
+          _loadChatsFromApi();
+        },
+      ),
+    );
+  }
+
+  Widget _buildLoadingState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(_brown),
+          ),
+          const SizedBox(height: 16),
+          const Text('Loading chats...'),
+        ],
+      ),
     );
   }
 
@@ -1000,11 +1258,9 @@ class _HomescreenState extends State<Homescreen>
     print(
         '   ✅ onChatListUpdated callback: ${_webSocketService.onChatListUpdated != null}');
 
-    // Test after connection is established
     Future.delayed(const Duration(seconds: 3), () {
       if (_webSocketService.isConnected) {
         print('🎉 WebSocket is connected and ready!');
-        print('   📡 Should receive updates on: /user/queue/chats/update');
       } else {
         print('❌ WebSocket failed to connect');
       }

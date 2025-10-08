@@ -13,6 +13,7 @@ class WebSocketService {
   ValueChanged<Map<String, dynamic>> onReadReceipt;
 
   final Map<String, StompUnsubscribe> _chatSubscriptions = {};
+  final Map<String, StompUnsubscribe> _typingSubscriptions = {};
   StompUnsubscribe? _chatListSubscription;
 
   String? _currentChatId;
@@ -66,7 +67,6 @@ class WebSocketService {
           connectionTimeout: Duration(seconds: 10),
           useSockJS: true,
           reconnectDelay: Duration(milliseconds: 5000),
-          // Add this for better debugging
           beforeConnect: () async {
             print('🔄 Preparing to connect to WebSocket...');
           },
@@ -90,13 +90,19 @@ class WebSocketService {
     // Subscribe to chat list updates
     subscribeToChatListUpdates();
 
-    // If we have a current chat, resubscribe to it
-    if (_currentChatId != null &&
-        !_chatSubscriptions.containsKey(_currentChatId)) {
-      subscribeToChatRoom(_currentChatId!);
-    }
+    // Resubscribe to all previously subscribed chats
+    _resubscribeToAllChats();
 
     print('📡 Subscribed to chat list updates');
+  }
+
+  void _resubscribeToAllChats() {
+    final chatIds = _chatSubscriptions.keys.toList();
+    print('🔄 Resubscribing to ${chatIds.length} chats: $chatIds');
+
+    for (final chatId in chatIds) {
+      _subscribeToChatRoomInternal(chatId);
+    }
   }
 
   void subscribeToChatListUpdates() {
@@ -123,20 +129,8 @@ class WebSocketService {
             final List<dynamic> chatData = jsonDecode(frame.body!);
             print('📊 Parsed ${chatData.length} chat items');
 
-            // Debug: Print raw data
-            for (var i = 0; i < chatData.length; i++) {
-              print('   📋 Raw chat $i: ${chatData[i]}');
-            }
-
             final chats =
                 chatData.map((json) => ChatRoom.fromJson(json)).toList();
-
-            // Debug: Print each parsed chat
-            for (var i = 0; i < chats.length; i++) {
-              final chat = chats[i];
-              print(
-                  '   💬 Chat ${i + 1}: ${chat.chatName} | Last: "${chat.lastMessage}" | Time: ${chat.lastActivity}');
-            }
 
             // Sort chats by last activity (most recent first)
             chats.sort((a, b) => b.lastActivity.compareTo(a.lastActivity));
@@ -167,17 +161,23 @@ class WebSocketService {
 
     _currentChatId = chatId;
 
+    // Check if already subscribed to this chat
     if (_chatSubscriptions.containsKey(chatId)) {
-      print('🔁 Already subscribed to $chatId, unsubscribing old subscription');
-      _chatSubscriptions[chatId]!();
+      print(
+          'ℹ️ Already subscribed to chat: $chatId, skipping duplicate subscription');
+      return;
     }
 
+    _subscribeToChatRoomInternal(chatId);
+  }
+
+  void _subscribeToChatRoomInternal(String chatId) {
     print('🎯 SUBSCRIBING TO: /topic/chat/$chatId');
 
-    final unsubscribe = _stompClient!.subscribe(
+    final messageUnsubscribe = _stompClient!.subscribe(
       destination: '/topic/chat/$chatId',
       callback: (StompFrame frame) {
-        print('💬 === MESSAGE CALLBACK TRIGGERED ===');
+        print('💬 === MESSAGE CALLBACK TRIGGERED for chat $chatId ===');
         print('📦 Frame headers: ${frame.headers}');
 
         if (frame.body != null) {
@@ -193,19 +193,21 @@ class WebSocketService {
       },
     );
 
-    _chatSubscriptions[chatId] = unsubscribe;
+    _chatSubscriptions[chatId] = messageUnsubscribe;
 
     print('🎯 SUBSCRIBING TO: /topic/chat/$chatId/typing');
 
     final typingUnsubscribe = _stompClient!.subscribe(
       destination: '/topic/chat/$chatId/typing',
       callback: (StompFrame frame) {
-        print('⌨️ === TYPING CALLBACK TRIGGERED ===');
+        print('⌨️ === TYPING CALLBACK TRIGGERED for chat $chatId ===');
 
         if (frame.body != null) {
           print('⌨️ Received typing notification: ${frame.body}');
           try {
             final typingData = jsonDecode(frame.body!);
+            // Add chatId to the typing data so we can filter it
+            typingData['chatId'] = chatId;
             onTyping(typingData);
           } catch (e) {
             print('❌ Error parsing typing notification: $e');
@@ -214,7 +216,10 @@ class WebSocketService {
       },
     );
 
-    print('✅ Subscribed to chat: $chatId');
+    _typingSubscriptions[chatId] = typingUnsubscribe;
+
+    print('✅ Successfully subscribed to chat: $chatId');
+    print('📊 Current subscriptions: ${_chatSubscriptions.keys.toList()}');
   }
 
   void sendMessage(String chatId, String content) {
@@ -281,6 +286,11 @@ class WebSocketService {
     }
     _chatSubscriptions.clear();
 
+    for (var unsubscribe in _typingSubscriptions.values) {
+      unsubscribe();
+    }
+    _typingSubscriptions.clear();
+
     _stompClient?.deactivate();
     _isConnected = false;
     print('✅ WebSocket disconnected');
@@ -288,11 +298,25 @@ class WebSocketService {
 
   bool get isConnected => _isConnected;
 
+  bool isSubscribedToChat(String chatId) {
+    return _chatSubscriptions.containsKey(chatId);
+  }
+
+  List<String> getSubscribedChats() {
+    return _chatSubscriptions.keys.toList();
+  }
+
   void unsubscribeFromChatRoom(String chatId) {
     if (_chatSubscriptions.containsKey(chatId)) {
       _chatSubscriptions[chatId]!();
       _chatSubscriptions.remove(chatId);
-      print('🔕 Unsubscribed from chat: $chatId');
+      print('🔕 Unsubscribed from chat messages: $chatId');
+    }
+
+    if (_typingSubscriptions.containsKey(chatId)) {
+      _typingSubscriptions[chatId]!();
+      _typingSubscriptions.remove(chatId);
+      print('🔕 Unsubscribed from chat typing: $chatId');
     }
   }
 
@@ -300,8 +324,6 @@ class WebSocketService {
   void requestChatListUpdate() {
     if (!_isConnected || _stompClient == null) return;
 
-    // You can send a request to get the latest chat list
-    // This depends on your backend implementation
     _stompClient!.send(
       destination: '/app/chats/refresh',
       body: '',

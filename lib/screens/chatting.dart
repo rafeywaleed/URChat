@@ -807,6 +807,13 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       final isTyping = data['typing'] as bool;
       final username = data['username'] as String;
       final userProfile = data['userProfile'] as Map<String, dynamic>?;
+      final chatId = data['chatId'] as String?;
+
+      // Only process typing events for THIS specific chat
+      if (chatId != null && chatId != widget.chatRoom.chatId) {
+        print('⌨️ Ignoring typing event for different chat: $chatId');
+        return;
+      }
 
       if (mounted) {
         setState(() {
@@ -814,12 +821,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
             _typingUsers[username] = {
               'username': username,
               'profile': userProfile,
-              // ??
-              //     {
-              //       'pfpIndex': '😊',
-              //       'pfpBg': '#4CAF50',
-              //       'fullName': username,
-              //     },
               'lastSeenTyping': DateTime.now().millisecondsSinceEpoch,
             };
 
@@ -1099,6 +1100,8 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 
   Widget _buildTypingIndicator() {
     if (_typingUsers.isEmpty) return const SizedBox();
+
+    // Auto-scroll when someone starts typing
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _scrollToBottom();
     });
@@ -1125,13 +1128,13 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                   padding:
                       const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.surface,
                     borderRadius: BorderRadius.circular(18),
-                    boxShadow: const [
+                    boxShadow: [
                       BoxShadow(
-                        color: Colors.black12,
+                        color: Colors.black.withOpacity(0.1),
                         blurRadius: 2,
-                        offset: Offset(0, 1),
+                        offset: const Offset(0, 1),
                       ),
                     ],
                   ),
@@ -1140,8 +1143,11 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                     children: [
                       Text(
                         '${profile['fullName'] ?? username} is typing',
-                        style: const TextStyle(
-                          color: Colors.grey,
+                        style: TextStyle(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withOpacity(0.7),
                           fontStyle: FontStyle.italic,
                         ),
                       ),
