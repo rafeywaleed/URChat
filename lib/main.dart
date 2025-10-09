@@ -55,6 +55,7 @@
 // import 'dart:developer';
 
 import 'package:flutter/material.dart';
+import 'package:nes_ui/nes_ui.dart';
 import 'package:urchat_back_testing/main.dart';
 import 'package:urchat_back_testing/model/user.dart';
 import 'package:urchat_back_testing/screens/auth_screen.dart';
@@ -82,11 +83,12 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'URChat',
-      theme: ThemeData(
-        primarySwatch: Colors.brown,
-        scaffoldBackgroundColor: const Color(0xFFF5F5DC),
-        visualDensity: VisualDensity.adaptivePlatformDensity,
-      ),
+      theme: flutterNesTheme(),
+      // theme: ThemeData(
+      //   primarySwatch: Colors.brown,
+      //   scaffoldBackgroundColor: const Color(0xFFF5F5DC),
+      //   visualDensity: VisualDensity.adaptivePlatformDensity,
+      // ),
       home: FutureBuilder(
         future: Future.delayed(Duration(milliseconds: 500)),
         builder: (context, snapshot) {
@@ -113,4 +115,3 @@ Future<User> getUserProfile(String username) async {
     throw Exception('Failed to load user profile');
   }
 }
-

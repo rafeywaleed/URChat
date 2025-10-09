@@ -1,7 +1,9 @@
+import 'package:nes_ui/nes_ui.dart';
 import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:urchat_back_testing/model/ChatRoom.dart';
 import 'package:urchat_back_testing/model/dto.dart';
 import 'package:urchat_back_testing/model/message.dart';
@@ -23,6 +25,7 @@ class Homescreen extends StatefulWidget {
 
 class _HomescreenState extends State<Homescreen>
     with SingleTickerProviderStateMixin {
+  // --- Colors & constants ---
   final Color _beige = const Color(0xFFF5F5DC);
   final Color _brown = const Color(0xFF5C4033);
 
@@ -35,13 +38,13 @@ class _HomescreenState extends State<Homescreen>
   String? _selectedChatId;
   String? _hoveredChatId;
 
-  // Theme colors based on the mono-classy palette
-  final Color _accent = const Color(0xFF4E342E);
-  final Color _secondaryAccent = const Color(0xFF6D4C41);
+  // Theme colors
+  Color _accent = const Color.fromARGB(255, 0, 0, 0);
+  final Color _secondaryAccent = const Color.fromARGB(255, 0, 0, 0);
   final Color _bgLight = const Color(0xFFFDFBF8);
   final Color _surface = Colors.white;
   final Color _mutedText = Colors.black87;
-  final Color _highlight = Color(0xFF4E342E);
+  Color _highlight = const Color.fromARGB(255, 0, 0, 0);
 
   // For message notifications
   final List<Map<String, dynamic>> _messageNotifications = [];
@@ -62,46 +65,15 @@ class _HomescreenState extends State<Homescreen>
     }
   }
 
-  final _lightTheme = ThemeData(
-    useMaterial3: true,
-    colorScheme: const ColorScheme.light(
-      primary: Color(0xFF4E342E),
-      secondary: Color(0xFF6D4C41),
-      background: Color(0xFFFDFBF8),
-      surface: Color(0xFFFFFFFF),
-      onPrimary: Colors.white,
-      onSurface: Colors.black87,
-    ),
-    scaffoldBackgroundColor: const Color(0xFFFDFBF8),
-    textTheme: const TextTheme(
-      titleLarge: TextStyle(fontWeight: FontWeight.w700, fontSize: 22),
-      bodyMedium: TextStyle(fontSize: 15, color: Colors.black87),
-    ),
-    appBarTheme: AppBarTheme(
-      backgroundColor: Colors.white.withOpacity(0.7),
-      elevation: 0,
-      titleTextStyle: const TextStyle(
-        color: Colors.black87,
-        fontWeight: FontWeight.bold,
-        fontSize: 20,
-      ),
-    ),
-    pageTransitionsTheme: const PageTransitionsTheme(
-      builders: {
-        TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
-        TargetPlatform.android: CupertinoPageTransitionsBuilder(),
-      },
-    ),
-  );
-
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    _initializeWebSocket();
     _loadInitialData();
+    _initializeWebSocket();
 
-    Timer.periodic(Duration(seconds: 10), (timer) {
+    // Keep the periodic debug from original file
+    Timer.periodic(const Duration(seconds: 10), (timer) {
       _debugSubscriptions();
     });
   }
@@ -126,53 +98,59 @@ class _HomescreenState extends State<Homescreen>
 
   void _loadInitialData() async {
     try {
-      setState(() {
-        _isLoading = true;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = true;
+        });
+      }
 
-      await Future.wait([
-        _loadChats(),
-        _loadGroupInvitations(),
-      ] as Iterable<Future>);
+      // Load chats and invitations sequentially to avoid type errors
+      await _loadChats();
+      await _loadGroupInvitations();
 
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
 
-      // Debug: show current subscriptions
       _debugSubscriptions();
     } catch (e) {
       print('❌ Error loading initial data: $e');
-      setState(() {
-        _isLoading = false;
-        _errorMessage = 'Failed to load data: $e';
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = 'Failed to load data: $e';
+        });
+      }
     }
   }
 
-  void _loadChats() async {
+  Future<void> _loadChats() async {
     try {
       final cachedChats = await LocalCacheService.getCachedChats();
 
       if (cachedChats != null && cachedChats.isNotEmpty) {
         print('📦 Loading chats from cache');
-        setState(() {
-          _chats = cachedChats;
-          _errorMessage = '';
-        });
-        _loadFreshChats();
-      } else {
-        _loadFreshChats();
+        if (mounted) {
+          setState(() {
+            _chats = cachedChats;
+            _errorMessage = '';
+          });
+        }
       }
+      await _loadFreshChats();
     } catch (e) {
       print('❌ Error loading initial chats: $e');
-      setState(() {
-        _errorMessage = 'Failed to load chats: $e';
-      });
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Failed to load chats: $e';
+        });
+      }
     }
   }
 
-  void _loadFreshChats() async {
+  Future<void> _loadFreshChats() async {
     print('🔄 Fetching fresh chats from API...');
     try {
       final chats = await ApiService.getUserChats();
@@ -188,19 +166,17 @@ class _HomescreenState extends State<Homescreen>
       }
     } catch (e) {
       print('❌ Error loading fresh chats: $e');
-      if (mounted) {
-        setState(() {
-          _errorMessage = 'Failed to load chats: $e';
-        });
-      }
+      // Don't show error if we have cached chats
     }
   }
 
-  void _loadGroupInvitations() async {
+  Future<void> _loadGroupInvitations() async {
     try {
-      setState(() {
-        _isLoadingInvitations = true;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoadingInvitations = true;
+        });
+      }
 
       final invitations = await ApiService.getGroupInvitations();
 
@@ -222,64 +198,51 @@ class _HomescreenState extends State<Homescreen>
 
   void _loadChatsFromApi() async {
     print('🔄 Reloading chats from API...');
-    _loadFreshChats();
+    await _loadFreshChats();
   }
 
   void _handleNewMessage(Message message) {
     print('💬 New message received: ${message.content}');
 
-    // FIX: Simplify the notification logic
     final bool shouldShowNotification = _selectedChatId != message.chatId;
 
     if (shouldShowNotification) {
       _showMessageNotification(message);
     }
 
-    // Also update the chat list to show new message preview
     _refreshChatListForMessage(message);
   }
 
-// Add this method to refresh chat list when new message arrives
   void _refreshChatListForMessage(Message message) {
-    // Find and update the chat that received the message
     final chatIndex =
         _chats.indexWhere((chat) => chat.chatId == message.chatId);
-    if (chatIndex != -1) {
+    if (chatIndex != -1 && mounted) {
       setState(() {
-        // _chats[chatIndex] = _chats[chatIndex].copyWith(
-        //   lastMessage: message.content,
-        //   lastActivity: message.timestamp,
-        // );
-        // Sort by last activity
         _chats.sort((a, b) => b.lastActivity.compareTo(a.lastActivity));
       });
     }
-  }
-
-  bool _isChatScreenFocused() {
-    // Check if the chat screen is currently focused/visible
-    // This is a simplified check - you might want to enhance this
-    return _showChatScreen && _selectedChatId != null;
   }
 
   void _handleChatListUpdate(List<ChatRoom> updatedChats) {
     print(
         '🔄 Real-time chat list update received: ${updatedChats.length} chats');
 
-    setState(() {
-      _chats = updatedChats;
-      _errorMessage = '';
+    if (mounted) {
+      setState(() {
+        _chats = updatedChats;
+        _errorMessage = '';
 
-      if (_selectedChatId != null) {
-        try {
-          _chats.firstWhere((chat) => chat.chatId == _selectedChatId);
-        } catch (e) {
-          print('⚠️ Selected chat no longer exists: $_selectedChatId');
-          _selectedChatId = null;
-          _showChatScreen = false;
+        if (_selectedChatId != null) {
+          try {
+            _chats.firstWhere((chat) => chat.chatId == _selectedChatId);
+          } catch (e) {
+            print('⚠️ Selected chat no longer exists: $_selectedChatId');
+            _selectedChatId = null;
+            _showChatScreen = false;
+          }
         }
-      }
-    });
+      });
+    }
   }
 
   void _selectChat(ChatRoom chat) {
@@ -290,20 +253,19 @@ class _HomescreenState extends State<Homescreen>
 
     print('👆 Selecting chat: ${chat.chatName} (ID: ${chat.chatId})');
 
-    // Force unsubscribe first, then subscribe to ensure clean state
     if (_selectedChatId != null) {
       _webSocketService.unsubscribeFromChatRoom(_selectedChatId!);
     }
 
-    // Subscribe to the new chat
     _webSocketService.subscribeToChatRoom(chat.chatId);
 
-    setState(() {
-      _selectedChatId = chat.chatId;
-      _showChatScreen = true;
-    });
+    if (mounted) {
+      setState(() {
+        _selectedChatId = chat.chatId;
+        _showChatScreen = true;
+      });
+    }
 
-    // Debug current subscriptions
     _debugSubscriptions();
   }
 
@@ -312,24 +274,13 @@ class _HomescreenState extends State<Homescreen>
         '🔍 CURRENT SUBSCRIPTIONS: ${_webSocketService.getSubscribedChats()}');
   }
 
-  void _refreshSelectedChat() {
-    if (_selectedChatId != null) {
-      setState(() {});
-    }
-    _loadChatsFromApi();
-  }
-
   void _deselectChat() {
     print('👈 Deselecting chat');
-    setState(() {
-      _selectedChatId = null;
-      _showChatScreen = false;
-    });
-  }
-
-  void _handleBackButton() {
-    if (_showChatScreen) {
-      _deselectChat();
+    if (mounted) {
+      setState(() {
+        _selectedChatId = null;
+        _showChatScreen = false;
+      });
     }
   }
 
@@ -338,26 +289,36 @@ class _HomescreenState extends State<Homescreen>
     try {
       await ApiService.acceptGroupInvitation(invitation.chatId);
 
-      setState(() {
-        _groupInvitations.removeWhere((inv) => inv.chatId == invitation.chatId);
-      });
+      if (mounted) {
+        setState(() {
+          _groupInvitations
+              .removeWhere((inv) => inv.chatId == invitation.chatId);
+        });
+      }
 
-      _loadFreshChats();
+      await _loadFreshChats();
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Joined ${invitation.chatName}'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (ctx) => NesDialog(
+            child: Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Text('Joined ${invitation.chatName}'),
+            ),
+          ),
+        );
+      }
     } catch (e) {
       print('❌ Error accepting group invitation: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to join group: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to join group: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -365,24 +326,34 @@ class _HomescreenState extends State<Homescreen>
     try {
       await ApiService.declineGroupInvitation(invitation.chatId);
 
-      setState(() {
-        _groupInvitations.removeWhere((inv) => inv.chatId == invitation.chatId);
-      });
+      if (mounted) {
+        setState(() {
+          _groupInvitations
+              .removeWhere((inv) => inv.chatId == invitation.chatId);
+        });
+      }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Declined invitation to ${invitation.chatName}'),
-          backgroundColor: Colors.orange,
-        ),
-      );
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (ctx) => NesWindow(
+            child: Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Text('Declined invitation to ${invitation.chatName}'),
+            ),
+          ),
+        );
+      }
     } catch (e) {
       print('❌ Error declining group invitation: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to decline invitation: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to decline invitation: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -398,51 +369,42 @@ class _HomescreenState extends State<Homescreen>
   }
 
   Widget _buildTabBar() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: _surface,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: TabBar(
-        controller: _tabController,
-        indicator: BoxDecoration(
-          borderRadius: BorderRadius.circular(8),
-          color: _accent,
-        ),
-        labelColor: Colors.white,
-        unselectedLabelColor: _mutedText,
-        indicatorSize: TabBarIndicatorSize.tab,
-        labelStyle: const TextStyle(
-          fontWeight: FontWeight.w600,
-          fontSize: 14,
-        ),
-        unselectedLabelStyle: const TextStyle(
-          fontWeight: FontWeight.w500,
-          fontSize: 14,
-        ),
-        tabs: const [
-          Tab(
-            icon: Icon(Icons.chat_rounded, size: 20),
-            text: "Chats",
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: NesContainer(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+        child: TabBar(
+          controller: _tabController,
+          indicator: BoxDecoration(
+            borderRadius: BorderRadius.circular(6),
+            color: const Color.fromARGB(255, 77, 105, 118),
           ),
-          Tab(
-            icon: Icon(Icons.group_rounded, size: 20),
-            text: "Invitations",
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.black,
+          indicatorSize: TabBarIndicatorSize.tab,
+          labelStyle: GoogleFonts.pressStart2p(
+            fontWeight: FontWeight.w600,
+            fontSize: 10,
           ),
-        ],
+          unselectedLabelStyle: GoogleFonts.pressStart2p(
+            fontWeight: FontWeight.w500,
+            fontSize: 10,
+          ),
+          tabs: const [
+            Tab(text: "Chats"),
+            Tab(text: "Invitations"),
+          ],
+        ),
       ),
     );
   }
 
   void _showMessageNotification(Message message) {
-    // Don't show notification if we're currently viewing this chat
     if (_selectedChatId == message.chatId && _showChatScreen) {
       print('🔕 Skipping notification - currently viewing this chat');
       return;
     }
 
-    // Find the chat room for this message
     final chatRoom = _chats.firstWhere(
       (chat) => chat.chatId == message.chatId,
       orElse: () => ChatRoom(
@@ -470,12 +432,13 @@ class _HomescreenState extends State<Homescreen>
     print(
         '🔔 Showing notification: ${notification['chatName']} - ${notification['message']}');
 
-    setState(() {
-      _messageNotifications.add(notification);
-    });
+    if (mounted) {
+      setState(() {
+        _messageNotifications.add(notification);
+      });
+    }
 
-    // Auto-remove after 5 seconds
-    Future.delayed(Duration(seconds: 5), () {
+    Future.delayed(const Duration(seconds: 5), () {
       if (mounted) {
         setState(() {
           _messageNotifications
@@ -486,7 +449,7 @@ class _HomescreenState extends State<Homescreen>
   }
 
   Widget _buildMessageNotifications() {
-    if (_messageNotifications.isEmpty) return SizedBox();
+    if (_messageNotifications.isEmpty) return const SizedBox();
 
     return Positioned(
       top: MediaQuery.of(context).padding.top + 8,
@@ -503,7 +466,6 @@ class _HomescreenState extends State<Homescreen>
   Widget _buildGlassNotification(Map<String, dynamic> notification) {
     return GestureDetector(
       onTap: () {
-        // Find and select the chat when notification is tapped
         final chat = _chats.firstWhere(
           (chat) => chat.chatId == notification['chatId'],
           orElse: () => ChatRoom(
@@ -520,85 +482,65 @@ class _HomescreenState extends State<Homescreen>
         );
 
         _selectChat(chat);
-        setState(() {
-          _messageNotifications.remove(notification);
-        });
+        if (mounted) {
+          setState(() {
+            _messageNotifications.remove(notification);
+          });
+        }
       },
-      child: Card(
-        margin: const EdgeInsets.only(bottom: 8),
-        elevation: 4,
-        color: Colors.white.withOpacity(0.95),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white.withOpacity(0.3)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
+      child: NesContainer(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            NesContainer(
+              width: 36,
+              height: 36,
+              backgroundColor: _accent,
+              child: const Center(
+                child: Icon(Icons.chat, color: Colors.white, size: 16),
               ),
-            ],
-          ),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  CircleAvatar(
-                    backgroundColor: _accent,
-                    child:
-                        const Icon(Icons.chat, color: Colors.white, size: 16),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          notification['chatName'],
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            color: _accent,
-                            fontSize: 14,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          notification['message'],
-                          style: TextStyle(
-                            color: _mutedText,
-                            fontSize: 12,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
+                  Text(
+                    notification['chatName'],
+                    style: GoogleFonts.pressStart2p(
+                      fontSize: 10,
+                      color: _accent,
                     ),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.close, size: 16),
-                    onPressed: () {
-                      setState(() {
-                        _messageNotifications.remove(notification);
-                      });
-                    },
+                  const SizedBox(height: 4),
+                  Text(
+                    notification['message'],
+                    style: GoogleFonts.vt323(
+                      color: _mutedText,
+                      fontSize: 12,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
             ),
-          ),
+            NesButton(
+              type: NesButtonType.normal,
+              child: const Icon(Icons.close, size: 16),
+              onPressed: () {
+                if (mounted) {
+                  setState(() {
+                    _messageNotifications.remove(notification);
+                  });
+                }
+              },
+            ),
+          ],
         ),
-      ).animate().slideX(
-            begin: -1,
-            end: 0,
-            curve: Curves.easeOut,
-            duration: 300.ms,
-          ),
+      )
+          .animate()
+          .slideX(begin: -1, end: 0, curve: Curves.easeOut, duration: 300.ms),
     );
   }
 
@@ -607,171 +549,115 @@ class _HomescreenState extends State<Homescreen>
     final isHovered = _hoveredChatId == chat.chatId;
 
     return MouseRegion(
-      onEnter: (_) => setState(() => _hoveredChatId = chat.chatId),
-      onExit: (_) => setState(() => _hoveredChatId = null),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
+      onEnter: (_) {
+        if (mounted) setState(() => _hoveredChatId = chat.chatId);
+      },
+      onExit: (_) {
+        if (mounted) setState(() => _hoveredChatId = null);
+      },
+      child: GestureDetector(
         onTap: () => _selectChat(chat),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 250),
-          margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            color: isSelected
-                ? _highlight.withOpacity(0.4)
-                : isHovered
-                    ? Colors.white.withOpacity(0.8)
-                    : _surface,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              if (isHovered || isSelected)
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.12),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                )
-              else
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.04),
-                  blurRadius: 8,
-                  offset: const Offset(0, 3),
+        child: NesContainer(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
+          backgroundColor: isSelected
+              ? Colors.grey.shade800
+              : (isHovered ? Colors.grey.shade300 : _surface),
+          child: Row(
+            children: [
+              NesContainer(
+                width: 44,
+                height: 44,
+                backgroundColor: _parseColor(chat.pfpBg),
+                child: Center(
+                  child: Text(
+                    chat.pfpIndex,
+                    style: TextStyle(fontSize: 24, fontFamily: null),
+                  ),
                 ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      chat.chatName,
+                      style: GoogleFonts.pressStart2p(
+                        fontSize: 12,
+                        color: isSelected ? Colors.white : _accent,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      chat.lastMessage.isNotEmpty
+                          ? chat.lastMessage
+                          : 'No messages yet',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.vt323(
+                        fontSize: 12,
+                        color: _mutedText,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(_formatTime(chat.lastActivity),
+                  style: GoogleFonts.vt323(fontSize: 12, color: _mutedText))
             ],
           ),
-          child: ListTile(
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            leading: CircleAvatar(
-              radius: 22,
-              backgroundColor: _parseColor(chat.pfpBg),
-              child: Text(
-                chat.pfpIndex,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                ),
-              ),
-            ),
-            title: Text(
-              chat.chatName,
-              style: TextStyle(
-                color: _accent,
-                fontWeight: FontWeight.w600,
-                fontSize: 16,
-              ),
-            ),
-            subtitle: Text(
-              chat.lastMessage.isNotEmpty
-                  ? chat.lastMessage
-                  : 'No messages yet',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: _mutedText,
-                fontSize: 13,
-              ),
-            ),
-            trailing: Text(
-              _formatTime(chat.lastActivity),
-              style: TextStyle(
-                fontSize: 12,
-                color: _mutedText,
-              ),
-            ),
-          ),
         ),
-      ),
-    );
-  }
-
-  Widget _connectionStatusBar() {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 600),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      decoration: BoxDecoration(
-        color: _webSocketService.isConnected
-            ? Colors.green[50]
-            : Colors.orange[50],
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            _webSocketService.isConnected ? Icons.check_circle : Icons.sync,
-            size: 18,
-            color: _webSocketService.isConnected ? Colors.green : Colors.orange,
-          ),
-          const SizedBox(width: 8),
-          Text(
-            _webSocketService.isConnected ? 'Connected' : 'Reconnecting...',
-            style: TextStyle(
-              color: _webSocketService.isConnected
-                  ? Colors.green[700]
-                  : Colors.orange[700],
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
       ),
     );
   }
 
   Widget _buildInvitationListItem(ChatRoom invitation) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.orange.withOpacity(0.3), width: 1),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.orange.withOpacity(0.1),
-            blurRadius: 2,
-            offset: const Offset(0, 1),
+    return NesContainer(
+      padding: const EdgeInsets.all(8),
+      backgroundColor: Colors.white,
+      child: Row(
+        children: [
+          NesContainer(
+            width: 44,
+            height: 44,
+            backgroundColor: _parseColor(invitation.pfpBg),
+            child: Center(
+              child: Text(invitation.pfpIndex,
+                  style: GoogleFonts.pressStart2p(
+                      fontSize: 14, color: Colors.white)),
+            ),
           ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(invitation.chatName,
+                    style:
+                        GoogleFonts.pressStart2p(fontSize: 12, color: _brown)),
+                const SizedBox(height: 4),
+                Text('Group Invitation',
+                    style: GoogleFonts.vt323(
+                        fontSize: 12, color: Colors.orange[700])),
+              ],
+            ),
+          ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              NesButton(
+                  type: NesButtonType.success,
+                  child: const Text('Accept'),
+                  onPressed: () => _acceptGroupInvitation(invitation)),
+              const SizedBox(width: 6),
+              NesButton(
+                  type: NesButtonType.error,
+                  child: const Text('Decline'),
+                  onPressed: () => _declineGroupInvitation(invitation)),
+            ],
+          )
         ],
-      ),
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: _parseColor(invitation.pfpBg),
-          child: Text(
-            invitation.pfpIndex,
-            style: const TextStyle(
-              fontSize: 20,
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-        title: Text(
-          invitation.chatName,
-          style: TextStyle(
-            fontWeight: FontWeight.w600,
-            color: _brown,
-          ),
-        ),
-        subtitle: Text(
-          'Group Invitation',
-          style: TextStyle(
-            color: Colors.orange[700],
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IconButton(
-              icon: const Icon(Icons.check, color: Colors.green),
-              onPressed: () => _acceptGroupInvitation(invitation),
-              tooltip: 'Accept',
-            ),
-            IconButton(
-              icon: const Icon(Icons.close, color: Colors.red),
-              onPressed: () => _declineGroupInvitation(invitation),
-              tooltip: 'Decline',
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -781,18 +667,8 @@ class _HomescreenState extends State<Homescreen>
       duration: const Duration(milliseconds: 300),
       width: _isLargeScreen ? 360 : double.infinity,
       curve: Curves.easeOutCubic,
-      child: Container(
-        decoration: BoxDecoration(
-          color: _bgLight,
-          border: _isLargeScreen
-              ? Border(
-                  right: BorderSide(
-                    color: Colors.grey.shade300,
-                    width: 1,
-                  ),
-                )
-              : null,
-        ),
+      child: NesContainer(
+        backgroundColor: _bgLight,
         child: Column(
           children: [
             // Connection status bar
@@ -824,7 +700,7 @@ class _HomescreenState extends State<Homescreen>
                       _webSocketService.isConnected
                           ? 'Connected'
                           : 'Connecting...',
-                      style: TextStyle(
+                      style: GoogleFonts.vt323(
                         color: _webSocketService.isConnected
                             ? Colors.green
                             : Colors.orange,
@@ -832,8 +708,9 @@ class _HomescreenState extends State<Homescreen>
                       ),
                     ),
                   ),
-                  IconButton(
-                    icon: Icon(Icons.search, color: _brown),
+                  NesButton(
+                    type: NesButtonType.normal,
+                    child: const Icon(Icons.search),
                     onPressed: () {
                       Navigator.push(
                         context,
@@ -847,7 +724,7 @@ class _HomescreenState extends State<Homescreen>
               ),
             ),
 
-            // Improved Tab bar
+            // Tab bar
             _buildTabBar(),
 
             // Tab content
@@ -895,15 +772,13 @@ class _HomescreenState extends State<Homescreen>
 
   Widget _buildInvitationsTab() {
     if (_isLoadingInvitations) {
-      return Center(
+      return const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(_brown),
-            ),
-            const SizedBox(height: 16),
-            const Text('Loading invitations...'),
+            NesHourglassLoadingIndicator(),
+            SizedBox(height: 16),
+            Text('Loading invitations...'),
           ],
         ),
       );
@@ -950,8 +825,8 @@ class _HomescreenState extends State<Homescreen>
           const SizedBox(height: 16),
           Text(
             title,
-            style: TextStyle(
-              fontSize: 16,
+            style: GoogleFonts.pressStart2p(
+              fontSize: 12,
               color: _brown.withOpacity(0.7),
               fontWeight: FontWeight.w500,
             ),
@@ -962,7 +837,7 @@ class _HomescreenState extends State<Homescreen>
             child: Text(
               subtitle,
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: GoogleFonts.vt323(
                 color: _brown.withOpacity(0.5),
               ),
             ),
@@ -974,14 +849,8 @@ class _HomescreenState extends State<Homescreen>
 
   Widget _buildEmptyChatView() {
     return Expanded(
-      child: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [_bgLight, Colors.white],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
+      child: NesContainer(
+        backgroundColor: _bgLight,
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -990,14 +859,14 @@ class _HomescreenState extends State<Homescreen>
                   size: 100, color: _accent.withOpacity(0.2)),
               const SizedBox(height: 24),
               Text("Welcome to URChat",
-                  style: TextStyle(
-                      fontSize: 24,
+                  style: GoogleFonts.pressStart2p(
+                      fontSize: 14,
                       fontWeight: FontWeight.bold,
                       color: _accent)),
               const SizedBox(height: 8),
               Text(
                 "Select a chat or start a new one",
-                style: TextStyle(color: _mutedText, fontSize: 14),
+                style: GoogleFonts.vt323(color: _mutedText, fontSize: 14),
               ),
             ],
           )
@@ -1017,8 +886,7 @@ class _HomescreenState extends State<Homescreen>
         key: ValueKey(_selectedChat!.chatId),
         chatRoom: _selectedChat!,
         webSocketService: _webSocketService,
-        onBack:
-            _isMobileScreen ? _deselectChat : null, // Only show back on mobile
+        onBack: _isMobileScreen ? _deselectChat : null,
       ),
     );
   }
@@ -1056,14 +924,6 @@ class _HomescreenState extends State<Homescreen>
     );
   }
 
-  // Check if we're on mobile screen
-  // bool get _isMobileScreen {
-  //   final mediaQuery = MediaQuery.of(context);
-  //   return mediaQuery.size.width < 768;
-  // }
-
-  // bool get _isLargeScreen => !_isMobileScreen;
-
   Color _parseColor(String colorString) {
     try {
       return Color(int.parse(colorString.replaceAll('#', '0xFF')));
@@ -1088,107 +948,120 @@ class _HomescreenState extends State<Homescreen>
     }
   }
 
+  ThemeData _getSafeTheme() {
+    // Create a custom theme that doesn't use NesUI to avoid animation issues
+    return ThemeData(
+      useMaterial3: false, // Disable Material3 to avoid conflicts
+      primaryColor: const Color(0xFF4E342E),
+      primaryColorDark: const Color(0xFF3E2723),
+      primaryColorLight: const Color(0xFF6D4C41),
+      scaffoldBackgroundColor: const Color(0xFFFDFBF8),
+      // backgroundColor: const Color(0xFFF5F5DC),
+      cardColor: Colors.white,
+      textTheme: TextTheme(
+        titleLarge: GoogleFonts.pressStart2p(
+          fontSize: 16,
+          color: const Color(0xFF4E342E),
+        ),
+        bodyMedium: GoogleFonts.vt323(
+          fontSize: 14,
+          color: Colors.black87,
+        ),
+      ),
+      appBarTheme: AppBarTheme(
+        backgroundColor: const Color(0xFF4E342E),
+        titleTextStyle: GoogleFonts.pressStart2p(
+          fontSize: 14,
+          color: Colors.white,
+        ),
+      ),
+      colorScheme: const ColorScheme.light(
+        primary: Color(0xFF4E342E),
+        secondary: Color(0xFF6D4C41),
+        background: Color(0xFFFDFBF8),
+        surface: Colors.white,
+      ),
+      pageTransitionsTheme: const PageTransitionsTheme(
+        builders: {
+          TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+          TargetPlatform.android: CupertinoPageTransitionsBuilder(),
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: const ColorScheme.light(
-          primary: Color(0xFF4E342E),
-          secondary: Color(0xFF6D4C41),
-          background: Color(0xFFFDFBF8),
-          surface: Color(0xFFFFFFFF),
-          onPrimary: Colors.white,
-          onSurface: Colors.black87,
-        ),
-        scaffoldBackgroundColor: const Color(0xFFFDFBF8),
-        pageTransitionsTheme: const PageTransitionsTheme(
-          builders: {
-            TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
-            TargetPlatform.android: CupertinoPageTransitionsBuilder(),
-          },
-        ),
-      ),
-      home: Scaffold(
-        backgroundColor: _beige,
-        appBar: _showChatScreen && _isMobileScreen
-            ? null // Hide main app bar when in chat view on mobile
-            : AppBar(
-                backgroundColor: _accent,
-                foregroundColor: Colors.white,
-                title: const Text(
-                  'URChat',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
+    return Scaffold(
+      backgroundColor: _beige,
+      appBar: _showChatScreen && _isMobileScreen
+          ? null
+          : AppBar(
+              title:
+                  Text('URChat', style: GoogleFonts.pressStart2p(fontSize: 14)),
+              actions: [
+                NesButton(
+                  type: NesButtonType.normal,
+                  child: const Icon(Icons.search_rounded),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => SearchScreen()),
+                    ).then((_) {
+                      _loadChatsFromApi();
+                    });
+                  },
                 ),
-                actions: [
-                  IconButton(
-                    icon: const Icon(Icons.search_rounded),
-                    onPressed: () {
+                const SizedBox(width: 8),
+                NesButton(
+                  type: NesButtonType.primary,
+                  child: const Icon(Icons.group_add_rounded),
+                  onPressed: _showCreateGroupDialog,
+                ),
+                const SizedBox(width: 8),
+                NesDropdownMenu(
+                  entries: const [
+                    NesDropdownMenuEntry(value: 'profile', label: 'Profile'),
+                    NesDropdownMenuEntry(value: 'logout', label: 'Logout'),
+                  ],
+                  onChanged: (value) {
+                    if (value == 'profile') {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => SearchScreen()),
-                      ).then((_) {
-                        _loadChatsFromApi();
-                      });
-                    },
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.group_add_rounded),
-                    onPressed: _showCreateGroupDialog,
-                  ),
-                  PopupMenuButton(
-                    itemBuilder: (_) => [
-                      const PopupMenuItem(
-                          value: 'profile', child: Text('Profile')),
-                      const PopupMenuItem(
-                          value: 'logout', child: Text('Logout')),
-                    ],
-                    onSelected: (value) {
-                      if (value == 'profile') {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => ProfileScreen()),
-                        );
-                      } else if (value == 'logout') {
-                        _logout();
-                      }
-                    },
-                  ),
+                        MaterialPageRoute(
+                            builder: (context) => ProfileScreen()),
+                      );
+                    } else if (value == 'logout') {
+                      _logout();
+                    }
+                  },
+                ),
+                const SizedBox(width: 8),
+              ],
+            ),
+      body: _isLoading
+          ? _buildLoadingState()
+          : (_isMobileScreen ? _buildMobileLayout() : _buildDesktopLayout()),
+      floatingActionButton: _isMobileScreen && !_showChatScreen
+          ? NesButton(
+              type: NesButtonType.primary,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.add_comment_outlined, size: 18),
+                  const SizedBox(width: 8),
+                  Text("New Chat",
+                      style: GoogleFonts.pressStart2p(fontSize: 10)),
                 ],
               ),
-        body: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 350),
-          switchInCurve: Curves.easeOutQuart,
-          switchOutCurve: Curves.easeInQuart,
-          child: _isLoading
-              ? _buildLoadingState().animate().fade(duration: 350.ms)
-              : _isMobileScreen
-                  ? _buildMobileLayout().animate().fadeIn(duration: 400.ms)
-                  : _buildDesktopLayout()
-                      .animate()
-                      .slideY(begin: 0.05, duration: 500.ms),
-        ),
-        floatingActionButton: _isMobileScreen && !_showChatScreen
-            ? FloatingActionButton.extended(
-                backgroundColor: Colors.white,
-                elevation: 8,
-                icon: const Icon(Icons.add_comment_outlined,
-                    color: Colors.black87),
-                label: const Text("New Chat",
-                    style: TextStyle(color: Colors.black87)),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => SearchScreen()),
-                  );
-                },
-              )
-            : null,
-      ),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => SearchScreen()),
+                );
+              },
+            )
+          : null,
     );
   }
 
@@ -1204,44 +1077,36 @@ class _HomescreenState extends State<Homescreen>
   }
 
   Widget _buildLoadingState() {
-    return Center(
+    return const Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(_brown),
-          ),
-          const SizedBox(height: 16),
-          const Text('Loading chats...'),
+          NesHourglassLoadingIndicator(),
+          SizedBox(height: 16),
+          Text('Loading chats...'),
         ],
       ),
     );
   }
 
   void _logout() async {
-    showDialog(
+    final result = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Logout'),
-        content: const Text('Are you sure you want to logout?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancel', style: TextStyle(color: _brown)),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              _webSocketService.disconnect();
-              await ApiService.logout();
-              Navigator.pushReplacement(context,
-                  MaterialPageRoute(builder: (context) => AuthScreen()));
-            },
-            child: const Text('Logout', style: TextStyle(color: Colors.red)),
-          ),
-        ],
+      builder: (context) => const NesConfirmDialog(
+        cancelLabel: 'Cancel',
+        confirmLabel: 'Logout',
+        message: 'Are you sure you want to logout?',
       ),
     );
+
+    if (result == true && mounted) {
+      _webSocketService.disconnect();
+      await ApiService.logout();
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => AuthScreen()),
+      );
+    }
   }
 
   @override
@@ -1255,8 +1120,6 @@ class _HomescreenState extends State<Homescreen>
     print('🔍 === WEB SOCKET CONNECTION TEST ===');
     print('   ✅ WebSocketService created: ${_webSocketService != null}');
     print('   ✅ Connected: ${_webSocketService.isConnected}');
-    print(
-        '   ✅ onChatListUpdated callback: ${_webSocketService.onChatListUpdated != null}');
 
     Future.delayed(const Duration(seconds: 3), () {
       if (_webSocketService.isConnected) {
