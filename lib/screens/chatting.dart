@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:animated_emoji/emoji.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:urchat_back_testing/model/ChatRoom.dart';
@@ -16,6 +17,7 @@ import 'package:iconsax/iconsax.dart';
 import 'package:urchat_back_testing/themes/butter/bfdemo.dart';
 import 'package:urchat_back_testing/themes/grid.dart';
 import 'package:urchat_back_testing/themes/meteor.dart';
+import 'package:urchat_back_testing/utils/animated_emoji_mapper.dart';
 
 class URChatApp extends StatefulWidget {
   final ChatRoom chatRoom;
@@ -1663,6 +1665,67 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         };
     final colorScheme = Theme.of(context).colorScheme;
 
+    // Check if message is a single emoji that has an animated version
+    final isSingleAnimatedEmoji = _isSingleAnimatedEmoji(message.content);
+
+    if (isSingleAnimatedEmoji) {
+      // Display animated emoji without bubble
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+        child: Row(
+          mainAxisAlignment:
+              isOwnMessage ? MainAxisAlignment.end : MainAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            if (showAvatar) ...[
+              _buildUserAvatar(message.sender),
+              const SizedBox(width: 12),
+            ],
+            Column(
+              crossAxisAlignment: isOwnMessage
+                  ? CrossAxisAlignment.end
+                  : CrossAxisAlignment.start,
+              children: [
+                if (!isOwnMessage && widget.chatRoom.isGroup == true)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 4, left: 8),
+                    child: Text(
+                      profile['fullName'] ?? message.sender,
+                      style: TextStyle(
+                        color: colorScheme.onSurface.withOpacity(0.7),
+                        fontWeight: FontWeight.w500,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                // Animated emoji
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  child: AnimatedEmoji(
+                    AnimatedEmojiMapper.getAnimatedEmoji(message.content)!,
+                    size: 48, // Larger size for single emoji messages
+                  ),
+                ),
+                // Timestamp
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    _formatMessageTime(message.timestamp),
+                    style: TextStyle(
+                      color: colorScheme.onSurface.withOpacity(0.5),
+                      fontSize: 10,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            if (!showAvatar) const SizedBox(width: 12),
+          ],
+        ),
+      );
+    }
+
+    // Regular message bubble (your existing code)
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
       child: Row(
@@ -1744,6 +1807,32 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         ],
       ),
     );
+  }
+
+  bool _isSingleAnimatedEmoji(String content) {
+    final trimmedContent = content.trim();
+
+    if (trimmedContent.isEmpty) return false;
+
+    // More permissive emoji detection that handles various emoji formats
+    bool isSingleEmoji;
+
+    if (trimmedContent.runes.length == 1) {
+      // Single character emoji
+      isSingleEmoji = true;
+    } else {
+      // Check for emoji with skin tones, flags, or other modifiers
+      // This is a simplified check - you might want to use a proper emoji detection library
+      final complexEmojiRegex = RegExp(
+        r'^[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E6}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]+$',
+        unicode: true,
+      );
+      isSingleEmoji = complexEmojiRegex.hasMatch(trimmedContent) &&
+          trimmedContent.runes.length <= 4; // Allow for skin tone modifiers
+    }
+
+    return isSingleEmoji &&
+        AnimatedEmojiMapper.hasAnimatedVersion(trimmedContent);
   }
 
   String _getOtherUserName() {
