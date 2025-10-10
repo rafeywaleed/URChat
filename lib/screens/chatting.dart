@@ -18,6 +18,7 @@ import 'package:urchat_back_testing/themes/butter/bfdemo.dart';
 import 'package:urchat_back_testing/themes/grid.dart';
 import 'package:urchat_back_testing/themes/meteor.dart';
 import 'package:urchat_back_testing/utils/animated_emoji_mapper.dart';
+import 'package:urchat_back_testing/widgets/animated_emoji_picker.dart';
 
 class URChatApp extends StatefulWidget {
   final ChatRoom chatRoom;
@@ -612,6 +613,8 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   late AnimationController _typingAnimationController;
   late AnimationController _scrollButtonAnimationController;
   late Animation<double> _scrollButtonAnimation;
+
+  bool _showEmojiPicker = false;
 
   @override
   void initState() {
@@ -1927,10 +1930,27 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
               Expanded(
                 child: _buildMessageList(),
               ),
+              _buildInlineEmojiPicker(),
               Padding(
                 padding: const EdgeInsets.all(16),
                 child: Row(
                   children: [
+                    IconButton(
+                      onPressed: () {
+                        setState(() {
+                          _showInlineEmojiPicker = !_showInlineEmojiPicker;
+                        });
+                      },
+                      icon: Icon(
+                        _showInlineEmojiPicker
+                            ? Icons.keyboard
+                            : Icons.emoji_emotions_outlined,
+                      ),
+                      tooltip: 'Emojis',
+                    ),
+                    const SizedBox(width: 4),
+
+                    // Message Text Field
                     Expanded(
                       child: TextField(
                         controller: _messageController,
@@ -1964,6 +1984,8 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                       ),
                     ),
                     const SizedBox(width: 8),
+
+                    // Send Button
                     FloatingActionButton(
                       onPressed: _isSending ? null : _sendMessage,
                       child: _isSending
@@ -1995,6 +2017,153 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                 ),
               ),
             ),
+        ],
+      ),
+    );
+  }
+
+//   void _showAnimatedEmojiPicker() async {
+//   final selectedEmoji = await Navigator.of(context).push(
+//     MaterialPageRoute(
+//       builder: (context) => const AnimatedEmojiPickerScreen(
+//         onEmojiSelected: null, // We'll handle this differently
+//       ),
+//     ),
+//   );
+
+//   if (selectedEmoji != null && selectedEmoji is String) {
+//     // Send the selected emoji immediately
+//     _sendEmojiMessage(selectedEmoji);
+//   }
+// }
+
+// Alternative approach using callback
+  void _showAnimatedEmojiPicker() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => AnimatedEmojiPickerScreen(
+          onEmojiSelected: (emoji) {
+            // Send the selected emoji
+            _sendEmojiMessage(emoji);
+          },
+        ),
+      ),
+    );
+  }
+
+  void _sendEmojiMessage(String emoji) {
+    // Set the emoji as the text field content
+    _messageController.text = emoji;
+
+    // Call the existing send function
+    _sendMessage();
+  }
+
+  bool _showInlineEmojiPicker = false;
+
+  Widget _buildInlineEmojiPicker() {
+    if (!_showInlineEmojiPicker) return const SizedBox.shrink();
+
+    // Quick access to popular emojis
+    final popularEmojis = [
+      '😀',
+      '😂',
+      '🥰',
+      '❤️',
+      '🔥',
+      '👍',
+      '🎉',
+      '🙏',
+      '😭',
+      '😡',
+      '🤔',
+      '👏',
+      '🎂',
+      '🌟',
+      '💯',
+      '🤣',
+      '😎',
+      '💕',
+      '😊',
+      '🎈'
+    ];
+
+    return Container(
+      height: 200,
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        border: Border(
+          top: BorderSide(
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.1),
+          ),
+        ),
+      ),
+      child: Column(
+        children: [
+          // Header
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Row(
+              children: [
+                const Text(
+                  'Quick Emojis',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(Icons.close, size: 18),
+                  onPressed: () {
+                    setState(() {
+                      _showInlineEmojiPicker = false;
+                    });
+                  },
+                ),
+              ],
+            ),
+          ),
+          // Emoji grid
+          Expanded(
+            child: GridView.builder(
+              padding: const EdgeInsets.all(8),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 8,
+                crossAxisSpacing: 4,
+                mainAxisSpacing: 4,
+              ),
+              itemCount: popularEmojis.length,
+              itemBuilder: (context, index) {
+                final emoji = popularEmojis[index];
+                return GestureDetector(
+                  onTap: () {
+                    _sendEmojiMessage(emoji);
+                    setState(() {
+                      _showInlineEmojiPicker = false;
+                    });
+                  },
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      color: Theme.of(context).colorScheme.background,
+                    ),
+                    child: Center(
+                      child: AnimatedEmoji(
+                        AnimatedEmojiMapper.getAnimatedEmoji(emoji)!,
+                        size: 24,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          // View all button
+          TextButton(
+            onPressed: _showAnimatedEmojiPicker,
+            child: const Text('View All Emojis'),
+          ),
         ],
       ),
     );
