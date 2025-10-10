@@ -164,6 +164,46 @@ class ApiService {
     }
   }
 
+  static Future<void> deleteMessage(String chatId, int messageId) async {
+    final response = await _makeAuthenticatedRequest(() async {
+      return await http.delete(
+        Uri.parse('$baseUrl/chat/message/$messageId'),
+        headers: headers,
+      );
+    });
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to delete message: ${response.body}');
+    }
+  }
+
+// ============ CHAT DELETION METHODS ============
+  static Future<void> deleteChat(String chatId) async {
+    final response = await _makeAuthenticatedRequest(() async {
+      return await http.delete(
+        Uri.parse('$baseUrl/chat/$chatId'),
+        headers: headers,
+      );
+    });
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to delete chat: ${response.body}');
+    }
+  }
+
+  static Future<void> leaveChat(String chatId) async {
+    final response = await _makeAuthenticatedRequest(() async {
+      return await http.post(
+        Uri.parse('$baseUrl/chat/$chatId/leave'),
+        headers: headers,
+      );
+    });
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to leave chat: ${response.body}');
+    }
+  }
+
   // ============ USER METHODS ============
   static Future<List<User>> searchUsers(String query) async {
     if (query.length < 2) return [];

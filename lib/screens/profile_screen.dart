@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:nes_ui/nes_ui.dart';
+import 'package:animated_emoji/animated_emoji.dart';
 import 'package:urchat_back_testing/service/api_service.dart';
+import 'package:urchat_back_testing/utils/animated_emoji_mapper.dart';
 import 'package:urchat_back_testing/widgets/pfp_selector.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -9,43 +11,6 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  final List<String> emojis = [
-    '😊',
-    '😂',
-    '🥰',
-    '😎',
-    '🤩',
-    '🧐',
-    '😋',
-    '🤠',
-    '😍',
-    '🥳',
-    '🤖',
-    '👻',
-    '🐱',
-    '🐶',
-    '🦊',
-    '🐼'
-  ];
-  final List<Color> bgColors = [
-    Color(0xFF4CAF50),
-    Color(0xFF2196F3),
-    Color(0xFFFF9800),
-    Color(0xFFF44336),
-    Color(0xFF9C27B0),
-    Color(0xFF673AB7),
-    Color(0xFF3F51B5),
-    Color(0xFF00BCD4),
-    Color(0xFF009688),
-    Color(0xFF8BC34A),
-    Color(0xFFFFC107),
-    Color(0xFFFF5722),
-    Color(0xFF795548),
-    Color(0xFF607D8B),
-    Color(0xFFE91E63),
-    Color(0xFF4CAF50),
-  ];
-
   late TextEditingController _fullNameController;
   late TextEditingController _bioController;
   late String _selectedEmoji;
@@ -200,6 +165,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isSmallScreen = MediaQuery.of(context).size.width < 600;
+
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
@@ -223,35 +190,44 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ],
       ),
       body: _isLoading && _userData == null
-          ? Center(child: CircularProgressIndicator(color: Color(0xFF5C4033)))
+          ? Center(
+              child: NesPixelRowLoadingIndicator(
+                count: 3,
+              ),
+            )
           : SingleChildScrollView(
-              padding: EdgeInsets.all(24),
-              child: Column(
-                children: [
-                  // Profile Picture Section
-                  _buildProfilePictureSection(),
-                  SizedBox(height: 32),
+              padding: EdgeInsets.all(isSmallScreen ? 16 : 24),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minHeight: MediaQuery.of(context).size.height,
+                ),
+                child: Column(
+                  children: [
+                    // Profile Picture Section
+                    _buildProfilePictureSection(isSmallScreen),
+                    SizedBox(height: isSmallScreen ? 24 : 32),
 
-                  // User Info Section
-                  _buildUserInfoSection(),
-                  SizedBox(height: 24),
+                    // User Info Section
+                    _buildUserInfoSection(isSmallScreen),
+                    SizedBox(height: isSmallScreen ? 20 : 24),
 
-                  // Action Button
-                  _buildActionButton(),
-                ],
+                    // Action Button
+                    _buildActionButton(isSmallScreen),
+                  ],
+                ),
               ),
             ),
     );
   }
 
-  Widget _buildProfilePictureSection() {
+  Widget _buildProfilePictureSection(bool isSmallScreen) {
     return Column(
       children: [
         Stack(
           children: [
             Container(
-              width: 120,
-              height: 120,
+              width: isSmallScreen ? 100 : 120,
+              height: isSmallScreen ? 100 : 120,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
@@ -268,11 +244,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               child: CircleAvatar(
                 backgroundColor: _selectedBgColor,
-                radius: 56,
-                child: Text(
-                  _selectedEmoji,
-                  style: TextStyle(fontSize: 48),
-                ),
+                radius: isSmallScreen ? 48 : 56,
+                child: AnimatedEmojiMapper.hasAnimatedVersion(_selectedEmoji)
+                    ? AnimatedEmojiMapper.getAnimatedEmojiWidget(
+                          _selectedEmoji,
+                          size: isSmallScreen ? 36 : 48,
+                        ) ??
+                        Text(
+                          _selectedEmoji,
+                          style: TextStyle(fontSize: isSmallScreen ? 36 : 48),
+                        )
+                    : Text(
+                        _selectedEmoji,
+                        style: TextStyle(fontSize: isSmallScreen ? 36 : 48),
+                      ),
               ),
             ),
             if (_isEditing)
@@ -280,15 +265,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 bottom: 0,
                 right: 0,
                 child: Container(
-                  width: 40,
-                  height: 40,
+                  width: isSmallScreen ? 32 : 40,
+                  height: isSmallScreen ? 32 : 40,
                   decoration: BoxDecoration(
                     color: Color(0xFF5C4033),
                     shape: BoxShape.circle,
                     border: Border.all(color: Colors.white, width: 3),
                   ),
                   child: IconButton(
-                    icon: Icon(Icons.edit, color: Colors.white, size: 18),
+                    icon: Icon(
+                      Icons.edit,
+                      color: Colors.white,
+                      size: isSmallScreen ? 14 : 18,
+                    ),
                     onPressed: _showProfileCustomization,
                     padding: EdgeInsets.zero,
                   ),
@@ -296,21 +285,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
           ],
         ),
-        SizedBox(height: 16),
+        SizedBox(height: isSmallScreen ? 12 : 16),
         Text(
           _userData?['username'] ?? ApiService.currentUsername ?? 'Unknown',
           style: TextStyle(
-            fontSize: 24,
+            fontSize: isSmallScreen ? 20 : 24,
             fontWeight: FontWeight.bold,
             color: Colors.grey[800],
           ),
         ),
         SizedBox(height: 4),
         Text(
-          _email ??
-              'user@example.com', // You might need to get email from auth or another endpoint
+          _email ?? 'user@example.com',
           style: TextStyle(
-            fontSize: 14,
+            fontSize: isSmallScreen ? 12 : 14,
             color: Colors.grey[600],
           ),
         ),
@@ -318,96 +306,90 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildUserInfoSection() {
-    return Container(
+  Widget _buildUserInfoSection(bool isSmallScreen) {
+    return NesContainer(
       width: double.infinity,
-      padding: EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 10,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
+      padding: EdgeInsets.all(isSmallScreen ? 16 : 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildInfoRow('Full Name',
-              _buildEditableField(_fullNameController, 'Full Name')),
-          SizedBox(height: 20),
           _buildInfoRow(
-              'Bio', _buildEditableField(_bioController, 'Bio', maxLines: 3)),
-          SizedBox(height: 20),
+            'Full Name',
+            _buildEditableField(
+                _fullNameController, 'Full Name', isSmallScreen),
+            isSmallScreen,
+          ),
+          SizedBox(height: isSmallScreen ? 16 : 20),
+          _buildInfoRow(
+            'Bio',
+            _buildEditableField(_bioController, 'Bio', isSmallScreen,
+                maxLines: 3),
+            isSmallScreen,
+          ),
+          SizedBox(height: isSmallScreen ? 16 : 20),
           _buildInfoRow(
             'Member Since',
             Text(
               _formatJoinedAt(_userData?['joinedAt']?.toString()),
               style: TextStyle(
-                fontSize: 16,
+                fontSize: isSmallScreen ? 14 : 16,
                 color: Colors.grey[700],
                 fontWeight: FontWeight.w500,
               ),
             ),
+            isSmallScreen,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildInfoRow(String label, Widget content) {
+  Widget _buildInfoRow(String label, Widget content, bool isSmallScreen) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
           style: TextStyle(
-            fontSize: 12,
+            fontSize: isSmallScreen ? 10 : 12,
             color: Colors.grey[500],
             fontWeight: FontWeight.w600,
           ),
         ),
-        SizedBox(height: 8),
+        SizedBox(height: isSmallScreen ? 6 : 8),
         content,
       ],
     );
   }
 
-  Widget _buildEditableField(TextEditingController controller, String hint,
-      {int maxLines = 1}) {
+  Widget _buildEditableField(
+    TextEditingController controller,
+    String hint,
+    bool isSmallScreen, {
+    int maxLines = 1,
+  }) {
     return _isEditing
         ? TextField(
             controller: controller,
             maxLines: maxLines,
             decoration: InputDecoration(
               hintText: hint,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Colors.grey[300]!),
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: isSmallScreen ? 12 : 16,
+                vertical: isSmallScreen ? 10 : 12,
               ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Color(0xFF5C4033)),
-              ),
-              contentPadding:
-                  EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             ),
           )
-        : Container(
+        : NesContainer(
             width: double.infinity,
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color: Colors.grey[50],
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey[300]!),
+            padding: EdgeInsets.symmetric(
+              horizontal: isSmallScreen ? 12 : 16,
+              vertical: isSmallScreen ? 10 : 12,
             ),
             child: Text(
               controller.text.isEmpty ? 'Not set' : controller.text,
               style: TextStyle(
-                fontSize: 16,
+                fontSize: isSmallScreen ? 14 : 16,
                 color: controller.text.isEmpty
                     ? Colors.grey[400]
                     : Colors.grey[800],
@@ -417,33 +399,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
           );
   }
 
-  Widget _buildActionButton() {
+  Widget _buildActionButton(bool isSmallScreen) {
     return SizedBox(
       width: double.infinity,
-      child: ElevatedButton(
+      child: NesButton(
+        type: NesButtonType.primary,
         onPressed: _isLoading ? null : _updateProfile,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Color(0xFF5C4033),
-          foregroundColor: Colors.white,
-          padding: EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          elevation: 2,
-        ),
         child: _isLoading
-            ? SizedBox(
-                height: 20,
-                width: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Colors.white,
-                ),
-              )
+            ? NesHourglassLoadingIndicator()
             : Text(
                 _isEditing ? 'Save Changes' : 'Edit Profile',
                 style: TextStyle(
-                  fontSize: 16,
+                  fontSize: isSmallScreen ? 14 : 16,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -455,9 +422,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder: (context) {
+        final isSmallScreen = MediaQuery.of(context).size.width < 600;
         return Container(
-          height: MediaQuery.of(context).size.height * 0.7,
+          height:
+              MediaQuery.of(context).size.height * (isSmallScreen ? 0.8 : 0.7),
           decoration: BoxDecoration(
             color: Theme.of(context).scaffoldBackgroundColor,
             borderRadius: BorderRadius.only(
@@ -476,8 +446,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 SizedBox(height: 16),
                 Expanded(
                   child: SingleChildScrollView(
-                    padding: EdgeInsets.all(16),
+                    padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
                     child: NesEmojiColorPicker(
+                      // CHANGED: Use the new improved picker
                       initialEmoji: _selectedEmoji,
                       initialColor: _selectedBgColor,
                       onEmojiChanged: (emoji) {
@@ -490,12 +461,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           _selectedBgColor = color;
                         });
                       },
-                      emojiSize: 48,
+                      emojiSize: isSmallScreen ? 36 : 48,
                     ),
                   ),
                 ),
                 Padding(
-                  padding: EdgeInsets.all(16),
+                  padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
                   child: NesButton(
                     type: NesButtonType.normal,
                     onPressed: () => Navigator.pop(context),

@@ -1,6 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:nes_ui/nes_ui.dart';
 import 'package:urchat_back_testing/model/user.dart';
+import 'package:urchat_back_testing/screens/user_profile,dart';
+
 import 'package:urchat_back_testing/service/api_service.dart';
 
 class SearchScreen extends StatefulWidget {
@@ -15,7 +18,6 @@ class _SearchScreenState extends State<SearchScreen> {
   bool _isSearching = false;
   bool _hasSearched = false;
 
-  /// Debounced search
   void _onSearchChanged(String query) {
     if (_debounce?.isActive ?? false) _debounce!.cancel();
     _debounce = Timer(const Duration(milliseconds: 500), () {
@@ -55,12 +57,27 @@ class _SearchScreenState extends State<SearchScreen> {
   void _startChat(User user) async {
     try {
       final chat = await ApiService.createIndividualChat(user.username);
-      Navigator.pop(context, chat);
+      // Navigate to the chat screen with the created chat
+      Navigator.pushReplacementNamed(context, '/chat', arguments: chat);
     } catch (e) {
+      NesScaffoldMessenger(body: Text("Hello"));
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error starting chat: $e")),
+        SnackBar(
+          content: Text("Failed to start chat: $e"),
+          backgroundColor: Colors.red,
+        ),
       );
     }
+  }
+
+  void _viewProfile(User user) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => OtherUserProfileScreen(
+          username: user.username,
+        ),
+      ),
+    );
   }
 
   @override
@@ -72,102 +89,292 @@ class _SearchScreenState extends State<SearchScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isSmallScreen = MediaQuery.of(context).size.width < 600;
     final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: Colors.grey[50],
       appBar: AppBar(
         backgroundColor: const Color(0xFF5C4033),
-        title: TextField(
-          controller: _searchController,
-          style: const TextStyle(color: Colors.white, fontSize: 16),
-          decoration: const InputDecoration(
-            hintText: "Search users...",
-            hintStyle: TextStyle(color: Colors.white70),
-            border: InputBorder.none,
+        title: NesContainer(
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          child: Row(
+            children: [
+              Icon(
+                Icons.search,
+                color: Colors.grey[600],
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: TextField(
+                  scrollPadding: EdgeInsets.all(2),
+                  controller: _searchController,
+                  style: const TextStyle(
+                    color: Colors.black87,
+                    fontSize: 16,
+                  ),
+                  decoration: InputDecoration(
+                    hintText: "Search users...",
+                    hintStyle: TextStyle(color: Colors.grey[600]),
+                    border: InputBorder.none,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                  onChanged: _onSearchChanged,
+                ),
+              ),
+              if (_searchController.text.isNotEmpty)
+                IconButton(
+                  icon: Icon(Icons.clear, size: 18, color: Colors.grey[600]),
+                  onPressed: () {
+                    _searchController.clear();
+                    _searchUsers("");
+                  },
+                  padding: EdgeInsets.zero,
+                  constraints: BoxConstraints.tight(Size(24, 24)),
+                ),
+            ],
           ),
-          onChanged: _onSearchChanged,
         ),
-        actions: [
-          if (_searchController.text.isNotEmpty)
-            IconButton(
-              icon: const Icon(Icons.clear, color: Colors.white),
-              onPressed: () {
-                _searchController.clear();
-                _searchUsers("");
-              },
-            ),
-        ],
+        elevation: 2,
       ),
-      body: _isSearching
-          ? const Center(child: CircularProgressIndicator())
-          : _searchResults.isEmpty
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Text(
-                      _hasSearched
-                          ? "No users found"
-                          : "🔍 Search for people to start a chat",
-                      style: theme.textTheme.bodyMedium
-                          ?.copyWith(color: Colors.grey),
-                      textAlign: TextAlign.center,
+      body: _buildBody(isSmallScreen, theme),
+    );
+  }
+
+  Widget _buildBody(bool isSmallScreen, ThemeData theme) {
+    if (_isSearching) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            NesPixelRowLoadingIndicator(count: 5),
+            const SizedBox(height: 16),
+            Text(
+              "Searching...",
+              style: TextStyle(
+                fontSize: isSmallScreen ? 14 : 16,
+                color: Colors.grey[600],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (!_hasSearched) {
+      return _buildEmptyState(isSmallScreen);
+    }
+
+    if (_searchResults.isEmpty) {
+      return _buildNoResultsState(isSmallScreen);
+    }
+
+    return _buildResultsList(isSmallScreen);
+  }
+
+  Widget _buildEmptyState(bool isSmallScreen) {
+    return Center(
+      child: Padding(
+        padding: EdgeInsets.all(isSmallScreen ? 24 : 32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            NesIcon(
+              iconData: NesIcons.owl,
+              // size: isSmallScreen ? 48 : 64,
+              primaryColor: Colors.grey[400],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              "Search for Users",
+              style: TextStyle(
+                fontSize: isSmallScreen ? 18 : 22,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey[700],
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              "Find people by username to start chatting",
+              style: TextStyle(
+                fontSize: isSmallScreen ? 14 : 16,
+                color: Colors.grey[500],
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNoResultsState(bool isSmallScreen) {
+    return Center(
+      child: Padding(
+        padding: EdgeInsets.all(isSmallScreen ? 24 : 32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            NesIcon(
+              iconData: NesIcons.user,
+              // size: isSmallScreen ? 48 : 64,
+              primaryColor: Colors.grey[400],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              "No Users Found",
+              style: TextStyle(
+                fontSize: isSmallScreen ? 18 : 22,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey[700],
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              "Try searching with a different username or name",
+              style: TextStyle(
+                fontSize: isSmallScreen ? 14 : 16,
+                color: Colors.grey[500],
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildResultsList(bool isSmallScreen) {
+    return ListView.separated(
+      padding: EdgeInsets.all(isSmallScreen ? 8 : 12),
+      itemCount: _searchResults.length,
+      separatorBuilder: (_, __) => SizedBox(height: isSmallScreen ? 8 : 12),
+      itemBuilder: (context, index) {
+        final user = _searchResults[index];
+        final bgColor = _parseColor(user.pfpBg);
+
+        return NesContainer(
+          padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+          child: Row(
+            children: [
+              // Profile Avatar
+              GestureDetector(
+                onTap: () => _viewProfile(user),
+                child: Container(
+                  width: isSmallScreen ? 48 : 56,
+                  height: isSmallScreen ? 48 : 56,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: Colors.grey[300]!,
+                      width: 2,
                     ),
                   ),
-                )
-              : ListView.separated(
-                  padding: const EdgeInsets.all(8),
-                  itemCount: _searchResults.length,
-                  separatorBuilder: (_, __) =>
-                      const Divider(height: 1, indent: 72),
-                  itemBuilder: (context, index) {
-                    final user = _searchResults[index];
-                    final bgColor = Color(
-                      int.parse(user.pfpBg.replaceAll("#", "0xFF")),
-                    );
-
-                    return ListTile(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                  child: CircleAvatar(
+                    backgroundColor: bgColor,
+                    child: Text(
+                      user.pfpIndex,
+                      style: TextStyle(
+                        fontSize: isSmallScreen ? 20 : 24,
                       ),
-                      leading: CircleAvatar(
-                        backgroundColor: bgColor,
-                        child: Text(
-                          user.pfpIndex,
-                          style: const TextStyle(fontSize: 22),
-                        ),
-                      ),
-                      title: Text(
-                        user.fullName,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 16,
-                        ),
-                      ),
-                      subtitle: Text(
-                        "@${user.username}",
-                        style: TextStyle(color: Colors.grey[600]),
-                      ),
-                      trailing: ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF5C4033),
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 6,
-                          ),
-                        ),
-                        icon: const Icon(Icons.chat_bubble_outline, size: 18),
-                        label: const Text("Chat"),
-                        onPressed: () => _startChat(user),
-                      ),
-                      onTap: () => _startChat(user),
-                    );
-                  },
+                    ),
+                  ),
                 ),
+              ),
+              SizedBox(width: isSmallScreen ? 12 : 16),
+
+              // User Info
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => _viewProfile(user),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        user.fullName,
+                        style: TextStyle(
+                          fontSize: isSmallScreen ? 16 : 18,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey[800],
+                        ),
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        "@${user.username}",
+                        style: TextStyle(
+                          fontSize: isSmallScreen ? 12 : 14,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Action Buttons
+              _buildActionButtons(user, isSmallScreen),
+            ],
+          ),
+        );
+      },
     );
+  }
+
+  Widget _buildActionButtons(User user, bool isSmallScreen) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Profile Button
+        NesButton(
+          type: NesButtonType.normal,
+          onPressed: () => _viewProfile(user),
+          child: Icon(
+            Icons.person_outline,
+            size: isSmallScreen ? 16 : 18,
+          ),
+        ),
+        SizedBox(width: isSmallScreen ? 8 : 12),
+
+        // Chat Button
+        NesButton(
+          type: NesButtonType.primary,
+          onPressed: () => _startChat(user),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.chat_bubble_outline,
+                size: isSmallScreen ? 14 : 16,
+              ),
+              if (!isSmallScreen) ...[
+                SizedBox(width: 6),
+                Text(
+                  "Chat",
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Color _parseColor(String hexColor) {
+    try {
+      hexColor = hexColor.replaceAll('#', '');
+      if (hexColor.length == 6) {
+        hexColor = 'FF' + hexColor;
+      }
+      return Color(int.parse(hexColor, radix: 16));
+    } catch (e) {
+      return Color(0xFF4CAF50); // Default fallback color
+    }
   }
 }

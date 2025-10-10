@@ -9,6 +9,7 @@ import 'package:urchat_back_testing/model/ChatRoom.dart';
 import 'package:urchat_back_testing/model/dto.dart';
 import 'package:urchat_back_testing/model/message.dart';
 import 'package:urchat_back_testing/screens/group_management_screen.dart';
+import 'package:urchat_back_testing/screens/user_profile,dart';
 import 'package:urchat_back_testing/service/api_service.dart';
 import 'package:urchat_back_testing/service/chat_cache_service.dart';
 import 'package:urchat_back_testing/service/user_cache_service.dart';
@@ -599,6 +600,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final List<Message> _messages = [];
+  final AnimatedEmojiMapper _emojiMapper = AnimatedEmojiMapper();
 
   bool _isLoading = true;
   bool _isSending = false;
@@ -1703,12 +1705,17 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                   ),
                 // Animated emoji
                 Container(
-                  padding: const EdgeInsets.all(8),
-                  child: AnimatedEmoji(
-                    AnimatedEmojiMapper.getAnimatedEmoji(message.content)!,
-                    size: 48, // Larger size for single emoji messages
-                  ),
-                ),
+                    padding: const EdgeInsets.all(8),
+                    child: _isSingleAnimatedEmoji(message.content)
+                        ? AnimatedEmoji(
+                            AnimatedEmojiMapper.getAnimatedEmoji(
+                                message.content)!,
+                            size: 48,
+                          )
+                        : Text(
+                            message.content,
+                            style: TextStyle(fontSize: 48),
+                          )),
                 // Timestamp
                 Padding(
                   padding: const EdgeInsets.only(top: 4),
@@ -1864,62 +1871,62 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                 onPressed: widget.onBack,
               )
             : null,
-        title: Row(
-          children: [
-            CircleAvatar(
-              backgroundColor: _parseColor(widget.chatRoom.pfpBg),
-              child: Text(
-                widget.chatRoom.pfpIndex,
-                style: const TextStyle(color: Colors.white),
+        title: GestureDetector(
+          onTap: () => widget.chatRoom.isGroup
+              ? Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => GroupManagementScreen(
+                      group: widget.chatRoom,
+                    ),
+                  ),
+                )
+              : Navigator.of(context).push(
+                  MaterialPageRoute(
+                      builder: (context) => OtherUserProfileScreen(
+                          username: widget.chatRoom.chatName)),
+                ),
+          child: Row(
+            children: [
+              CircleAvatar(
+                backgroundColor: _parseColor(widget.chatRoom.pfpBg),
+                child: Text(
+                  widget.chatRoom.pfpIndex,
+                  style: const TextStyle(color: Colors.white),
+                ),
               ),
-            ),
-            const SizedBox(width: 12),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  widget.chatRoom.chatName,
-                  style: const TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 300),
-                  child: _typingUser.isNotEmpty
-                      ? Text(
-                          '$_typingUser is typing...',
-                          style: const TextStyle(
-                              fontSize: 12, color: Colors.white70),
-                        )
-                      : Text(
-                          widget.chatRoom.isGroup ? 'Group' : 'Online',
-                          style: const TextStyle(
-                              fontSize: 12, color: Colors.white70),
-                        ),
-                ),
-              ],
-            ),
-          ],
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.chatRoom.chatName,
+                    style: const TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 300),
+                    child: _typingUser.isNotEmpty
+                        ? Text(
+                            '$_typingUser is typing...',
+                            style: const TextStyle(
+                                fontSize: 12, color: Colors.white70),
+                          )
+                        : Text(
+                            widget.chatRoom.isGroup ? 'Group' : 'Online',
+                            style: const TextStyle(
+                                fontSize: 12, color: Colors.white70),
+                          ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
         actions: [
           IconButton(
             icon: const Icon(Iconsax.paintbucket),
             onPressed: _showThemeMenu,
           ),
-          widget.chatRoom.isGroup
-              ? IconButton(
-                  icon: const Icon(Icons.group),
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => GroupManagementScreen(
-                          group: widget.chatRoom,
-                        ),
-                      ),
-                    );
-                  },
-                  tooltip: 'Group Info',
-                )
-              : const SizedBox.shrink(),
         ],
       ),
       body: Stack(
@@ -2143,16 +2150,10 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                       _showInlineEmojiPicker = false;
                     });
                   },
-                  child: Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(8),
-                      color: Theme.of(context).colorScheme.background,
-                    ),
-                    child: Center(
-                      child: AnimatedEmoji(
-                        AnimatedEmojiMapper.getAnimatedEmoji(emoji)!,
-                        size: 24,
-                      ),
+                  child: Center(
+                    child: AnimatedEmoji(
+                      AnimatedEmojiMapper.getAnimatedEmoji(emoji)!,
+                      size: 30,
                     ),
                   ),
                 );

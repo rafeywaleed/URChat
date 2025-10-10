@@ -54,6 +54,10 @@ class Message {
     };
   }
 
+  bool canDelete(String currentUsername) {
+    return sender == currentUsername;
+  }
+
   @override
   String toString() {
     return 'Message{id: $id, sender: $sender, content: $content}';

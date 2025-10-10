@@ -11,6 +11,10 @@ class WebSocketService {
   ValueChanged<List<ChatRoom>> onChatListUpdated;
   ValueChanged<Map<String, dynamic>> onTyping;
   ValueChanged<Map<String, dynamic>> onReadReceipt;
+  ValueChanged<Map<String, dynamic>> onMessageDeleted;
+  ValueChanged<String> onChatDeleted;
+
+  final Map<String, StompUnsubscribe> _messageDeletionSubscriptions = {};
 
   final Map<String, StompUnsubscribe> _chatSubscriptions = {};
   final Map<String, StompUnsubscribe> _typingSubscriptions = {};
@@ -24,6 +28,8 @@ class WebSocketService {
     required this.onChatListUpdated,
     required this.onTyping,
     required this.onReadReceipt,
+    required this.onMessageDeleted,
+    required this.onChatDeleted,
   });
 
   void connect() {
@@ -218,6 +224,30 @@ class WebSocketService {
 
     _typingSubscriptions[chatId] = typingUnsubscribe;
 
+    // Subscribe to message deletion events
+    print('🎯 SUBSCRIBING TO: /topic/chat/$chatId/message-deleted');
+
+    _chatSubscriptions[chatId] = messageUnsubscribe;
+
+    final deletionUnsubscribe = _stompClient!.subscribe(
+      destination: '/topic/chat/$chatId/message-deleted',
+      callback: (StompFrame frame) {
+        print(
+            '🗑️ === MESSAGE DELETION CALLBACK TRIGGERED for chat $chatId ===');
+        if (frame.body != null) {
+          print('🗑️ Received message deletion: ${frame.body}');
+          try {
+            final deletionData = jsonDecode(frame.body!);
+            onMessageDeleted(deletionData);
+          } catch (e) {
+            print('❌ Error parsing message deletion: $e');
+          }
+        }
+      },
+    );
+
+    _messageDeletionSubscriptions[chatId] = deletionUnsubscribe;
+
     print('✅ Successfully subscribed to chat: $chatId');
     print('📊 Current subscriptions: ${_chatSubscriptions.keys.toList()}');
   }
@@ -254,6 +284,25 @@ class WebSocketService {
       print('⌨️ Sent typing notification: $isTyping');
     } catch (e) {
       print('❌ Error sending typing notification: $e');
+    }
+  }
+
+  void deleteMessage(String chatId, int messageId) {
+    if (!_isConnected || _stompClient == null) {
+      print('❌ Cannot delete message: WebSocket not connected');
+      return;
+    }
+
+    try {
+      _stompClient!.send(
+        destination: '/app/chat/$chatId/delete-message',
+        body: jsonEncode({
+          'messageId': messageId,
+        }),
+      );
+      print('🗑️ Sent message deletion for message $messageId in chat $chatId');
+    } catch (e) {
+      print('❌ Error sending message deletion: $e');
     }
   }
 
@@ -317,6 +366,12 @@ class WebSocketService {
       _typingSubscriptions[chatId]!();
       _typingSubscriptions.remove(chatId);
       print('🔕 Unsubscribed from chat typing: $chatId');
+    }
+
+    if (_messageDeletionSubscriptions.containsKey(chatId)) {
+      _messageDeletionSubscriptions[chatId]!();
+      _messageDeletionSubscriptions.remove(chatId);
+      print('🔕 Unsubscribed from message deletion: $chatId');
     }
   }
 
