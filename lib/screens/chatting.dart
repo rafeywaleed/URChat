@@ -183,7 +183,7 @@ class _URChatAppState extends State<URChatApp> {
         onPrimary: Colors.white,
         onSecondary: Colors.white,
       ),
-      textTheme: GoogleFonts.interTextTheme().apply(
+      textTheme: GoogleFonts.pixelifySansTextTheme().apply(
         bodyColor: const Color(0xFF2C2C2C),
         displayColor: const Color(0xFF2C2C2C),
       ),
@@ -200,7 +200,7 @@ class _URChatAppState extends State<URChatApp> {
         backgroundColor: const Color(0xFF2C2C2C),
         elevation: 1,
         centerTitle: true,
-        titleTextStyle: GoogleFonts.inter(
+        titleTextStyle: GoogleFonts.pixelifySans(
           color: Colors.white,
           fontSize: 18,
           fontWeight: FontWeight.w600,
@@ -257,7 +257,7 @@ class _URChatAppState extends State<URChatApp> {
         onPrimary: const Color(0xFF121212),
         onSecondary: const Color(0xFF121212),
       ),
-      textTheme: GoogleFonts.interTextTheme().apply(
+      textTheme: GoogleFonts.pixelifySansTextTheme().apply(
         bodyColor: const Color(0xFFE0E0E0),
         displayColor: const Color(0xFFE0E0E0),
       ),
@@ -274,7 +274,7 @@ class _URChatAppState extends State<URChatApp> {
         backgroundColor: const Color(0xFF1E1E1E),
         elevation: 1,
         centerTitle: true,
-        titleTextStyle: GoogleFonts.inter(
+        titleTextStyle: GoogleFonts.pixelifySans(
           color: const Color(0xFFE0E0E0),
           fontSize: 18,
           fontWeight: FontWeight.w600,
@@ -329,7 +329,7 @@ class _URChatAppState extends State<URChatApp> {
         background: Color(0xFFFFFFFF),
         onSurface: Color(0xFF212529),
       ),
-      textTheme: GoogleFonts.robotoTextTheme().apply(
+      textTheme: GoogleFonts.pixelifySansTextTheme().apply(
         bodyColor: Color(0xFF212529),
         displayColor: Color(0xFF212529),
       ),
@@ -346,7 +346,7 @@ class _URChatAppState extends State<URChatApp> {
         backgroundColor: const Color(0xFF2E4057),
         elevation: 0,
         centerTitle: true,
-        titleTextStyle: GoogleFonts.roboto(
+        titleTextStyle: GoogleFonts.pixelifySans(
           fontSize: 20,
           fontWeight: FontWeight.w600,
           color: Colors.white,
@@ -364,7 +364,7 @@ class _URChatAppState extends State<URChatApp> {
         background: Color(0xFF121212),
         onSurface: Color(0xFFE0E0E0),
       ),
-      textTheme: GoogleFonts.robotoTextTheme().apply(
+      textTheme: GoogleFonts.pixelifySansTextTheme().apply(
         bodyColor: Color(0xFFE0E0E0),
         displayColor: Colors.white,
       ),
@@ -381,7 +381,7 @@ class _URChatAppState extends State<URChatApp> {
         backgroundColor: const Color(0xFF4A6FA5),
         elevation: 0,
         centerTitle: true,
-        titleTextStyle: GoogleFonts.roboto(
+        titleTextStyle: GoogleFonts.pixelifySans(
           fontSize: 20,
           fontWeight: FontWeight.w600,
           color: Colors.white,
@@ -402,7 +402,7 @@ class _URChatAppState extends State<URChatApp> {
         background: Color(0xFFFFFFFF),
         onSurface: Color(0xFF3A3A3A),
       ),
-      textTheme: GoogleFonts.robotoTextTheme().apply(
+      textTheme: GoogleFonts.pixelifySansTextTheme().apply(
         bodyColor: Color(0xFF3A3A3A),
         displayColor: Color(0xFF3A3A3A),
       ),
@@ -419,7 +419,7 @@ class _URChatAppState extends State<URChatApp> {
         backgroundColor: const Color(0xFF5D737E),
         elevation: 0,
         centerTitle: true,
-        titleTextStyle: GoogleFonts.roboto(
+        titleTextStyle: GoogleFonts.pixelifySans(
           fontSize: 20,
           fontWeight: FontWeight.w500,
           color: Colors.white,
@@ -437,7 +437,7 @@ class _URChatAppState extends State<URChatApp> {
         background: Color(0xFF121A21),
         onSurface: Color(0xFFE0E3E7),
       ),
-      textTheme: GoogleFonts.robotoTextTheme().apply(
+      textTheme: GoogleFonts.pixelifySansTextTheme().apply(
         bodyColor: Color(0xFFE0E3E7),
         displayColor: Colors.white,
       ),
@@ -455,7 +455,7 @@ class _URChatAppState extends State<URChatApp> {
         backgroundColor: const Color(0xFF7A8B99),
         elevation: 0,
         centerTitle: true,
-        titleTextStyle: GoogleFonts.roboto(
+        titleTextStyle: GoogleFonts.pixelifySans(
           fontSize: 20,
           fontWeight: FontWeight.w500,
           color: Colors.white,
@@ -476,7 +476,7 @@ class _URChatAppState extends State<URChatApp> {
         background: Color(0xFFFFF9FB),
         onSurface: Color(0xFF333333),
       ),
-      textTheme: GoogleFonts.poppinsTextTheme().apply(
+      textTheme: GoogleFonts.pixelifySansTextTheme().apply(
         bodyColor: Color(0xFF333333),
         displayColor: Color(0xFF333333),
       ),
@@ -493,7 +493,7 @@ class _URChatAppState extends State<URChatApp> {
         backgroundColor: const Color(0xFFE91E63),
         elevation: 0,
         centerTitle: true,
-        titleTextStyle: GoogleFonts.poppins(
+        titleTextStyle: GoogleFonts.pixelifySans(
           fontSize: 20,
           fontWeight: FontWeight.w600,
           color: Colors.white,
@@ -511,7 +511,7 @@ class _URChatAppState extends State<URChatApp> {
         background: Color(0xFF121212),
         onSurface: Color(0xFFE0E0E0),
       ),
-      textTheme: GoogleFonts.poppinsTextTheme().apply(
+      textTheme: GoogleFonts.pixelifySansTextTheme().apply(
         bodyColor: Color(0xFFE0E0E0),
         displayColor: Colors.white,
       ),
@@ -528,7 +528,7 @@ class _URChatAppState extends State<URChatApp> {
         backgroundColor: const Color(0xFFEC407A),
         elevation: 0,
         centerTitle: true,
-        titleTextStyle: GoogleFonts.poppins(
+        titleTextStyle: GoogleFonts.pixelifySans(
           fontSize: 20,
           fontWeight: FontWeight.w600,
           color: Colors.white,
@@ -863,6 +863,8 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   void _showThemeMenu() async {
     int tempTheme = widget.selectedTheme;
     bool tempDarkMode = widget.isDarkMode;
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     await showDialog(
       barrierDismissible: false,
@@ -872,71 +874,309 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setState) {
-            return AlertDialog(
-              title: const Text('Theme Settings'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  ListTile(
-                    leading: Icon(
-                      tempDarkMode ? Iconsax.sun_1 : Iconsax.moon,
-                      color: Theme.of(context).iconTheme.color,
-                    ),
-                    title: Text(tempDarkMode ? 'Light Mode' : 'Dark Mode'),
-                    onTap: () {
-                      setState(() {
-                        tempDarkMode = !tempDarkMode;
-                      });
-                      widget.onThemeModeChanged?.call(
-                          tempDarkMode ? ThemeMode.dark : ThemeMode.light);
-                    },
+            return Dialog(
+              backgroundColor: colorScheme.background,
+              insetPadding: const EdgeInsets.all(20),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: colorScheme.background,
+                  border: Border.all(
+                    color: colorScheme.onSurface.withOpacity(0.2),
+                    width: 2,
                   ),
-                  const SizedBox(height: 12),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      'Theme Style',
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w600,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // NES Style Header - Now uses theme colors
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      decoration: BoxDecoration(
+                        color: colorScheme.primary,
+                        border: Border.all(
+                          color: colorScheme.onPrimary.withOpacity(0.3),
+                          width: 2,
+                        ),
+                      ),
+                      child: Center(
+                        child: Text(
+                          'THEME SETTINGS',
+                          style: TextStyle(
+                            color: colorScheme.onPrimary,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            letterSpacing: 1,
                           ),
+                        ),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    children: List.generate(widget.themeNames.length, (index) {
-                      return ChoiceChip(
-                        label: Text(widget.themeNames[index]),
-                        selected: tempTheme == index,
-                        onSelected: (selected) {
-                          if (selected) {
-                            setState(() {
-                              tempTheme = index;
-                            });
-                            widget.onThemeChanged?.call(index);
-                          }
-                        },
-                      );
-                    }),
-                  ),
-                ],
+
+                    const SizedBox(height: 20),
+
+                    // Theme Mode Toggle - NES Style with theme colors
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: colorScheme.surface,
+                        border: Border.all(
+                          color: colorScheme.onSurface.withOpacity(0.2),
+                          width: 2,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Iconsax.color_swatch,
+                            color: colorScheme.onSurface,
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            'MODE',
+                            style: TextStyle(
+                              color: colorScheme.onSurface,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                          const Spacer(),
+                          Container(
+                            decoration: BoxDecoration(
+                              color: colorScheme.background,
+                              border: Border.all(
+                                color: colorScheme.onSurface.withOpacity(0.3),
+                                width: 2,
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                // Light Mode Button
+                                GestureDetector(
+                                  onTap: () {
+                                    setState(() {
+                                      tempDarkMode = false;
+                                    });
+                                    widget.onThemeModeChanged
+                                        ?.call(ThemeMode.light);
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 8,
+                                    ),
+                                    color: !tempDarkMode
+                                        ? colorScheme.primary
+                                        : colorScheme.surface,
+                                    child: Text(
+                                      'LIGHT',
+                                      style: TextStyle(
+                                        color: !tempDarkMode
+                                            ? colorScheme.onPrimary
+                                            : colorScheme.onSurface,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                // Dark Mode Button
+                                GestureDetector(
+                                  onTap: () {
+                                    setState(() {
+                                      tempDarkMode = true;
+                                    });
+                                    widget.onThemeModeChanged
+                                        ?.call(ThemeMode.dark);
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 8,
+                                    ),
+                                    color: tempDarkMode
+                                        ? colorScheme.primary
+                                        : colorScheme.surface,
+                                    child: Text(
+                                      'DARK',
+                                      style: TextStyle(
+                                        color: tempDarkMode
+                                            ? colorScheme.onPrimary
+                                            : colorScheme.onSurface,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // Theme Style Selection - NES Style with theme colors
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: colorScheme.surface,
+                        border: Border.all(
+                          color: colorScheme.onSurface.withOpacity(0.2),
+                          width: 2,
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                Iconsax.paintbucket,
+                                color: colorScheme.onSurface,
+                              ),
+                              const SizedBox(width: 12),
+                              Text(
+                                'THEME STYLE',
+                                style: TextStyle(
+                                  color: colorScheme.onSurface,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+
+                          // Theme Selection Grid
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: List.generate(widget.themeNames.length,
+                                (index) {
+                              final isSelected = tempTheme == index;
+                              return GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    tempTheme = index;
+                                  });
+                                  widget.onThemeChanged?.call(index);
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: isSelected
+                                        ? colorScheme.primary
+                                        : colorScheme.background,
+                                    border: Border.all(
+                                      color: isSelected
+                                          ? colorScheme.primary
+                                          : colorScheme.onSurface
+                                              .withOpacity(0.3),
+                                      width: 2,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    widget.themeNames[index],
+                                    style: TextStyle(
+                                      color: isSelected
+                                          ? colorScheme.onPrimary
+                                          : colorScheme.onSurface,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    // NES Style Buttons with theme colors
+                    Row(
+                      children: [
+                        // Cancel Button
+                        Expanded(
+                          child: Container(
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: colorScheme.surface,
+                              border: Border.all(
+                                color: colorScheme.onSurface.withOpacity(0.2),
+                                width: 2,
+                              ),
+                            ),
+                            child: TextButton(
+                              onPressed: () {
+                                widget.onThemeCancel?.call();
+                                Navigator.of(context).pop();
+                              },
+                              style: TextButton.styleFrom(
+                                padding: EdgeInsets.zero,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.zero,
+                                ),
+                              ),
+                              child: Text(
+                                'CANCEL',
+                                style: TextStyle(
+                                  color: colorScheme.onSurface,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+
+                        // Save Button
+                        Expanded(
+                          child: Container(
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: colorScheme.primary,
+                              border: Border.all(
+                                color: colorScheme.onPrimary.withOpacity(0.3),
+                                width: 2,
+                              ),
+                            ),
+                            child: TextButton(
+                              onPressed: () {
+                                widget.onThemeSave?.call();
+                                Navigator.of(context).pop();
+                              },
+                              style: TextButton.styleFrom(
+                                padding: EdgeInsets.zero,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.zero,
+                                ),
+                              ),
+                              child: Text(
+                                'SAVE',
+                                style: TextStyle(
+                                  color: colorScheme.onPrimary,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    widget.onThemeCancel?.call();
-                    Navigator.of(context).pop();
-                  },
-                  child: const Text('Cancel'),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    widget.onThemeSave?.call();
-                    Navigator.of(context).pop();
-                  },
-                  child: const Text('Save'),
-                ),
-              ],
             );
           },
         );
@@ -1504,6 +1744,22 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         ],
       ),
     );
+  }
+
+  String _getOtherUserName() {
+    // For individual chats, try to get the full name from user profiles
+    if (!widget.chatRoom.isGroup) {
+      // Get all users in the chat except current user
+      final otherUser = widget.chatRoom.chatName;
+
+      final profile = _userProfiles[otherUser];
+      if (profile != null && profile['fullName'] != null) {
+        return profile['fullName']!;
+      }
+    }
+
+    // Fallback to chat name if no profile found or it's a group
+    return widget.chatRoom.chatName;
   }
 
   @override

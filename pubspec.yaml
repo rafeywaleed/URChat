@@ -28,11 +28,15 @@ environment:
 # the latest version available on pub.dev. To see which dependencies have newer
 # versions available, run `flutter pub outdated`.
 dependencies:
+  animated_emoji: ^3.2.1
+  connectivity_plus: ^7.0.0
   cupertino_icons: ^1.0.8
+  emoji_picker_flutter: ^4.3.0
   extended_text_field: ^16.0.2
   flutter:
     sdk: flutter
   flutter_animate: ^4.5.2
+  flutter_colorpicker: ^1.1.0
   google_fonts: ^6.3.2
   http: ^1.1.0
   iconsax: ^0.0.8

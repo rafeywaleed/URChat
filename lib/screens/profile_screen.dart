@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:nes_ui/nes_ui.dart';
 import 'package:urchat_back_testing/service/api_service.dart';
+import 'package:urchat_back_testing/widgets/pfp_selector.dart';
 
 class ProfileScreen extends StatefulWidget {
   @override
@@ -453,154 +455,55 @@ class _ProfileScreenState extends State<ProfileScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
       builder: (context) {
         return Container(
           height: MediaQuery.of(context).size.height * 0.7,
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Theme.of(context).scaffoldBackgroundColor,
             borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(25),
-              topRight: Radius.circular(25),
+              topLeft: Radius.circular(12),
+              topRight: Radius.circular(12),
             ),
           ),
-          child: Column(
-            children: [
-              Container(
-                margin: EdgeInsets.only(top: 16, bottom: 8),
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              Padding(
-                padding: EdgeInsets.all(24),
-                child: Text(
+          child: NesContainer(
+            child: Column(
+              children: [
+                SizedBox(height: 16),
+                Text(
                   'Customize Profile',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey[800],
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
+                SizedBox(height: 16),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: EdgeInsets.all(16),
+                    child: NesEmojiColorPicker(
+                      initialEmoji: _selectedEmoji,
+                      initialColor: _selectedBgColor,
+                      onEmojiChanged: (emoji) {
+                        setState(() {
+                          _selectedEmoji = emoji;
+                        });
+                      },
+                      onColorChanged: (color) {
+                        setState(() {
+                          _selectedBgColor = color;
+                        });
+                      },
+                      emojiSize: 48,
+                    ),
                   ),
                 ),
-              ),
-              Expanded(
-                child: DefaultTabController(
-                  length: 2,
-                  child: Column(
-                    children: [
-                      TabBar(
-                        labelColor: Color(0xFF5C4033),
-                        unselectedLabelColor: Colors.grey[500],
-                        indicatorColor: Color(0xFF5C4033),
-                        tabs: [
-                          Tab(text: 'Emoji'),
-                          Tab(text: 'Background'),
-                        ],
-                      ),
-                      Expanded(
-                        child: TabBarView(
-                          children: [
-                            // Emoji Selection
-                            Padding(
-                              padding: EdgeInsets.all(16),
-                              child: GridView.builder(
-                                gridDelegate:
-                                    SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: 4,
-                                  crossAxisSpacing: 16,
-                                  mainAxisSpacing: 16,
-                                ),
-                                itemCount: emojis.length,
-                                itemBuilder: (context, index) {
-                                  return GestureDetector(
-                                    onTap: () {
-                                      setState(() {
-                                        _selectedEmoji = emojis[index];
-                                      });
-                                      Navigator.pop(context);
-                                    },
-                                    child: Container(
-                                      decoration: BoxDecoration(
-                                        color: _selectedEmoji == emojis[index]
-                                            ? Color(0xFF5C4033).withOpacity(0.1)
-                                            : Colors.grey[100],
-                                        borderRadius: BorderRadius.circular(16),
-                                        border: Border.all(
-                                          color: _selectedEmoji == emojis[index]
-                                              ? Color(0xFF5C4033)
-                                              : Colors.transparent,
-                                          width: 2,
-                                        ),
-                                      ),
-                                      child: Center(
-                                        child: Text(
-                                          emojis[index],
-                                          style: TextStyle(fontSize: 24),
-                                        ),
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
-                            // Background Color Selection
-                            Padding(
-                              padding: EdgeInsets.all(16),
-                              child: GridView.builder(
-                                gridDelegate:
-                                    SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: 4,
-                                  crossAxisSpacing: 16,
-                                  mainAxisSpacing: 16,
-                                ),
-                                itemCount: bgColors.length,
-                                itemBuilder: (context, index) {
-                                  return GestureDetector(
-                                    onTap: () {
-                                      setState(() {
-                                        _selectedBgColor = bgColors[index];
-                                      });
-                                      Navigator.pop(context);
-                                    },
-                                    child: Container(
-                                      decoration: BoxDecoration(
-                                        color: bgColors[index],
-                                        borderRadius: BorderRadius.circular(16),
-                                        border: Border.all(
-                                          color: _selectedBgColor ==
-                                                  bgColors[index]
-                                              ? Colors.white
-                                              : Colors.transparent,
-                                          width: 3,
-                                        ),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: Colors.black12,
-                                            blurRadius: 4,
-                                            offset: Offset(0, 2),
-                                          ),
-                                        ],
-                                      ),
-                                      child: _selectedBgColor == bgColors[index]
-                                          ? Icon(Icons.check,
-                                              color: Colors.white, size: 20)
-                                          : null,
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                Padding(
+                  padding: EdgeInsets.all(16),
+                  child: NesButton(
+                    type: NesButtonType.normal,
+                    onPressed: () => Navigator.pop(context),
+                    child: Text('Done'),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         );
       },

@@ -3,6 +3,8 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
+  connectivity_plus
+  emoji_picker_flutter
   url_launcher_windows
 )
 

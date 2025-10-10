@@ -38,6 +38,8 @@ class _HomescreenState extends State<Homescreen>
   String? _selectedChatId;
   String? _hoveredChatId;
 
+  bool _isDarkMode = false;
+
   // Theme colors
   Color _accent = const Color.fromARGB(255, 0, 0, 0);
   final Color _secondaryAccent = const Color.fromARGB(255, 0, 0, 0);
@@ -568,10 +570,15 @@ class _HomescreenState extends State<Homescreen>
                 width: 44,
                 height: 44,
                 backgroundColor: _parseColor(chat.pfpBg),
-                child: Center(
+                child: CircleAvatar(
+                  backgroundColor: Colors.transparent,
+                  radius: 16,
                   child: Text(
                     chat.pfpIndex,
-                    style: TextStyle(fontSize: 24, fontFamily: null),
+                    style: TextStyle(
+                        fontSize: 25,
+                        // color: Colors.white,
+                        fontFamily: null),
                   ),
                 ),
               ),
@@ -595,7 +602,7 @@ class _HomescreenState extends State<Homescreen>
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: GoogleFonts.vt323(
-                        fontSize: 12,
+                        fontSize: 13,
                         color: _mutedText,
                       ),
                     ),
@@ -643,17 +650,23 @@ class _HomescreenState extends State<Homescreen>
               ],
             ),
           ),
-          Row(
+          Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               NesButton(
                   type: NesButtonType.success,
-                  child: const Text('Accept'),
+                  child: const Text(
+                    'Accept',
+                    style: TextStyle(fontSize: 8),
+                  ),
                   onPressed: () => _acceptGroupInvitation(invitation)),
-              const SizedBox(width: 6),
+              const SizedBox(width: 3),
               NesButton(
                   type: NesButtonType.error,
-                  child: const Text('Decline'),
+                  child: const Text(
+                    'Decline',
+                    style: TextStyle(fontSize: 8),
+                  ),
                   onPressed: () => _declineGroupInvitation(invitation)),
             ],
           )
@@ -674,51 +687,25 @@ class _HomescreenState extends State<Homescreen>
             // Connection status bar
             Container(
               padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                border: Border(
-                  bottom: BorderSide(
-                    color: Colors.grey.shade300,
-                    width: 1,
-                  ),
-                ),
-              ),
               child: Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Icon(
-                    _webSocketService.isConnected
-                        ? Icons.circle
-                        : Icons.circle_outlined,
-                    size: 12,
-                    color: _webSocketService.isConnected
-                        ? Colors.green
-                        : Colors.orange,
+                  Text(
+                    "Connection: ",
+                    style: TextStyle(fontSize: 8),
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
+                  NesBlinker(
+                    child: Icon(
                       _webSocketService.isConnected
-                          ? 'Connected'
-                          : 'Connecting...',
-                      style: GoogleFonts.vt323(
-                        color: _webSocketService.isConnected
-                            ? Colors.green
-                            : Colors.orange,
-                        fontWeight: FontWeight.w500,
-                      ),
+                          ? Icons.circle
+                          : Icons.circle_outlined,
+                      size: 8,
+                      color: _webSocketService.isConnected
+                          ? Colors.green
+                          : Colors.orange,
                     ),
-                  ),
-                  NesButton(
-                    type: NesButtonType.normal,
-                    child: const Icon(Icons.search),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => SearchScreen()),
-                      ).then((_) {
-                        _loadChatsFromApi();
-                      });
-                    },
                   ),
                 ],
               ),
@@ -742,6 +729,59 @@ class _HomescreenState extends State<Homescreen>
           ],
         ),
       ),
+    );
+  }
+
+  PreferredSizeWidget _buildAppBar() {
+    return AppBar(
+      leading: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: NesIcon(iconData: NesIcons.musicNote),
+      ),
+      title: Text('URChat', style: GoogleFonts.pressStart2p(fontSize: 14)),
+      actions: [
+        // Theme mode dropdown
+        // NesDropdownMenu(
+        //   entries: const [
+        //     NesDropdownMenuEntry(value: 'light', label: 'Light Mode'),
+        //     NesDropdownMenuEntry(value: 'dark', label: 'Dark Mode'),
+        //   ],
+        //   onChanged: (value) {
+        //     if (mounted) {
+        //       setState(() {
+        //         _isDarkMode = value == 'dark';
+        //         // Update theme colors based on mode
+        //         if (_isDarkMode) {
+
+        //         } else {
+
+        //         }
+        //       });
+        //     }
+        //   },
+        // ),
+        // const SizedBox(width: 8),
+
+        // Profile and logout dropdown
+        PopupMenuButton(
+          child: NesIcon(iconData: NesIcons.threeVerticalDots),
+          itemBuilder: (_) => [
+            const PopupMenuItem(value: 'profile', child: Text('Profile')),
+            const PopupMenuItem(value: 'logout', child: Text('Logout')),
+          ],
+          onSelected: (value) {
+            if (value == 'profile') {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => ProfileScreen()),
+              );
+            } else if (value == 'logout') {
+              _logout();
+            }
+          },
+        ),
+        const SizedBox(width: 8),
+      ],
     );
   }
 
@@ -858,11 +898,14 @@ class _HomescreenState extends State<Homescreen>
               Icon(Icons.chat_bubble_outline_rounded,
                   size: 100, color: _accent.withOpacity(0.2)),
               const SizedBox(height: 24),
-              Text("Welcome to URChat",
-                  style: GoogleFonts.pressStart2p(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: _accent)),
+              NesRunningText(
+                text: "Welcome to URChat",
+              ),
+
+              // style: GoogleFonts.pressStart2p(
+              //     fontSize: 14,
+              //     fontWeight: FontWeight.bold,
+              //     color: _accent)),
               const SizedBox(height: 8),
               Text(
                 "Select a chat or start a new one",
@@ -993,17 +1036,57 @@ class _HomescreenState extends State<Homescreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _beige,
-      appBar: _showChatScreen && _isMobileScreen
-          ? null
-          : AppBar(
-              title:
-                  Text('URChat', style: GoogleFonts.pressStart2p(fontSize: 14)),
-              actions: [
+        backgroundColor: _beige,
+        appBar: _showChatScreen && _isMobileScreen ? null : _buildAppBar(),
+        body: _isLoading
+            ? _buildLoadingState()
+            : (_isMobileScreen ? _buildMobileLayout() : _buildDesktopLayout()),
+        floatingActionButton: !_showChatScreen
+            ? NesButton(
+                type: NesButtonType.primary,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.add_comment_outlined, size: 18),
+                    const SizedBox(width: 8),
+                    Text("New Chat",
+                        style: GoogleFonts.pressStart2p(fontSize: 10)),
+                  ],
+                ),
+                onPressed: () {
+                  _showFloatingActionMenu();
+                },
+              )
+            : null);
+  }
+
+  void _showFloatingActionMenu() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // New Chat Option
                 NesButton(
-                  type: NesButtonType.normal,
-                  child: const Icon(Icons.search_rounded),
+                  type: NesButtonType.primary,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.chat_outlined, size: 18),
+                      const SizedBox(width: 12),
+                      Text(
+                        "New Chat",
+                        style: GoogleFonts.pressStart2p(fontSize: 10),
+                      ),
+                    ],
+                  ),
                   onPressed: () {
+                    Navigator.pop(context); // Close the menu
                     Navigator.push(
                       context,
                       MaterialPageRoute(builder: (context) => SearchScreen()),
@@ -1012,56 +1095,52 @@ class _HomescreenState extends State<Homescreen>
                     });
                   },
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(height: 12),
+
+                // Create Group Option
                 NesButton(
-                  type: NesButtonType.primary,
-                  child: const Icon(Icons.group_add_rounded),
-                  onPressed: _showCreateGroupDialog,
-                ),
-                const SizedBox(width: 8),
-                NesDropdownMenu(
-                  entries: const [
-                    NesDropdownMenuEntry(value: 'profile', label: 'Profile'),
-                    NesDropdownMenuEntry(value: 'logout', label: 'Logout'),
-                  ],
-                  onChanged: (value) {
-                    if (value == 'profile') {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (context) => ProfileScreen()),
-                      );
-                    } else if (value == 'logout') {
-                      _logout();
-                    }
+                  type: NesButtonType.warning,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.group_add_outlined, size: 18),
+                      const SizedBox(width: 12),
+                      Text(
+                        "Create Group",
+                        style: GoogleFonts.pressStart2p(fontSize: 10),
+                      ),
+                    ],
+                  ),
+                  onPressed: () {
+                    Navigator.pop(context); // Close the menu
+                    _showCreateGroupDialog();
                   },
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(height: 8),
+
+                // Close button
+                NesButton(
+                  type: NesButtonType.normal,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.close, size: 18),
+                      const SizedBox(width: 12),
+                      Text(
+                        "Close",
+                        style: GoogleFonts.pressStart2p(fontSize: 10),
+                      ),
+                    ],
+                  ),
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                ),
               ],
             ),
-      body: _isLoading
-          ? _buildLoadingState()
-          : (_isMobileScreen ? _buildMobileLayout() : _buildDesktopLayout()),
-      floatingActionButton: _isMobileScreen && !_showChatScreen
-          ? NesButton(
-              type: NesButtonType.primary,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.add_comment_outlined, size: 18),
-                  const SizedBox(width: 8),
-                  Text("New Chat",
-                      style: GoogleFonts.pressStart2p(fontSize: 10)),
-                ],
-              ),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => SearchScreen()),
-                );
-              },
-            )
-          : null,
+          ),
+        );
+      },
     );
   }
 
@@ -1090,7 +1169,7 @@ class _HomescreenState extends State<Homescreen>
   }
 
   void _logout() async {
-    final result = await showDialog<bool>(
+    final result = await NesDialog.show<bool>(
       context: context,
       builder: (context) => const NesConfirmDialog(
         cancelLabel: 'Cancel',
