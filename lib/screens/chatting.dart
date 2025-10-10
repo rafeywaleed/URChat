@@ -5,6 +5,7 @@ import 'dart:math' as math;
 import 'package:animated_emoji/emoji.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:nes_ui/nes_ui.dart';
 import 'package:urchat_back_testing/model/ChatRoom.dart';
 import 'package:urchat_back_testing/model/dto.dart';
 import 'package:urchat_back_testing/model/message.dart';
@@ -20,6 +21,7 @@ import 'package:urchat_back_testing/themes/grid.dart';
 import 'package:urchat_back_testing/themes/meteor.dart';
 import 'package:urchat_back_testing/utils/animated_emoji_mapper.dart';
 import 'package:urchat_back_testing/widgets/animated_emoji_picker.dart';
+import 'package:urchat_back_testing/widgets/deletion_dialog.dart';
 
 class URChatApp extends StatefulWidget {
   final ChatRoom chatRoom;
@@ -809,6 +811,9 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         _cacheUserFromMessage(message);
       }
     };
+
+    // NEW: Add message deletion handler
+    widget.webSocketService.onMessageDeleted = _handleMessageDeleted;
 
     widget.webSocketService.onTyping = (data) {
       final isTyping = data['typing'] as bool;
@@ -1670,12 +1675,18 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         };
     final colorScheme = Theme.of(context).colorScheme;
 
+    // NEW: Check if message can be deleted
+    final canDelete = _canDeleteMessage(message);
+
     // Check if message is a single emoji that has an animated version
     final isSingleAnimatedEmoji = _isSingleAnimatedEmoji(message.content);
 
+    // NEW: Wrap the message in a GestureDetector for long press
+    Widget messageContent;
+
     if (isSingleAnimatedEmoji) {
       // Display animated emoji without bubble
-      return Padding(
+      messageContent = Padding(
         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
         child: Row(
           mainAxisAlignment:
@@ -1733,90 +1744,293 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
           ],
         ),
       );
+    } else {
+      // Regular message bubble
+      messageContent = Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
+        child: Row(
+          mainAxisAlignment:
+              isOwnMessage ? MainAxisAlignment.end : MainAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (showAvatar) ...[
+              _buildUserAvatar(message.sender),
+              const SizedBox(width: 8),
+            ],
+            Flexible(
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+                decoration: BoxDecoration(
+                  color: isOwnMessage
+                      ? colorScheme.surface.withOpacity(0.9)
+                      : colorScheme.primary,
+                  borderRadius: BorderRadius.only(
+                    topLeft: const Radius.circular(18),
+                    topRight: const Radius.circular(18),
+                    bottomLeft: isOwnMessage
+                        ? const Radius.circular(18)
+                        : const Radius.circular(4),
+                    bottomRight: isOwnMessage
+                        ? const Radius.circular(4)
+                        : const Radius.circular(18),
+                  ),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Colors.black12,
+                      blurRadius: 2,
+                      offset: Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (!isOwnMessage && widget.chatRoom.isGroup == true)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: Text(
+                          profile['fullName'] ?? message.sender,
+                          style: TextStyle(
+                            color: isOwnMessage
+                                ? colorScheme.onSurface
+                                : Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    Text(
+                      message.content,
+                      style: TextStyle(
+                        color:
+                            isOwnMessage ? colorScheme.onSurface : Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          _formatMessageTime(message.timestamp),
+                          style: TextStyle(
+                            color: isOwnMessage ? Colors.grey : Colors.white70,
+                            fontSize: 10,
+                          ),
+                        ),
+                        // NEW: Add delete icon for own messages
+                        if (canDelete) ...[
+                          const SizedBox(width: 8),
+                          Icon(
+                            Icons.check,
+                            size: 12,
+                            color: isOwnMessage ? Colors.green : Colors.white70,
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            if (!showAvatar) const SizedBox(width: 8),
+          ],
+        ),
+      );
     }
 
-    // Regular message bubble (your existing code)
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
-      child: Row(
-        mainAxisAlignment:
-            isOwnMessage ? MainAxisAlignment.end : MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (showAvatar) ...[
-            _buildUserAvatar(message.sender),
-            const SizedBox(width: 8),
-          ],
-          Flexible(
+    // NEW: Wrap with GestureDetector for long press
+    return GestureDetector(
+      onLongPress: canDelete
+          ? () {
+              // Add haptic feedback
+              Feedback.forLongPress(context);
+              _showMessageOptions(message);
+            }
+          : null,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        child: messageContent,
+      ),
+    );
+  }
+
+// UPDATED: Show message options menu with theme consistency
+  void _showMessageOptions(Message message) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          margin: const EdgeInsets.all(16),
+          child: Material(
+            color: colorScheme.background,
+            borderRadius: BorderRadius.circular(12),
             child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
               decoration: BoxDecoration(
-                color: isOwnMessage
-                    ? colorScheme.surface.withOpacity(0.9)
-                    : colorScheme.primary,
-                borderRadius: BorderRadius.only(
-                  topLeft: const Radius.circular(18),
-                  topRight: const Radius.circular(18),
-                  bottomLeft: isOwnMessage
-                      ? const Radius.circular(18)
-                      : const Radius.circular(4),
-                  bottomRight: isOwnMessage
-                      ? const Radius.circular(4)
-                      : const Radius.circular(18),
+                color: colorScheme.background,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: colorScheme.onSurface.withOpacity(0.2),
+                  width: 2,
                 ),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Colors.black12,
-                    blurRadius: 2,
-                    offset: Offset(0, 3),
-                  ),
-                ],
               ),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  if (!isOwnMessage && widget.chatRoom.isGroup == true)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 4),
-                      child: Text(
-                        profile['fullName'] ?? message.sender,
-                        style: TextStyle(
-                          color: isOwnMessage
-                              ? colorScheme.onSurface
-                              : Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
-                        ),
+                  // Header
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: colorScheme.surface,
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(12),
+                        topRight: Radius.circular(12),
                       ),
                     ),
-                  Text(
-                    message.content,
-                    style: TextStyle(
-                      color:
-                          isOwnMessage ? colorScheme.onSurface : Colors.white,
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.message_outlined,
+                          color: colorScheme.onSurface,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          'MESSAGE OPTIONS',
+                          style: GoogleFonts.pressStart2p(
+                            fontSize: 12,
+                            color: colorScheme.onSurface,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        _formatMessageTime(message.timestamp),
-                        style: TextStyle(
-                          color: isOwnMessage ? Colors.grey : Colors.white70,
-                          fontSize: 10,
+
+                  // Message preview
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: colorScheme.surface.withOpacity(0.5),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: colorScheme.onSurface.withOpacity(0.1),
+                          width: 1,
                         ),
                       ),
-                    ],
+                      child: Text(
+                        message.content.length > 50
+                            ? '${message.content.substring(0, 50)}...'
+                            : message.content,
+                        style: TextStyle(
+                          color: colorScheme.onSurface,
+                          fontSize: 14,
+                          fontFamily: 'VT323',
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ),
+
+                  // Options
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Delete button
+                        _buildThemeMessageOptionButton(
+                          icon: Icons.delete_outline,
+                          title: 'Delete Message',
+                          backgroundColor: Colors.red,
+                          textColor: Colors.white,
+                          onPressed: () {
+                            Navigator.pop(context);
+                            _deleteMessage(message);
+                          },
+                        ),
+                        const SizedBox(height: 8),
+
+                        // Cancel button
+                        _buildThemeMessageOptionButton(
+                          icon: Icons.cancel_outlined,
+                          title: 'Cancel',
+                          backgroundColor: colorScheme.surface,
+                          textColor: colorScheme.onSurface,
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
             ),
           ),
-          if (!showAvatar) const SizedBox(width: 8),
-        ],
+        );
+      },
+    );
+  }
+
+// UPDATED: Helper method for theme-consistent option buttons
+  Widget _buildThemeMessageOptionButton({
+    required IconData icon,
+    required String title,
+    required Color backgroundColor,
+    required Color textColor,
+    required VoidCallback onPressed,
+  }) {
+    return Container(
+      height: 44,
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: backgroundColor == Colors.red
+              ? Colors.red.withOpacity(0.3)
+              : textColor.withOpacity(0.3),
+          width: 2,
+        ),
+      ),
+      child: TextButton(
+        onPressed: onPressed,
+        style: TextButton.styleFrom(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 18, color: textColor),
+            const SizedBox(width: 8),
+            Text(
+              title,
+              style: GoogleFonts.pressStart2p(
+                fontSize: 10,
+                color: textColor,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
       ),
     );
+  }
+
+// Helper to determine button type for message options
+  NesButtonType _getMessageButtonType(Color color) {
+    if (color == Colors.red) return NesButtonType.error;
+    if (color == Colors.orange) return NesButtonType.warning;
+    if (color == Colors.green) return NesButtonType.success;
+    return NesButtonType.normal;
   }
 
   bool _isSingleAnimatedEmoji(String content) {
@@ -2170,6 +2384,94 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     );
   }
 
+  // Add to _ChatScreenState class
+
+// NEW: Handle message deletion from WebSocket
+  void _handleMessageDeleted(Map<String, dynamic> deletionData) {
+    print('🗑️ Message deletion received: $deletionData');
+
+    final deletedMessageId = deletionData['messageId'];
+    final chatId = deletionData['chatId'];
+
+    // Only process if it's for the current chat
+    if (chatId == widget.chatRoom.chatId) {
+      if (mounted) {
+        setState(() {
+          _messages.removeWhere((message) => message.id == deletedMessageId);
+        });
+      }
+
+      // Update cache
+      ChatCacheService.saveChatMessages(widget.chatRoom.chatId, _messages);
+
+      // Show notification
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('A message was deleted'),
+          backgroundColor: Colors.orange,
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+// UPDATED: Delete message method with theme-consistent dialog
+  Future<void> _deleteMessage(Message message) async {
+    final confirmed = await _showDeleteMessageDialog();
+
+    if (confirmed == true) {
+      try {
+        // Store message ID before deletion
+        final messageId = message.id;
+
+        // Immediately remove from local state for instant UI update
+        if (mounted) {
+          setState(() {
+            _messages.removeWhere((msg) => msg.id == messageId);
+          });
+        }
+
+        // Update cache
+        await ChatCacheService.saveChatMessages(
+            widget.chatRoom.chatId, _messages);
+
+        // Call API to delete from backend
+        await ApiService.deleteMessage(widget.chatRoom.chatId, messageId);
+
+        // Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Message deleted',
+              style: TextStyle(fontFamily: 'VT323', fontSize: 14),
+            ),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      } catch (e) {
+        // If API call fails, reload messages to restore state
+        _loadInitialMessages();
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Failed to delete message: $e',
+              style: TextStyle(fontFamily: 'VT323', fontSize: 14),
+            ),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+    }
+  }
+
+// NEW: Check if current user can delete this message
+  bool _canDeleteMessage(Message message) {
+    return message.sender == ApiService.currentUsername;
+  }
+
   void _cacheUserFromMessage(Message message) async {
     try {
       final hasCachedUser = await UserCacheService.hasUser(message.sender);
@@ -2191,6 +2493,319 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     } catch (e) {
       print('❌ Failed to cache user from message: $e');
     }
+  }
+
+// NEW: Theme-consistent delete message dialog - RESPONSIVE
+  Future<bool?> _showDeleteMessageDialog() {
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        // Get screen dimensions for responsive sizing
+        final screenWidth = MediaQuery.of(context).size.width;
+        final screenHeight = MediaQuery.of(context).size.height;
+
+        // Responsive breakpoints
+        final bool isSmallScreen = screenWidth < 360;
+        final bool isLargeScreen = screenWidth > 600;
+        final bool isVeryLargeScreen = screenWidth > 800;
+
+        // Responsive sizing calculations
+        final double dialogPadding =
+            isSmallScreen ? 16 : (isLargeScreen ? 24 : 20);
+        final double elementSpacing =
+            isSmallScreen ? 12 : (isLargeScreen ? 24 : 20);
+        final double smallElementSpacing = isSmallScreen ? 8 : 12;
+        final double buttonSpacing = isSmallScreen ? 8 : 12;
+
+        // Responsive font sizes
+        final double headerFontSize =
+            isSmallScreen ? 10 : (isLargeScreen ? 14 : 12);
+        final double titleFontSize =
+            isSmallScreen ? 14 : (isLargeScreen ? 18 : 16);
+        final double subtitleFontSize =
+            isSmallScreen ? 12 : (isLargeScreen ? 16 : 14);
+        final double warningFontSize =
+            isSmallScreen ? 10 : (isLargeScreen ? 14 : 12);
+        final double buttonFontSize =
+            isSmallScreen ? 8 : (isLargeScreen ? 12 : 10);
+
+        // Responsive icon sizes
+        final double headerIconSize = isSmallScreen ? 16 : 20;
+        final double warningIconSize = isSmallScreen ? 14 : 16;
+
+        // Responsive dimensions
+        final double buttonHeight =
+            isSmallScreen ? 36 : (isLargeScreen ? 48 : 40);
+        final double headerPadding = isSmallScreen ? 8 : 12;
+        final double borderRadius = isSmallScreen ? 6 : 8;
+
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: EdgeInsets.symmetric(
+            horizontal: isSmallScreen ? 16 : (isLargeScreen ? 80 : 40),
+            vertical: isSmallScreen ? 16 : (isLargeScreen ? 60 : 40),
+          ),
+          child: Container(
+            padding: EdgeInsets.all(dialogPadding),
+            decoration: BoxDecoration(
+              color: colorScheme.background,
+              borderRadius: BorderRadius.circular(borderRadius * 1.5),
+              border: Border.all(
+                color: colorScheme.onSurface.withOpacity(0.2),
+                width: 2,
+              ),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Header
+                Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.symmetric(vertical: headerPadding),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.9),
+                    borderRadius: BorderRadius.circular(borderRadius),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.delete_outline,
+                          color: Colors.white, size: headerIconSize),
+                      SizedBox(width: smallElementSpacing),
+                      Flexible(
+                        child: Text(
+                          'DELETE MESSAGE',
+                          style: GoogleFonts.pressStart2p(
+                            fontSize: headerFontSize,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                SizedBox(height: elementSpacing),
+
+                // Message content
+                Column(
+                  children: [
+                    Text(
+                      'Are you sure you want to delete this message?',
+                      style: TextStyle(
+                        fontSize: titleFontSize,
+                        color: colorScheme.onSurface,
+                        height: 1.3,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    SizedBox(height: smallElementSpacing),
+                    Text(
+                      'This action cannot be undone.',
+                      style: TextStyle(
+                        fontSize: subtitleFontSize,
+                        color: Colors.red,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+
+                SizedBox(height: elementSpacing),
+
+                // Warning note
+                Container(
+                  padding: EdgeInsets.all(isSmallScreen ? 8 : 12),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(borderRadius),
+                    border: Border.all(
+                      color: Colors.orange.withOpacity(0.3),
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.warning_amber_outlined,
+                          color: Colors.orange[800], size: warningIconSize),
+                      SizedBox(width: smallElementSpacing),
+                      Expanded(
+                        child: Text(
+                          'This will remove the message for everyone',
+                          style: TextStyle(
+                            fontSize: warningFontSize,
+                            color: Colors.orange[800],
+                            fontWeight: FontWeight.bold,
+                            height: 1.2,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                SizedBox(height: elementSpacing),
+
+                // Action buttons - Stack vertically on very small screens
+                isSmallScreen
+                    ? Column(
+                        children: [
+                          // Delete button (comes first on small screens for better UX)
+                          Container(
+                            height: buttonHeight,
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              color: Colors.red,
+                              borderRadius: BorderRadius.circular(borderRadius),
+                              border: Border.all(
+                                color: Colors.red.withOpacity(0.3),
+                                width: 2,
+                              ),
+                            ),
+                            child: TextButton(
+                              onPressed: () {
+                                Navigator.of(context).pop(true);
+                              },
+                              style: TextButton.styleFrom(
+                                shape: RoundedRectangleBorder(
+                                  borderRadius:
+                                      BorderRadius.circular(borderRadius),
+                                ),
+                              ),
+                              child: Text(
+                                'DELETE',
+                                style: GoogleFonts.pressStart2p(
+                                  fontSize: buttonFontSize,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: buttonSpacing),
+                          // Cancel button
+                          Container(
+                            height: buttonHeight,
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              color: colorScheme.surface,
+                              borderRadius: BorderRadius.circular(borderRadius),
+                              border: Border.all(
+                                color: colorScheme.onSurface.withOpacity(0.3),
+                                width: 2,
+                              ),
+                            ),
+                            child: TextButton(
+                              onPressed: () {
+                                Navigator.of(context).pop(false);
+                              },
+                              style: TextButton.styleFrom(
+                                shape: RoundedRectangleBorder(
+                                  borderRadius:
+                                      BorderRadius.circular(borderRadius),
+                                ),
+                              ),
+                              child: Text(
+                                'CANCEL',
+                                style: GoogleFonts.pressStart2p(
+                                  fontSize: buttonFontSize,
+                                  color: colorScheme.onSurface,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      )
+                    : Row(
+                        children: [
+                          // Cancel button
+                          Expanded(
+                            child: Container(
+                              height: buttonHeight,
+                              decoration: BoxDecoration(
+                                color: colorScheme.surface,
+                                borderRadius:
+                                    BorderRadius.circular(borderRadius),
+                                border: Border.all(
+                                  color: colorScheme.onSurface.withOpacity(0.3),
+                                  width: 2,
+                                ),
+                              ),
+                              child: TextButton(
+                                onPressed: () {
+                                  Navigator.of(context).pop(false);
+                                },
+                                style: TextButton.styleFrom(
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius:
+                                        BorderRadius.circular(borderRadius),
+                                  ),
+                                ),
+                                child: Text(
+                                  'CANCEL',
+                                  style: GoogleFonts.pressStart2p(
+                                    fontSize: buttonFontSize,
+                                    color: colorScheme.onSurface,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          SizedBox(width: buttonSpacing),
+
+                          // Delete button
+                          Expanded(
+                            child: Container(
+                              height: buttonHeight,
+                              decoration: BoxDecoration(
+                                color: Colors.red,
+                                borderRadius:
+                                    BorderRadius.circular(borderRadius),
+                                border: Border.all(
+                                  color: Colors.red.withOpacity(0.3),
+                                  width: 2,
+                                ),
+                              ),
+                              child: TextButton(
+                                onPressed: () {
+                                  Navigator.of(context).pop(true);
+                                },
+                                style: TextButton.styleFrom(
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius:
+                                        BorderRadius.circular(borderRadius),
+                                  ),
+                                ),
+                                child: Text(
+                                  'DELETE',
+                                  style: GoogleFonts.pressStart2p(
+                                    fontSize: buttonFontSize,
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
 // Helper method to cache user from profile data

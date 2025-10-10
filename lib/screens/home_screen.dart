@@ -754,7 +754,10 @@ class _HomescreenState extends State<Homescreen>
       },
       child: GestureDetector(
         onTap: () => _selectChat(chat),
-        onLongPress: () => _showChatOptions(chat),
+        onLongPress: () => {
+          Feedback.forLongPress(context),
+          _showChatOptions(chat),
+        },
         // onLongPress: () => !_isMobileScreen
         //     ? chat.isGroup
         //         ? GroupManagementScreen(group: chat)
@@ -813,117 +816,155 @@ class _HomescreenState extends State<Homescreen>
     );
   }
 
-  // // NEW: Show chat options menu
   void _showChatOptions(ChatRoom chat) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
+      isScrollControlled: true, // Important for responsiveness
       builder: (context) {
-        return NesContainer(
-          // margin: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Header with chat info
-              NesContainer(
-                child: Row(
-                  children: [
-                    PixelCircle(
-                      color: _parseColor(chat.pfpBg),
-                      label: chat.pfpIndex,
-                      // size: 40,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            chat.chatName,
-                            style: GoogleFonts.pressStart2p(
-                              fontSize: 12,
-                              color: _accent,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            chat.isGroup ? 'Group Chat' : 'Direct Message',
-                            style: GoogleFonts.vt323(
-                              fontSize: 14,
-                              color: _mutedText,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(
-                height: 6,
-              ),
+        // Get screen dimensions for responsive sizing
+        final screenWidth = MediaQuery.of(context).size.width;
+        final screenHeight = MediaQuery.of(context).size.height;
 
-              // Options
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (chat.isGroup) ...[
-                      _buildOptionButton(
-                        icon: Icons.exit_to_app,
-                        title: 'Leave Group',
-                        color: Colors.orange,
-                        onPressed: () {
-                          Navigator.pop(context);
-                          _leaveGroup(chat);
-                        },
+        // Responsive sizing calculations
+        final bool isSmallScreen = screenWidth < 360;
+        final bool isLargeScreen = screenWidth > 600;
+        final double horizontalPadding = isSmallScreen ? 12 : 16;
+        final double containerMargin = isSmallScreen ? 8 : 16;
+        final double buttonSpacing = isSmallScreen ? 6 : 8;
+
+        // Responsive font sizes
+        final double titleFontSize =
+            isSmallScreen ? 10 : (isLargeScreen ? 14 : 12);
+        final double subtitleFontSize =
+            isSmallScreen ? 12 : (isLargeScreen ? 16 : 14);
+        final double buttonFontSize =
+            isSmallScreen ? 8 : (isLargeScreen ? 12 : 10);
+
+        // Responsive icon size
+        final double iconSize = isSmallScreen ? 14 : 16;
+
+        // Responsive spacing
+        final double elementSpacing = isSmallScreen ? 8 : 12;
+        final double pixelCircleSize = isSmallScreen ? 32 : 40;
+
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: NesContainer(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Header with chat info
+                NesContainer(
+                  child: Row(
+                    children: [
+                      PixelCircle(
+                        color: _parseColor(chat.pfpBg),
+                        label: chat.pfpIndex,
                       ),
-                      const SizedBox(height: 8),
-                      _buildOptionButton(
-                        icon: Icons.delete,
-                        title: 'Delete Group',
-                        color: Colors.red,
-                        onPressed: () {
-                          Navigator.pop(context);
-                          _deleteChat(chat);
-                        },
+                      SizedBox(width: elementSpacing),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              chat.chatName,
+                              style: GoogleFonts.pressStart2p(
+                                fontSize: titleFontSize,
+                                color: _accent,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 2,
+                            ),
+                            SizedBox(height: isSmallScreen ? 2 : 4),
+                            Text(
+                              chat.isGroup ? 'Group Chat' : 'Direct Message',
+                              style: GoogleFonts.vt323(
+                                fontSize: subtitleFontSize,
+                                color: _mutedText,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ] else
-                      _buildOptionButton(
-                        icon: Icons.delete,
-                        title: 'Delete Chat',
-                        color: Colors.red,
-                        onPressed: () {
-                          Navigator.pop(context);
-                          _deleteChat(chat);
-                        },
-                      ),
-                    const SizedBox(height: 8),
-                    _buildOptionButton(
-                      icon: Icons.cancel,
-                      title: 'Cancel',
-                      color: Colors.grey,
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                    const SizedBox(height: 8),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            ],
+                SizedBox(height: isSmallScreen ? 4 : 6),
+
+                // Options
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (chat.isGroup) ...[
+                        _buildOptionButton(
+                          icon: Icons.exit_to_app,
+                          title: 'Leave Group',
+                          color: Colors.orange,
+                          onPressed: () {
+                            Navigator.pop(context);
+                            _leaveGroup(chat);
+                          },
+                          fontSize: buttonFontSize,
+                          iconSize: iconSize,
+                        ),
+                        SizedBox(height: buttonSpacing),
+                        _buildOptionButton(
+                          icon: Icons.delete,
+                          title: 'Delete Group',
+                          color: Colors.red,
+                          onPressed: () {
+                            Navigator.pop(context);
+                            _deleteChat(chat);
+                          },
+                          fontSize: buttonFontSize,
+                          iconSize: iconSize,
+                        ),
+                      ] else
+                        _buildOptionButton(
+                          icon: Icons.delete,
+                          title: 'Delete Chat',
+                          color: Colors.red,
+                          onPressed: () {
+                            Navigator.pop(context);
+                            _deleteChat(chat);
+                          },
+                          fontSize: buttonFontSize,
+                          iconSize: iconSize,
+                        ),
+                      SizedBox(height: buttonSpacing),
+                      _buildOptionButton(
+                        icon: Icons.cancel,
+                        title: 'Cancel',
+                        color: Colors.grey,
+                        onPressed: () => Navigator.pop(context),
+                        fontSize: buttonFontSize,
+                        iconSize: iconSize,
+                      ),
+                      SizedBox(height: buttonSpacing),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       },
     );
   }
 
-// Helper method for option buttons
+// Updated helper method for option buttons with responsive parameters
   Widget _buildOptionButton({
     required IconData icon,
     required String title,
     required Color color,
     required VoidCallback onPressed,
+    required double fontSize,
+    required double iconSize,
   }) {
     return NesButton(
       type: _getButtonType(color),
@@ -931,12 +972,16 @@ class _HomescreenState extends State<Homescreen>
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 16),
+          Icon(icon, size: iconSize),
           const SizedBox(width: 8),
-          Text(
-            title,
-            style: GoogleFonts.pressStart2p(
-              fontSize: 10,
+          Expanded(
+            child: Text(
+              title,
+              style: GoogleFonts.pressStart2p(
+                fontSize: fontSize,
+              ),
+              textAlign: TextAlign.center,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
@@ -944,7 +989,7 @@ class _HomescreenState extends State<Homescreen>
     );
   }
 
-// Helper to determine button type based on color
+// Helper to determine button type based on color (unchanged)
   NesButtonType _getButtonType(Color color) {
     if (color == Colors.red) return NesButtonType.error;
     if (color == Colors.orange) return NesButtonType.warning;
