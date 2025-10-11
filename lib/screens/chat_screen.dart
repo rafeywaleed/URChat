@@ -2,13 +2,14 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:urchat_back_testing/model/ChatRoom.dart';
 import 'package:urchat_back_testing/model/message.dart';
 import 'package:urchat_back_testing/service/api_service.dart';
 import 'package:urchat_back_testing/service/websocket_service.dart';
 import 'package:urchat_back_testing/themes/butter/bfdemo.dart';
 import 'package:urchat_back_testing/themes/grid.dart';
 import 'package:urchat_back_testing/themes/meteor.dart';
+
+import '../model/chat_room.dart';
 
 class ChatScreen extends StatefulWidget {
   final ChatRoom chatRoom;

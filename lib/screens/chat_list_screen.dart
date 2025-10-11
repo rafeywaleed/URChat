@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:urchat_back_testing/model/ChatRoom.dart';
+import 'package:urchat_back_testing/model/chat_room.dart';
 
 class ChatListScreen extends StatefulWidget {
   final List<ChatRoom> chats;

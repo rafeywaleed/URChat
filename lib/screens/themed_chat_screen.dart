@@ -1,7 +1,8 @@
 // chat_theme_wrapper.dart
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:urchat_back_testing/model/ChatRoom.dart';
+import 'package:urchat_back_testing/model/chat_room.dart';
+
 import 'package:urchat_back_testing/service/websocket_service.dart';
 import 'chat_screen.dart';
 
