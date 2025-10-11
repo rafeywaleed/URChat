@@ -76,6 +76,7 @@ class _SearchScreenState extends State<SearchScreen> {
       MaterialPageRoute(
         builder: (context) => OtherUserProfileScreen(
           username: user.username,
+          fromChat: false,
         ),
       ),
     );

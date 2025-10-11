@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:urchat_back_testing/model/dto.dart';
 import 'package:urchat_back_testing/screens/group_pfp_dialog.dart';
+import 'package:urchat_back_testing/screens/user_profile.dart';
 import 'package:urchat_back_testing/service/api_service.dart';
 
 import '../model/chat_room.dart';
@@ -132,32 +133,41 @@ class _GroupManagementScreenState extends State<GroupManagementScreen> {
           ),
         ),
         ...groupDetails.groupMembers
-            .map((member) => ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: _parseColor(member.pfpBg),
-                    child: Text(member.pfpIndex,
-                        style: const TextStyle(color: Colors.white)),
-                  ),
-                  title: Text(member.fullName),
-                  subtitle: Text('@${member.username}'),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (member.username == groupDetails.adminUsername)
-                        Chip(
-                          label: const Text('Admin'),
-                          backgroundColor: Colors.blue[100],
-                        ),
-                      if (isCurrentUserAdmin &&
-                          member.username != groupDetails.adminUsername)
-                        IconButton(
-                          icon: const Icon(Icons.person_remove,
-                              color: Colors.red),
-                          onPressed: () => _removeUser(member.username),
-                        ),
-                    ],
-                  ),
-                ))
+            .map(
+              (member) => ListTile(
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                      builder: (context) => OtherUserProfileScreen(
+                            username: member.username,
+                            fromChat: true,
+                          )),
+                ),
+                leading: CircleAvatar(
+                  backgroundColor: _parseColor(member.pfpBg),
+                  child: Text(member.pfpIndex,
+                      style: const TextStyle(color: Colors.white)),
+                ),
+                title: Text(member.fullName),
+                subtitle: Text('@${member.username}'),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (member.username == groupDetails.adminUsername)
+                      Chip(
+                        label: const Text('Admin'),
+                        backgroundColor: Colors.blue[100],
+                      ),
+                    if (isCurrentUserAdmin &&
+                        member.username != groupDetails.adminUsername)
+                      IconButton(
+                        icon:
+                            const Icon(Icons.person_remove, color: Colors.red),
+                        onPressed: () => _removeUser(member.username),
+                      ),
+                  ],
+                ),
+              ),
+            )
             .toList(),
       ],
     );

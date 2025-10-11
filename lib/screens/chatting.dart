@@ -2097,7 +2097,9 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
               : Navigator.of(context).push(
                   MaterialPageRoute(
                       builder: (context) => OtherUserProfileScreen(
-                          username: widget.chatRoom.chatName)),
+                            username: widget.chatRoom.chatName,
+                            fromChat: true,
+                          )),
                 ),
           child: Row(
             children: [

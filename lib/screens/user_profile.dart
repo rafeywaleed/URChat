@@ -8,9 +8,15 @@ import 'package:urchat_back_testing/utils/chat_navigation_helper.dart';
 
 class OtherUserProfileScreen extends StatefulWidget {
   final String username;
+  final bool fromChat;
+  final ThemeData? chatTheme; // Optional chat theme
 
-  const OtherUserProfileScreen({Key? key, required this.username})
-      : super(key: key);
+  const OtherUserProfileScreen({
+    Key? key,
+    required this.username,
+    required this.fromChat,
+    this.chatTheme, // Add optional chat theme parameter
+  }) : super(key: key);
 
   @override
   _OtherUserProfileScreenState createState() => _OtherUserProfileScreenState();
@@ -100,9 +106,7 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen> {
 
     try {
       print('🎯 Creating chat with ${widget.username}');
-
       final chat = await ApiService.createIndividualChat(widget.username);
-
       NavigationHelper.navigateToChat(context, widget.username);
     } catch (e) {
       print('❌ Error creating chat: $e');
@@ -120,9 +124,21 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Check if NesTheme is available, if not wrap with NesTheme
-    final nesTheme = Theme.of(context).extension<NesTheme>();
+    // If coming from chat with a theme, use that theme
+    if (widget.fromChat && widget.chatTheme != null) {
+      return Theme(
+        data: widget.chatTheme!,
+        child: _buildContent(),
+      );
+    }
 
+    // If coming from chat without theme, use default
+    if (widget.fromChat) {
+      return _buildContent();
+    }
+
+    // If not from chat, check if NesTheme is available
+    final nesTheme = Theme.of(context).extension<NesTheme>();
     if (nesTheme == null) {
       // return NesTheme(
       //   child: _buildContent(),
@@ -132,22 +148,23 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen> {
     return _buildContent();
   }
 
-  @override
   Widget _buildContent() {
     final isSmallScreen = MediaQuery.of(context).size.width < 600;
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: colorScheme.background,
       appBar: AppBar(
         title: Text(
           'User Profile',
           style: TextStyle(
             fontWeight: FontWeight.w600,
-            color: Colors.white,
+            color: colorScheme.onPrimary,
           ),
         ),
-        backgroundColor: Color(0xFF5C4033),
-        foregroundColor: Colors.white,
+        backgroundColor: colorScheme.primary,
+        foregroundColor: colorScheme.onPrimary,
         elevation: 0,
         centerTitle: true,
         leading: IconButton(
@@ -157,9 +174,12 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen> {
       ),
       body: _isLoading
           ? Center(
-              child: NesPixelRowLoadingIndicator(
-                count: 3,
-              ),
+              child: widget.fromChat
+                  ? CircularProgressIndicator(
+                      valueColor:
+                          AlwaysStoppedAnimation<Color>(colorScheme.primary),
+                    )
+                  : NesPixelRowLoadingIndicator(count: 3),
             )
           : SingleChildScrollView(
               padding: EdgeInsets.all(isSmallScreen ? 16 : 24),
@@ -177,8 +197,8 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen> {
                     _buildUserInfoSection(isSmallScreen),
                     SizedBox(height: isSmallScreen ? 20 : 24),
 
-                    // Action Button
-                    _buildActionButton(isSmallScreen),
+                    // Action Button - Only show if not from chat
+                    if (!widget.fromChat) _buildActionButton(isSmallScreen),
                   ],
                 ),
               ),
@@ -189,6 +209,7 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen> {
   Widget _buildProfilePictureSection(bool isSmallScreen) {
     final pfpEmoji = _userData?['pfpIndex'] ?? '😊';
     final bgColor = _hexToColor(_userData?['pfpBg'] ?? '#4CAF50');
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Column(
       children: [
@@ -198,12 +219,12 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen> {
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             border: Border.all(
-              color: Colors.grey[300]!,
+              color: colorScheme.outline.withOpacity(0.3),
               width: 3,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black12,
+                color: Colors.black.withOpacity(0.1),
                 blurRadius: 8,
                 offset: Offset(0, 4),
               ),
@@ -233,7 +254,7 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen> {
           style: TextStyle(
             fontSize: isSmallScreen ? 20 : 24,
             fontWeight: FontWeight.bold,
-            color: Colors.grey[800],
+            color: Theme.of(context).colorScheme.onBackground,
           ),
         ),
         SizedBox(height: 4),
@@ -241,7 +262,7 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen> {
           '@${_userData?['username'] ?? widget.username}',
           style: TextStyle(
             fontSize: isSmallScreen ? 12 : 14,
-            color: Colors.grey[600],
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
           ),
         ),
       ],
@@ -249,19 +270,90 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen> {
   }
 
   Widget _buildUserInfoSection(bool isSmallScreen) {
-    final nesContainerTheme = Theme.of(context).extension<NesContainerTheme>();
+    final colorScheme = Theme.of(context).colorScheme;
 
-    if (nesContainerTheme == null) {
-      // Fallback container using Material Design
+    // If from chat, use themed Material Design containers
+    if (widget.fromChat) {
       return Container(
         width: double.infinity,
         padding: EdgeInsets.all(isSmallScreen ? 16 : 24),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(8),
+          color: colorScheme.surface,
+          borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: Colors.black12,
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 4,
+              offset: Offset(0, 2),
+            ),
+          ],
+          border: Border.all(
+            color: colorScheme.outline.withOpacity(0.2),
+            width: 1,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildInfoRow(
+              'Full Name',
+              Text(
+                _userData?['fullName'] ?? 'Not set',
+                style: TextStyle(
+                  fontSize: isSmallScreen ? 14 : 16,
+                  color: (_userData?['fullName'] ?? '').isEmpty
+                      ? colorScheme.onSurface.withOpacity(0.4)
+                      : colorScheme.onSurface,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              isSmallScreen,
+            ),
+            SizedBox(height: isSmallScreen ? 16 : 20),
+            _buildInfoRow(
+              'Bio',
+              Text(
+                _userData?['bio'] ?? 'Hello! I am using URChat',
+                style: TextStyle(
+                  fontSize: isSmallScreen ? 14 : 16,
+                  color: (_userData?['bio'] ?? '').isEmpty
+                      ? colorScheme.onSurface.withOpacity(0.4)
+                      : colorScheme.onSurface,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              isSmallScreen,
+            ),
+            SizedBox(height: isSmallScreen ? 16 : 20),
+            _buildInfoRow(
+              'Member Since',
+              Text(
+                _formatJoinedAt(_userData?['joinedAt']?.toString()),
+                style: TextStyle(
+                  fontSize: isSmallScreen ? 14 : 16,
+                  color: colorScheme.onSurface.withOpacity(0.8),
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              isSmallScreen,
+            ),
+          ],
+        ),
+      );
+    }
+
+    // If not from chat, use NesContainer if available, otherwise fallback
+    final nesContainerTheme = Theme.of(context).extension<NesContainerTheme>();
+    if (nesContainerTheme == null) {
+      return Container(
+        width: double.infinity,
+        padding: EdgeInsets.all(isSmallScreen ? 16 : 24),
+        decoration: BoxDecoration(
+          color: colorScheme.surface,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
               blurRadius: 4,
               offset: Offset(0, 2),
             ),
@@ -277,8 +369,8 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen> {
                 style: TextStyle(
                   fontSize: isSmallScreen ? 14 : 16,
                   color: (_userData?['fullName'] ?? '').isEmpty
-                      ? Colors.grey[400]
-                      : Colors.grey[800],
+                      ? colorScheme.onSurface.withOpacity(0.4)
+                      : colorScheme.onSurface,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -292,8 +384,8 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen> {
                 style: TextStyle(
                   fontSize: isSmallScreen ? 14 : 16,
                   color: (_userData?['bio'] ?? '').isEmpty
-                      ? Colors.grey[400]
-                      : Colors.grey[800],
+                      ? colorScheme.onSurface.withOpacity(0.4)
+                      : colorScheme.onSurface,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -306,7 +398,7 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen> {
                 _formatJoinedAt(_userData?['joinedAt']?.toString()),
                 style: TextStyle(
                   fontSize: isSmallScreen ? 14 : 16,
-                  color: Colors.grey[700],
+                  color: colorScheme.onSurface.withOpacity(0.8),
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -331,8 +423,8 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen> {
               style: TextStyle(
                 fontSize: isSmallScreen ? 14 : 16,
                 color: (_userData?['fullName'] ?? '').isEmpty
-                    ? Colors.grey[400]
-                    : Colors.grey[800],
+                    ? colorScheme.onSurface.withOpacity(0.4)
+                    : colorScheme.onSurface,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -346,8 +438,8 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen> {
               style: TextStyle(
                 fontSize: isSmallScreen ? 14 : 16,
                 color: (_userData?['bio'] ?? '').isEmpty
-                    ? Colors.grey[400]
-                    : Colors.grey[800],
+                    ? colorScheme.onSurface.withOpacity(0.4)
+                    : colorScheme.onSurface,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -360,7 +452,7 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen> {
               _formatJoinedAt(_userData?['joinedAt']?.toString()),
               style: TextStyle(
                 fontSize: isSmallScreen ? 14 : 16,
-                color: Colors.grey[700],
+                color: colorScheme.onSurface.withOpacity(0.8),
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -372,6 +464,8 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen> {
   }
 
   Widget _buildInfoRow(String label, Widget content, bool isSmallScreen) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -379,7 +473,7 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen> {
           label,
           style: TextStyle(
             fontSize: isSmallScreen ? 10 : 12,
-            color: Colors.grey[500],
+            color: colorScheme.onSurface.withOpacity(0.6),
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -390,21 +484,33 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen> {
   }
 
   Widget _buildActionButton(bool isSmallScreen) {
+    // This method is only called when not from chat
     final nesTheme = Theme.of(context).extension<NesTheme>();
+    final colorScheme = Theme.of(context).colorScheme;
 
     if (nesTheme == null) {
-      // Fallback buttons using Material Design
+      // Fallback buttons using Material Design with theme colors
       return Column(
         children: [
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
               onPressed: _isAddingToChat ? null : _addToChat,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: colorScheme.primary,
+                foregroundColor: colorScheme.onPrimary,
+                padding:
+                    EdgeInsets.symmetric(vertical: isSmallScreen ? 12 : 16),
+              ),
               child: _isAddingToChat
                   ? SizedBox(
                       width: 20,
                       height: 20,
-                      child: NesHourglassLoadingIndicator(),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                            colorScheme.onPrimary),
+                      ),
                     )
                   : Row(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -427,12 +533,17 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen> {
             width: double.infinity,
             child: OutlinedButton(
               onPressed: () => Navigator.pop(context),
+              style: OutlinedButton.styleFrom(
+                padding:
+                    EdgeInsets.symmetric(vertical: isSmallScreen ? 12 : 16),
+                side: BorderSide(color: colorScheme.primary),
+              ),
               child: Text(
                 'Back',
-                textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: isSmallScreen ? 14 : 16,
                   fontWeight: FontWeight.w600,
+                  color: colorScheme.primary,
                 ),
               ),
             ),
