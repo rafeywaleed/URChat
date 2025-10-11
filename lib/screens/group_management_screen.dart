@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:urchat_back_testing/model/ChatRoom.dart';
 import 'package:urchat_back_testing/model/dto.dart';
 import 'package:urchat_back_testing/screens/group_pfp_dialog.dart';
 import 'package:urchat_back_testing/service/api_service.dart';
+
+import '../model/chat_room.dart';
 
 class GroupManagementScreen extends StatefulWidget {
   final ChatRoom group;

@@ -1,9 +1,10 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:stomp_dart_client/stomp_dart_client.dart';
-import 'package:urchat_back_testing/model/ChatRoom.dart';
 import 'package:urchat_back_testing/model/message.dart';
 import 'package:urchat_back_testing/service/api_service.dart';
+
+import '../model/chat_room.dart';
 
 class WebSocketService {
   StompClient? _stompClient;

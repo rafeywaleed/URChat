@@ -4,14 +4,13 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:urchat_back_testing/model/ChatRoom.dart';
+import 'package:urchat_back_testing/model/chat_room.dart';
+
 import 'package:urchat_back_testing/model/dto.dart';
 import 'package:urchat_back_testing/model/message.dart';
 import 'package:urchat_back_testing/model/user.dart';
 import 'package:urchat_back_testing/screens/auth_screen.dart';
 import 'package:urchat_back_testing/screens/chatting.dart';
-import 'package:urchat_back_testing/screens/group_management_screen.dart';
-import 'package:urchat_back_testing/screens/group_pfp_dialog.dart';
 import 'package:urchat_back_testing/screens/new_group.dart';
 import 'package:urchat_back_testing/screens/profile_screen.dart';
 import 'package:urchat_back_testing/screens/search_delegate.dart';
@@ -24,6 +23,12 @@ import 'package:urchat_back_testing/widgets/deletion_dialog.dart';
 import 'package:urchat_back_testing/widgets/pixle_circle.dart';
 
 class Homescreen extends StatefulWidget {
+  final String? initialChatId;
+  final bool? openChatOnStart;
+
+  const Homescreen({Key? key, this.initialChatId, this.openChatOnStart = false})
+      : super(key: key);
+
   @override
   _HomescreenState createState() => _HomescreenState();
 }
@@ -87,19 +92,17 @@ class _HomescreenState extends State<Homescreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    _loadInitialData();
+    _loadInitialData().then((_) {
+      // After loading data, check if we need to open a specific chat
+      if (widget.openChatOnStart == true && widget.initialChatId != null) {
+        _openInitialChat();
+      }
+    });
     _initializeWebSocket();
 
-    // Keep the periodic debug from original file
     Timer.periodic(const Duration(seconds: 10), (timer) {
       _debugSubscriptions();
     });
-
-    // _timer = Timer.periodic(const Duration(seconds: 8), (timer) {
-    //   setState(() {
-    //     _currentTextIndex = (_currentTextIndex + 1) % 2;
-    //   });
-    // });
   }
 
   void _initializeWebSocket() {
@@ -121,6 +124,59 @@ class _HomescreenState extends State<Homescreen>
 
     _webSocketService.connect();
     _testWebSocketConnection();
+  }
+
+  void _openChatWithUser(String username) async {
+    try {
+      final existingChat = _chats.firstWhere(
+        (chat) => !chat.isGroup && chat.chatName == username,
+      );
+      _selectChat(existingChat);
+    } catch (e) {
+      try {
+        final newChat = await ApiService.createIndividualChat(username);
+
+        _selectChat(ChatRoom.convertChatDTOToChatRoom(newChat));
+        _loadFreshChats();
+      } catch (createError) {
+        print('❌ Error creating chat with user: $createError');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to create chat: $createError'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _openInitialChat() {
+    if (widget.initialChatId != null && mounted) {
+      try {
+        final existingChat = _chats.firstWhere(
+          (chat) => chat.chatId == widget.initialChatId,
+        );
+        Future.delayed(Duration(milliseconds: 300), () {
+          if (mounted) _selectChat(existingChat);
+        });
+      } catch (e) {
+        _loadFreshChats().then((_) {
+          try {
+            final refreshedChat = _chats.firstWhere(
+              (chat) => chat.chatId == widget.initialChatId,
+            );
+            if (mounted) {
+              Future.delayed(Duration(milliseconds: 300), () {
+                if (mounted) _selectChat(refreshedChat);
+              });
+            }
+          } catch (e) {
+            print(
+                '⚠️ Chat not found even after refresh: ${widget.initialChatId}');
+          }
+        });
+      }
+    }
   }
 
   void _onSearchChanged(String query) {
@@ -165,13 +221,10 @@ class _HomescreenState extends State<Homescreen>
     try {
       final chat = await ApiService.createIndividualChat(user.username);
 
-      // Convert the result to ChatRoom using your converter
       final chatRoom = _convertToChatRoom(chat);
 
-      // Select the newly created chat
       _selectChat(chatRoom);
 
-      // Clear search and close search results
       setState(() {
         _searchController.clear();
         _showSearchResults = false;
@@ -228,8 +281,12 @@ class _HomescreenState extends State<Homescreen>
         builder: (context) => OtherUserProfileScreen(username: user.username),
       ),
     ).then((result) {
+      // Handle the chat returned from UserProfileScreen
       if (result != null && result is ChatRoom) {
-        _selectChat(result);
+        print('✅ Received chat from profile: ${result.chatName}');
+
+        // Close the SearchScreen and return the chat to Homescreen
+        Navigator.of(context).pop(result);
       }
     });
   }
@@ -330,7 +387,7 @@ class _HomescreenState extends State<Homescreen>
     }
   }
 
-  void _loadInitialData() async {
+  Future<void> _loadInitialData() async {
     try {
       if (mounted) {
         setState(() {
@@ -1911,9 +1968,20 @@ class _HomescreenState extends State<Homescreen>
                     ],
                   ),
                   onPressed: () {
-                    Navigator.pop(context); // Close the menu
-                    setState(() {
-                      _showSearchResults = true;
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => SearchScreen()),
+                    ).then((result) {
+                      print(
+                          '🏠 Homescreen received result from SearchScreen: $result');
+                      if (result != null && result is ChatRoom) {
+                        print(
+                            '✅ Selecting chat from SearchScreen: ${result.chatName}');
+                        _selectChat(result);
+
+                        // Also refresh the chat list to ensure the new chat appears
+                        _loadFreshChats();
+                      }
                     });
                   },
                 ),

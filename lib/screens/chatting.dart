@@ -6,7 +6,7 @@ import 'package:animated_emoji/emoji.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:nes_ui/nes_ui.dart';
-import 'package:urchat_back_testing/model/ChatRoom.dart';
+import 'package:urchat_back_testing/model/chat_room.dart';
 import 'package:urchat_back_testing/model/dto.dart';
 import 'package:urchat_back_testing/model/message.dart';
 import 'package:urchat_back_testing/screens/group_management_screen.dart';

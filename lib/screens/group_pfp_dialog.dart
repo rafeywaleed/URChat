@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:urchat_back_testing/model/ChatRoom.dart';
+import 'package:urchat_back_testing/model/chat_room.dart';
+
 import 'package:urchat_back_testing/service/api_service.dart';
 import 'package:nes_ui/nes_ui.dart';
 import 'package:animated_emoji/animated_emoji.dart';

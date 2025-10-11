@@ -67,17 +67,31 @@ class ChatRoom {
     };
   }
 
-  ChatRoom convertToChatRoom(GroupChatRoomDTO groupDTO) {
+  static ChatRoom convertGroupDTOToChatRoom(GroupChatRoomDTO groupDTO) {
     return ChatRoom(
       chatId: groupDTO.chatId,
       chatName: groupDTO.chatName,
       isGroup: groupDTO.isGroup ?? true,
-      lastMessage: '', // or appropriate initial value
+      lastMessage: '',
       lastActivity: DateTime.now(),
       pfpIndex: groupDTO.pfpIndex,
       pfpBg: groupDTO.pfpBg,
-      themeIndex: 0, // default theme
-      isDark: true, // default dark mode
+      themeIndex: 0,
+      isDark: true,
+    );
+  }
+
+  static ChatRoom convertChatDTOToChatRoom(ChatRoomDTO chatDTO) {
+    return ChatRoom(
+      chatId: chatDTO.chatId,
+      chatName: chatDTO.chatName,
+      isGroup: chatDTO.isGroup ?? true,
+      lastMessage: chatDTO.lastMessage,
+      lastActivity: DateTime.now(),
+      pfpIndex: chatDTO.pfpIndex,
+      pfpBg: chatDTO.pfpBg,
+      themeIndex: 0,
+      isDark: true,
     );
   }
 

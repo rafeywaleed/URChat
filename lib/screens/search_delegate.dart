@@ -2,9 +2,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:nes_ui/nes_ui.dart';
 import 'package:urchat_back_testing/model/user.dart';
+import 'package:urchat_back_testing/screens/home_screen.dart';
 import 'package:urchat_back_testing/screens/user_profile.dart';
 
 import 'package:urchat_back_testing/service/api_service.dart';
+import 'package:urchat_back_testing/utils/chat_navigation_helper.dart';
 
 class SearchScreen extends StatefulWidget {
   @override
@@ -58,8 +60,7 @@ class _SearchScreenState extends State<SearchScreen> {
     try {
       final chat = await ApiService.createIndividualChat(user.username);
 
-      // Navigate back to home and pass the chat
-      Navigator.of(context).pop(chat);
+      NavigationHelper.navigateToChat(context, user.username);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

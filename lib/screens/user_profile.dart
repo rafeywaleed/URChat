@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:nes_ui/nes_ui.dart';
 import 'package:animated_emoji/animated_emoji.dart';
+import 'package:urchat_back_testing/screens/home_screen.dart';
 import 'package:urchat_back_testing/service/api_service.dart';
 import 'package:urchat_back_testing/utils/animated_emoji_mapper.dart';
+import 'package:urchat_back_testing/utils/chat_navigation_helper.dart';
 
 class OtherUserProfileScreen extends StatefulWidget {
   final String username;
@@ -97,13 +99,13 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen> {
     });
 
     try {
-      // Create chat with the user
+      print('🎯 Creating chat with ${widget.username}');
+
       final chat = await ApiService.createIndividualChat(widget.username);
 
-      // Return the chat to the previous screen
-      Navigator.of(context).pop(chat);
+      NavigationHelper.navigateToChat(context, widget.username);
     } catch (e) {
-      print('Error adding to chat: $e');
+      print('❌ Error creating chat: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Failed to create chat: $e'),
