@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:nes_ui/nes_ui.dart';
 import 'package:urchat_back_testing/model/user.dart';
-import 'package:urchat_back_testing/screens/user_profile,dart';
+import 'package:urchat_back_testing/screens/user_profile.dart';
 
 import 'package:urchat_back_testing/service/api_service.dart';
 
@@ -57,10 +57,10 @@ class _SearchScreenState extends State<SearchScreen> {
   void _startChat(User user) async {
     try {
       final chat = await ApiService.createIndividualChat(user.username);
-      // Navigate to the chat screen with the created chat
-      Navigator.pushReplacementNamed(context, '/chat', arguments: chat);
+
+      // Navigate back to home and pass the chat
+      Navigator.of(context).pop(chat);
     } catch (e) {
-      NesScaffoldMessenger(body: Text("Hello"));
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text("Failed to start chat: $e"),
@@ -108,6 +108,7 @@ class _SearchScreenState extends State<SearchScreen> {
               const SizedBox(width: 8),
               Expanded(
                 child: TextField(
+                  autofocus: true,
                   scrollPadding: EdgeInsets.all(2),
                   controller: _searchController,
                   style: const TextStyle(

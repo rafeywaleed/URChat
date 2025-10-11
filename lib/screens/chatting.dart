@@ -10,7 +10,7 @@ import 'package:urchat_back_testing/model/ChatRoom.dart';
 import 'package:urchat_back_testing/model/dto.dart';
 import 'package:urchat_back_testing/model/message.dart';
 import 'package:urchat_back_testing/screens/group_management_screen.dart';
-import 'package:urchat_back_testing/screens/user_profile,dart';
+import 'package:urchat_back_testing/screens/user_profile.dart';
 import 'package:urchat_back_testing/service/api_service.dart';
 import 'package:urchat_back_testing/service/chat_cache_service.dart';
 import 'package:urchat_back_testing/service/user_cache_service.dart';
@@ -2101,11 +2101,14 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                 ),
           child: Row(
             children: [
-              CircleAvatar(
-                backgroundColor: _parseColor(widget.chatRoom.pfpBg),
-                child: Text(
-                  widget.chatRoom.pfpIndex,
-                  style: const TextStyle(color: Colors.white),
+              Hero(
+                tag: "Avatar",
+                child: CircleAvatar(
+                  backgroundColor: _parseColor(widget.chatRoom.pfpBg),
+                  child: Text(
+                    widget.chatRoom.pfpIndex,
+                    style: const TextStyle(color: Colors.white),
+                  ),
                 ),
               ),
               const SizedBox(width: 12),

@@ -7,6 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:urchat_back_testing/model/ChatRoom.dart';
 import 'package:urchat_back_testing/model/dto.dart';
 import 'package:urchat_back_testing/model/message.dart';
+import 'package:urchat_back_testing/model/user.dart';
 import 'package:urchat_back_testing/screens/auth_screen.dart';
 import 'package:urchat_back_testing/screens/chatting.dart';
 import 'package:urchat_back_testing/screens/group_management_screen.dart';
@@ -14,7 +15,7 @@ import 'package:urchat_back_testing/screens/group_pfp_dialog.dart';
 import 'package:urchat_back_testing/screens/new_group.dart';
 import 'package:urchat_back_testing/screens/profile_screen.dart';
 import 'package:urchat_back_testing/screens/search_delegate.dart';
-import 'package:urchat_back_testing/screens/user_profile,dart';
+import 'package:urchat_back_testing/screens/user_profile.dart';
 import 'package:urchat_back_testing/service/api_service.dart';
 import 'package:urchat_back_testing/service/local_cache_service.dart';
 import 'package:urchat_back_testing/service/websocket_service.dart';
@@ -62,6 +63,17 @@ class _HomescreenState extends State<Homescreen>
   // Track if we're showing chat details on mobile
   bool _showChatScreen = false;
 
+  int _currentTextIndex = 0;
+  late Timer _timer;
+  bool _showRunningText = true;
+
+  final TextEditingController _searchController = TextEditingController();
+  Timer? _debounce;
+  List<User> _searchResults = [];
+  bool _isSearching = false;
+  bool _hasSearched = false;
+  bool _showSearchResults = false;
+
   ChatRoom? get _selectedChat {
     if (_selectedChatId == null) return null;
     try {
@@ -82,6 +94,12 @@ class _HomescreenState extends State<Homescreen>
     Timer.periodic(const Duration(seconds: 10), (timer) {
       _debugSubscriptions();
     });
+
+    // _timer = Timer.periodic(const Duration(seconds: 8), (timer) {
+    //   setState(() {
+    //     _currentTextIndex = (_currentTextIndex + 1) % 2;
+    //   });
+    // });
   }
 
   void _initializeWebSocket() {
@@ -103,6 +121,117 @@ class _HomescreenState extends State<Homescreen>
 
     _webSocketService.connect();
     _testWebSocketConnection();
+  }
+
+  void _onSearchChanged(String query) {
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    _debounce = Timer(const Duration(milliseconds: 500), () {
+      _searchUsers(query.trim());
+    });
+  }
+
+  Future<void> _searchUsers(String query) async {
+    if (query.isEmpty) {
+      setState(() {
+        _searchResults = [];
+        _isSearching = false;
+        _hasSearched = false;
+        _showSearchResults = false;
+      });
+      return;
+    }
+
+    setState(() {
+      _isSearching = true;
+      _hasSearched = true;
+      _showSearchResults = true;
+    });
+
+    try {
+      final results = await ApiService.searchUsers(query);
+      setState(() {
+        _searchResults = results.cast<User>();
+        _isSearching = false;
+      });
+    } catch (e) {
+      print("❌ Search error: $e");
+      setState(() {
+        _isSearching = false;
+      });
+    }
+  }
+
+  void _startChat(User user) async {
+    try {
+      final chat = await ApiService.createIndividualChat(user.username);
+
+      // Convert the result to ChatRoom using your converter
+      final chatRoom = _convertToChatRoom(chat);
+
+      // Select the newly created chat
+      _selectChat(chatRoom);
+
+      // Clear search and close search results
+      setState(() {
+        _searchController.clear();
+        _showSearchResults = false;
+        _searchResults = [];
+        _hasSearched = false;
+      });
+    } catch (e) {
+      print('❌ Error starting chat: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Failed to start chat: $e"),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  ChatRoom _convertToChatRoom(dynamic chatData) {
+    if (chatData is ChatRoom) {
+      return chatData;
+    } else if (chatData is ChatRoomDTO) {
+      return ChatRoom(
+        chatId: chatData.chatId,
+        chatName: chatData.chatName,
+        isGroup: chatData.isGroup,
+        lastMessage: chatData.lastMessage,
+        lastActivity: DateTime.now(),
+        pfpIndex: chatData.pfpIndex,
+        pfpBg: chatData.pfpBg,
+        themeIndex: 0,
+        isDark: true,
+      );
+    } else if (chatData is Map<String, dynamic>) {
+      return ChatRoom(
+        chatId: chatData['chatId'] ?? '',
+        chatName: chatData['chatName'] ?? '',
+        isGroup: chatData['isGroup'] ?? false,
+        lastMessage: chatData['lastMessage'] ?? '',
+        lastActivity: DateTime.now(),
+        pfpIndex: chatData['pfpIndex'] ?? '💬',
+        pfpBg: chatData['pfpBg'] ?? '#4CAF50',
+        themeIndex: 0,
+        isDark: true,
+      );
+    } else {
+      throw Exception('Unknown chat data type: ${chatData.runtimeType}');
+    }
+  }
+
+  void _viewProfile(User user) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => OtherUserProfileScreen(username: user.username),
+      ),
+    ).then((result) {
+      if (result != null && result is ChatRoom) {
+        _selectChat(result);
+      }
+    });
   }
 
   // NEW: Handle message deletion from WebSocket
@@ -187,6 +316,18 @@ class _HomescreenState extends State<Homescreen>
         });
       }
     });
+  }
+
+  void selectChatFromExternal(ChatRoom chat) {
+    if (mounted) {
+      setState(() {
+        _selectedChatId = chat.chatId;
+        _showChatScreen = true;
+      });
+
+      // Subscribe to WebSocket for this chat
+      _webSocketService.subscribeToChatRoom(chat.chatId);
+    }
   }
 
   void _loadInitialData() async {
@@ -758,16 +899,7 @@ class _HomescreenState extends State<Homescreen>
           Feedback.forLongPress(context),
           _showChatOptions(chat),
         },
-        // onLongPress: () => !_isMobileScreen
-        //     ? chat.isGroup
-        //         ? GroupManagementScreen(group: chat)
-        //         : OtherUserProfileScreen(username: chat.chatName)
-        //     : null,
-        // onDoubleTap: () => _isMobileScreen
-        //     ? chat.isGroup
-        //         ? GroupManagementScreen(group: chat)
-        //         : OtherUserProfileScreen(username: chat.chatName)
-        //     : null,
+        onDoubleTap: () => _navigateToUserProfile(chat.chatName),
         child: NesContainer(
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
           backgroundColor: isSelected
@@ -775,9 +907,12 @@ class _HomescreenState extends State<Homescreen>
               : (isHovered ? Colors.grey.shade300 : _surface),
           child: Row(
             children: [
-              PixelCircle(
-                color: _parseColor(chat.pfpBg),
-                label: chat.pfpIndex,
+              Hero(
+                tag: "Avatar",
+                child: PixelCircle(
+                  color: _parseColor(chat.pfpBg),
+                  label: chat.pfpIndex,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -997,6 +1132,20 @@ class _HomescreenState extends State<Homescreen>
     return NesButtonType.normal;
   }
 
+  void _navigateToUserProfile(String username) async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => OtherUserProfileScreen(username: username),
+      ),
+    );
+
+    // If a chat was created in the profile screen, select it
+    if (result != null && result is ChatRoom) {
+      _selectChat(result);
+    }
+  }
+
   Widget _buildInvitationListItem(ChatRoom invitation) {
     return NesContainer(
       padding: const EdgeInsets.all(8),
@@ -1056,16 +1205,17 @@ class _HomescreenState extends State<Homescreen>
         backgroundColor: _bgLight,
         child: Column(
           children: [
+            _isMobileScreen ? _buildRunningTextBanner() : SizedBox.shrink(),
             // Connection status bar
             Container(
               padding: const EdgeInsets.all(12),
               child: Row(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.start, // Align to left
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Text(
                     "Connection: ",
+                    textAlign: TextAlign.start,
                     style: TextStyle(fontSize: 8),
                   ),
                   NesBlinker(
@@ -1110,28 +1260,105 @@ class _HomescreenState extends State<Homescreen>
         padding: const EdgeInsets.all(8.0),
         child: NesIcon(iconData: NesIcons.musicNote),
       ),
-      title: Text('URChat', style: GoogleFonts.pressStart2p(fontSize: 14)),
-      actions: [
-        PopupMenuButton(
-          child: NesIcon(iconData: NesIcons.threeVerticalDots),
-          itemBuilder: (_) => [
-            const PopupMenuItem(value: 'profile', child: Text('Profile')),
-            const PopupMenuItem(value: 'logout', child: Text('Logout')),
-          ],
-          onSelected: (value) {
-            if (value == 'profile') {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => ProfileScreen()),
-              );
-            } else if (value == 'logout') {
-              _logout();
-            }
+      title: _showSearchResults
+          ? _buildSearchField()
+          : Text('URChat', style: GoogleFonts.pressStart2p(fontSize: 14)),
+      actions: _buildAppBarActions(),
+    );
+  }
+
+  Widget _buildSearchField() {
+    return NesContainer(
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      child: Row(
+        children: [
+          Icon(
+            Icons.search,
+            color: Colors.grey[600],
+            size: 20,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: TextField(
+              autofocus: true,
+              controller: _searchController,
+              style: const TextStyle(
+                color: Colors.black87,
+                fontSize: 16,
+              ),
+              decoration: InputDecoration(
+                hintText: "Search users...",
+                hintStyle: TextStyle(color: Colors.grey[600]),
+                border: InputBorder.none,
+                contentPadding: EdgeInsets.zero,
+              ),
+              onChanged: _onSearchChanged,
+            ),
+          ),
+          if (_searchController.text.isNotEmpty)
+            IconButton(
+              icon: Icon(Icons.clear, size: 18, color: Colors.grey[600]),
+              onPressed: () {
+                _searchController.clear();
+                setState(() {
+                  _showSearchResults = false;
+                  _searchResults = [];
+                  _hasSearched = false;
+                });
+              },
+              padding: EdgeInsets.zero,
+              constraints: BoxConstraints.tight(Size(24, 24)),
+            ),
+        ],
+      ),
+    );
+  }
+
+  List<Widget> _buildAppBarActions() {
+    if (_showSearchResults) {
+      return [
+        IconButton(
+          icon: Icon(Icons.close),
+          onPressed: () {
+            setState(() {
+              _showSearchResults = false;
+              _searchController.clear();
+              _searchResults = [];
+              _hasSearched = false;
+            });
           },
         ),
-        const SizedBox(width: 8),
-      ],
-    );
+      ];
+    }
+
+    return [
+      IconButton(
+        icon: Icon(Icons.search),
+        onPressed: () {
+          setState(() {
+            _showSearchResults = true;
+          });
+        },
+      ),
+      PopupMenuButton(
+        child: NesIcon(iconData: NesIcons.threeVerticalDots),
+        itemBuilder: (_) => [
+          const PopupMenuItem(value: 'profile', child: Text('Profile')),
+          const PopupMenuItem(value: 'logout', child: Text('Logout')),
+        ],
+        onSelected: (value) {
+          if (value == 'profile') {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => ProfileScreen()),
+            );
+          } else if (value == 'logout') {
+            _logout();
+          }
+        },
+      ),
+      const SizedBox(width: 8),
+    ];
   }
 
   Widget _buildChatsTab() {
@@ -1199,6 +1426,220 @@ class _HomescreenState extends State<Homescreen>
           );
   }
 
+  Widget _buildSearchResults() {
+    if (_isSearching) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            NesPixelRowLoadingIndicator(count: 5),
+            const SizedBox(height: 16),
+            Text(
+              "Searching...",
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey[600],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (!_hasSearched) {
+      return _buildSearchEmptyState();
+    }
+
+    if (_searchResults.isEmpty) {
+      return _buildNoResultsState();
+    }
+
+    return _buildSearchResultsList();
+  }
+
+  Widget _buildSearchEmptyState() {
+    return Center(
+      child: Padding(
+        padding: EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            NesIcon(
+              iconData: NesIcons.owl,
+              primaryColor: Colors.grey[400],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              "Search for Users",
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey[700],
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              "Find people by username to start chatting",
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey[500],
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNoResultsState() {
+    return Center(
+      child: Padding(
+        padding: EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            NesIcon(
+              iconData: NesIcons.user,
+              primaryColor: Colors.grey[400],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              "No Users Found",
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey[700],
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              "Try searching with a different username or name",
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey[500],
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSearchResultsList() {
+    return ListView.separated(
+      padding: EdgeInsets.all(12),
+      itemCount: _searchResults.length,
+      separatorBuilder: (_, __) => SizedBox(height: 12),
+      itemBuilder: (context, index) {
+        final user = _searchResults[index];
+        final bgColor = _parseColor(user.pfpBg);
+
+        return NesContainer(
+          padding: EdgeInsets.all(16),
+          child: Row(
+            children: [
+              // Profile Avatar
+              GestureDetector(
+                onTap: () => _viewProfile(user),
+                child: Container(
+                  // width: 56,
+                  // height: 56,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: Colors.grey[300]!,
+                      width: 2,
+                    ),
+                  ),
+                  child: CircleAvatar(
+                    backgroundColor: bgColor,
+                    child: Text(
+                      user.pfpIndex,
+                      style: TextStyle(fontSize: 24),
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(width: 16),
+
+              // User Info
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => _viewProfile(user),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        user.fullName,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey[800],
+                        ),
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        "@${user.username}",
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Action Buttons
+              _buildSearchActionButtons(user),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildSearchActionButtons(User user) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Profile Button
+        NesButton(
+          type: NesButtonType.normal,
+          onPressed: () => _viewProfile(user),
+          child: Icon(Icons.person_outline, size: 18),
+        ),
+        SizedBox(width: 12),
+
+        // Chat Button
+        NesButton(
+          type: NesButtonType.primary,
+          onPressed: () => _startChat(user),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.chat_bubble_outline, size: 16),
+              SizedBox(width: 6),
+              _isLargeScreen
+                  ? Text(
+                      "Chat",
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    )
+                  : Text(""),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildEmptyState({
     required IconData icon,
     required String title,
@@ -1238,6 +1679,69 @@ class _HomescreenState extends State<Homescreen>
     );
   }
 
+  Widget _buildRunningTextBanner() {
+    return SizedBox(
+      height: 40,
+      child: AnimatedOpacity(
+        duration: const Duration(milliseconds: 500),
+        opacity: _showRunningText ? 1.0 : 0.0,
+        child: _currentTextIndex == 0
+            ? Center(
+                child: NesRunningText(
+                  onEnd: () {
+                    // Wait a bit after text completes, then fade out and switch
+                    Future.delayed(const Duration(seconds: 1), () {
+                      if (mounted) {
+                        setState(() {
+                          _showRunningText = false;
+                        });
+
+                        // After fade out, switch text and fade in
+                        Future.delayed(const Duration(milliseconds: 500), () {
+                          if (mounted) {
+                            setState(() {
+                              _currentTextIndex = 1;
+                              _showRunningText = true;
+                            });
+                          }
+                        });
+                      }
+                    });
+                  },
+                  text: "Welcome to URChat",
+                  textStyle: TextStyle(fontSize: _isLargeScreen ? 14 : 12),
+                ),
+              )
+            : Center(
+                child: NesRunningText(
+                  onEnd: () {
+                    // Wait a bit after text completes, then fade out and switch
+                    Future.delayed(const Duration(seconds: 1), () {
+                      if (mounted) {
+                        setState(() {
+                          _showRunningText = false;
+                        });
+
+                        // After fade out, switch text and fade in
+                        Future.delayed(const Duration(milliseconds: 500), () {
+                          if (mounted) {
+                            setState(() {
+                              _currentTextIndex = 0;
+                              _showRunningText = true;
+                            });
+                          }
+                        });
+                      }
+                    });
+                  },
+                  text: "Messages will be automatically\ndeleted after 30 days",
+                  textStyle: TextStyle(fontSize: _isLargeScreen ? 12 : 10),
+                ),
+              ),
+      ),
+    );
+  }
+
   Widget _buildEmptyChatView() {
     return Expanded(
       child: NesContainer(
@@ -1249,10 +1753,7 @@ class _HomescreenState extends State<Homescreen>
               Icon(Icons.chat_bubble_outline_rounded,
                   size: 100, color: _accent.withOpacity(0.2)),
               const SizedBox(height: 24),
-              NesRunningText(
-                text: "Welcome to URChat",
-              ),
-              const SizedBox(height: 8),
+              _buildRunningTextBanner(),
               Text(
                 "Select a chat or start a new one",
                 style: GoogleFonts.vt323(color: _mutedText, fontSize: 14),
@@ -1346,9 +1847,11 @@ class _HomescreenState extends State<Homescreen>
           appBar: _showChatScreen && _isMobileScreen ? null : _buildAppBar(),
           body: _isLoading
               ? _buildLoadingState()
-              : (_isMobileScreen
-                  ? _buildMobileLayout()
-                  : _buildDesktopLayout()),
+              : (_showSearchResults
+                  ? _buildSearchResults()
+                  : (_isMobileScreen
+                      ? _buildMobileLayout()
+                      : _buildDesktopLayout())),
           floatingActionButton: !_showChatScreen
               ? NesButton(
                   type: NesButtonType.primary,
@@ -1409,11 +1912,8 @@ class _HomescreenState extends State<Homescreen>
                   ),
                   onPressed: () {
                     Navigator.pop(context); // Close the menu
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => SearchScreen()),
-                    ).then((_) {
-                      _loadChatsFromApi();
+                    setState(() {
+                      _showSearchResults = true;
                     });
                   },
                 ),
@@ -1514,6 +2014,8 @@ class _HomescreenState extends State<Homescreen>
   void dispose() {
     _tabController.dispose();
     _webSocketService.disconnect();
+    _debounce?.cancel();
+    _searchController.dispose();
     super.dispose();
   }
 

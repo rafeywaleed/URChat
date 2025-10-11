@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:nes_ui/nes_ui.dart';
 import 'package:urchat_back_testing/screens/home_screen.dart';
 import 'package:urchat_back_testing/service/api_service.dart';
 
@@ -112,9 +113,11 @@ class _AuthScreenState extends State<AuthScreen> {
                   Icon(Icons.chat_bubble_rounded,
                       size: 60, color: _brown.withOpacity(0.9)),
                   const SizedBox(height: 10),
-                  Text(
-                    "URChat",
-                    style: TextStyle(
+                  NesRunningText(
+                    speed: 0.3,
+                    running: true,
+                    text: "URChat",
+                    textStyle: TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
                       color: _brown,
@@ -183,7 +186,7 @@ class _AuthScreenState extends State<AuthScreen> {
                   const SizedBox(height: 28),
 
                   _isLoading
-                      ? const CircularProgressIndicator()
+                      ? const NesHourglassLoadingIndicator()
                       : ElevatedButton(
                           onPressed: _submit,
                           style: ElevatedButton.styleFrom(

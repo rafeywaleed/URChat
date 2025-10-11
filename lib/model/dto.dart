@@ -1,6 +1,8 @@
 // DTO Classes and Converters for Flutter App
 // Generated from Java Spring Boot DTOs
 
+import 'package:urchat_back_testing/model/ChatRoom.dart';
+
 class ApiResponse {
   final bool success;
   final String message;
@@ -518,6 +520,17 @@ class ChatDTOConvertor {
       lastMessage: chatRoomData['lastMessage'] ?? '',
       pfpIndex: chatRoomData['pfpIndex'] ?? '',
       pfpBg: chatRoomData['pfpBg'] ?? '',
+    );
+  }
+
+  ChatRoomDTO convertChatToChatRoomDTO(ChatRoom chat) {
+    return ChatRoomDTO(
+      chatId: chat.chatId,
+      chatName: chat.chatName,
+      isGroup: chat.isGroup,
+      lastMessage: chat.lastMessage,
+      pfpIndex: chat.pfpIndex,
+      pfpBg: chat.pfpBg,
     );
   }
 

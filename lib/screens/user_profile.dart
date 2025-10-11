@@ -7,7 +7,8 @@ import 'package:urchat_back_testing/utils/animated_emoji_mapper.dart';
 class OtherUserProfileScreen extends StatefulWidget {
   final String username;
 
-  const OtherUserProfileScreen({Key? key, required this.username}) : super(key: key);
+  const OtherUserProfileScreen({Key? key, required this.username})
+      : super(key: key);
 
   @override
   _OtherUserProfileScreenState createState() => _OtherUserProfileScreenState();
@@ -17,7 +18,6 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen> {
   Map<String, dynamic>? _userData;
   bool _isLoading = true;
   bool _isAddingToChat = false;
-
 
   @override
   void initState() {
@@ -97,47 +97,38 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen> {
     });
 
     try {
-      // TODO: Implement the actual chat creation/adding logic
-      // This would typically call an API endpoint to create a chat or add user to existing chat
-      await Future.delayed(Duration(seconds: 1)); // Simulate API call
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Chat created with ${_userData?['fullName'] ?? widget.username}'),
-          backgroundColor: Colors.green,
-        ),
-      );
-      
-      // Optionally navigate back or to the chat screen
-      Navigator.pop(context);
+      // Create chat with the user
+      final chat = await ApiService.createIndividualChat(widget.username);
+
+      // Return the chat to the previous screen
+      Navigator.of(context).pop(chat);
     } catch (e) {
       print('Error adding to chat: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to create chat'),
+          content: Text('Failed to create chat: $e'),
           backgroundColor: Colors.red,
         ),
       );
-    } finally {
       setState(() {
         _isAddingToChat = false;
       });
     }
   }
+
   @override
   Widget build(BuildContext context) {
     // Check if NesTheme is available, if not wrap with NesTheme
     final nesTheme = Theme.of(context).extension<NesTheme>();
-    
+
     if (nesTheme == null) {
       // return NesTheme(
       //   child: _buildContent(),
       // );
     }
-    
+
     return _buildContent();
   }
-
 
   @override
   Widget _buildContent() {
@@ -255,9 +246,9 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen> {
     );
   }
 
- Widget _buildUserInfoSection(bool isSmallScreen) {
+  Widget _buildUserInfoSection(bool isSmallScreen) {
     final nesContainerTheme = Theme.of(context).extension<NesContainerTheme>();
-    
+
     if (nesContainerTheme == null) {
       // Fallback container using Material Design
       return Container(
@@ -377,6 +368,7 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen> {
       ),
     );
   }
+
   Widget _buildInfoRow(String label, Widget content, bool isSmallScreen) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -395,9 +387,9 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen> {
     );
   }
 
-   Widget _buildActionButton(bool isSmallScreen) {
+  Widget _buildActionButton(bool isSmallScreen) {
     final nesTheme = Theme.of(context).extension<NesTheme>();
-    
+
     if (nesTheme == null) {
       // Fallback buttons using Material Design
       return Column(
@@ -435,12 +427,10 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen> {
               onPressed: () => Navigator.pop(context),
               child: Text(
                 'Back',
-              textAlign: TextAlign.center,
+                textAlign: TextAlign.center,
                 style: TextStyle(
-
                   fontSize: isSmallScreen ? 14 : 16,
                   fontWeight: FontWeight.w600,
-                  
                 ),
               ),
             ),
