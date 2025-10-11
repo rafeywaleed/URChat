@@ -95,6 +95,35 @@ class ChatRoom {
     );
   }
 
+  factory ChatRoom.fromDynamic(dynamic data) {
+    if (data is ChatRoom) {
+      return data;
+    } else if (data is Map<String, dynamic>) {
+      return ChatRoom.fromJson(data);
+    } else if (data is ChatRoomDTO) {
+      return ChatRoom.convertChatDTOToChatRoom(data);
+    } else {
+      throw FormatException('Cannot convert ${data.runtimeType} to ChatRoom');
+    }
+  }
+
+  static List<ChatRoom> fromList(dynamic listData) {
+    if (listData == null) return [];
+
+    if (listData is List<ChatRoom>) {
+      return listData;
+    }
+
+    if (listData is List<dynamic>) {
+      return listData
+          .map<ChatRoom>((item) => ChatRoom.fromDynamic(item))
+          .toList();
+    }
+
+    throw FormatException(
+        'Cannot convert ${listData.runtimeType} to List<ChatRoom>');
+  }
+
   @override
   String toString() {
     return 'ChatRoom{chatId: $chatId, chatName: $chatName, isGroup: $isGroup, lastMessage: $lastMessage}';

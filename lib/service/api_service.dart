@@ -385,6 +385,27 @@ class ApiService {
     }
   }
 
+  static Future<bool> changeAdmin(
+      String chatId, String candidateUsername) async {
+    final response = await _makeAuthenticatedRequest(() async {
+      return await http.put(
+        Uri.parse('$baseUrl/chat/group/changeAdmin'),
+        headers: headers,
+        body: jsonEncode({
+          'adminUsername': currentUsername,
+          'candidateUsername': candidateUsername,
+          'chatId': chatId,
+        }),
+      );
+    });
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to change admin: ${response.body}');
+    }
+  }
+
   static Future<List<ChatRoom>> getGroupInvitations() async {
     final response = await _makeAuthenticatedRequest(() async {
       return await http.get(

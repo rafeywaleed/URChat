@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:nes_ui/nes_ui.dart';
 import 'package:urchat_back_testing/model/dto.dart';
 import 'package:urchat_back_testing/model/user.dart';
 import 'package:urchat_back_testing/service/api_service.dart';
@@ -141,15 +142,15 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
         const Padding(
           padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Text(
-            'Selected Members',
+            'SELECTED MEMBERS',
             style: TextStyle(
               fontWeight: FontWeight.bold,
-              fontSize: 16,
+              fontSize: 14,
             ),
           ),
         ),
-        Container(
-          height: 80,
+        SizedBox(
+          height: 100,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -157,56 +158,58 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
             itemBuilder: (context, index) {
               final user = _selectedUsers[index];
               return Container(
-                margin: const EdgeInsets.only(right: 8),
-                child: Column(
-                  children: [
-                    Stack(
-                      children: [
-                        CircleAvatar(
-                          backgroundColor: _parseColor(user.pfpBg),
-                          child: Text(
-                            user.pfpIndex,
-                            style: const TextStyle(color: Colors.white),
-                          ),
-                        ),
-                        Positioned(
-                          top: 0,
-                          right: 0,
-                          child: GestureDetector(
-                            onTap: () => _removeUser(user),
-                            child: Container(
-                              padding: const EdgeInsets.all(2),
-                              decoration: const BoxDecoration(
-                                color: Colors.red,
-                                shape: BoxShape.circle,
+                margin: const EdgeInsets.only(right: 12),
+                child: NesContainer(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Stack(
+                        children: [
+                          CircleAvatar(
+                            backgroundColor: _parseColor(user.pfpBg),
+                            radius: 24,
+                            child: Text(
+                              user.pfpIndex,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
                               ),
+                            ),
+                          ),
+                          Positioned(
+                            top: -4,
+                            right: -4,
+                            child: NesButton(
+                              type: NesButtonType.error,
+                              onPressed: () => _removeUser(user),
                               child: const Icon(
                                 Icons.close,
-                                size: 12,
+                                size: 16,
                                 color: Colors.white,
                               ),
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    SizedBox(
-                      width: 60,
-                      child: Text(
-                        user.fullName,
-                        style: const TextStyle(fontSize: 12),
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.center,
+                        ],
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 4),
+                      SizedBox(
+                        width: 70,
+                        child: Text(
+                          user.fullName,
+                          style: const TextStyle(fontSize: 12),
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          maxLines: 2,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               );
             },
           ),
         ),
-        const Divider(),
+        const SizedBox(height: 16),
       ],
     );
   }
@@ -217,18 +220,27 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
     }
 
     if (_isSearching) {
-      return const Center(child: CircularProgressIndicator());
+      return const Padding(
+        padding: EdgeInsets.all(16.0),
+        child: Center(child: CircularProgressIndicator()),
+      );
     }
 
     if (_searchResults.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Text(
-            _searchController.text.length < 2
-                ? 'Type at least 2 characters to search'
-                : 'No users found',
-            style: const TextStyle(color: Colors.grey),
+      return Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: NesContainer(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text(
+                _searchController.text.length < 2
+                    ? 'Type at least 2 characters to search'
+                    : 'No users found for "${_searchController.text}"',
+                style: const TextStyle(color: Colors.grey),
+                textAlign: TextAlign.center,
+              ),
+            ),
           ),
         ),
       );
@@ -240,33 +252,73 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
         const Padding(
           padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Text(
-            'Search Results',
+            'SEARCH RESULTS',
             style: TextStyle(
               fontWeight: FontWeight.bold,
-              fontSize: 16,
+              fontSize: 14,
             ),
           ),
         ),
-        ListView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: _searchResults.length,
-          itemBuilder: (context, index) {
-            final user = _searchResults[index];
-            return ListTile(
-              leading: CircleAvatar(
-                backgroundColor: _parseColor(user.pfpBg),
-                child: Text(
-                  user.pfpIndex,
-                  style: const TextStyle(color: Colors.white),
-                ),
-              ),
-              title: Text(user.fullName),
-              subtitle: Text('@${user.username}'),
-              trailing: const Icon(Icons.add),
-              onTap: () => _selectUser(user),
-            );
-          },
+        NesContainer(
+          // margin: const EdgeInsets.symmetric(horizontal: 16),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: 200),
+            child: ListView.builder(
+              shrinkWrap: true,
+              physics: const AlwaysScrollableScrollPhysics(),
+              itemCount: _searchResults.length,
+              itemBuilder: (context, index) {
+                final user = _searchResults[index];
+                return NesButton(
+                  type: NesButtonType.normal,
+                  onPressed: () => _selectUser(user),
+                  child: Padding(
+                    padding:
+                        const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          backgroundColor: _parseColor(user.pfpBg),
+                          radius: 20,
+                          child: Text(
+                            user.pfpIndex,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                user.fullName,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              Text(
+                                '@${user.username}',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Icon(Icons.add, size: 20),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
         ),
       ],
     );
@@ -282,117 +334,183 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final isSmallScreen = MediaQuery.of(context).size.width < 500;
+
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 500, maxHeight: 600),
+      backgroundColor: Colors.transparent,
+      child: NesContainer(
+        width: isSmallScreen ? MediaQuery.of(context).size.width * 0.95 : 500,
+        height: isSmallScreen ? MediaQuery.of(context).size.height * 0.9 : 600,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             // Header
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFF5C4033),
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(16),
-                  topRight: Radius.circular(16),
-                ),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.group_add, color: Colors.white),
-                  const SizedBox(width: 12),
-                  const Text(
-                    'Create New Group',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const Spacer(),
-                  if (_isCreating)
-                    const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+            NesContainer(
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Row(
+                  children: [
+                    const Icon(Icons.group_add, size: 24),
+                    const SizedBox(width: 12),
+                    const Text(
+                      'CREATE NEW GROUP',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
                       ),
-                    )
-                  else
-                    IconButton(
-                      icon: const Icon(Icons.check, color: Colors.white),
-                      onPressed: _createGroup,
-                      tooltip: 'Create Group',
                     ),
-                  IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white),
-                    onPressed: () => Navigator.of(context).pop(),
-                    tooltip: 'Cancel',
-                  ),
-                ],
+                    const Spacer(),
+                    if (_isCreating)
+                      const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    else
+                      NesButton(
+                        type: NesButtonType.success,
+                        onPressed: _createGroup,
+                        child: const Text('CREATE'),
+                      ),
+                    const SizedBox(width: 8),
+                    NesButton(
+                      type: NesButtonType.error,
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text('CANCEL'),
+                    ),
+                  ],
+                ),
               ),
             ),
 
             // Content
             Expanded(
-              child: SingleChildScrollView(
-                child: Column(
-                  children: [
-                    // Group Name Input
-                    Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: TextField(
-                        controller: _groupNameController,
-                        decoration: const InputDecoration(
-                          labelText: 'Group Name',
-                          border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.group),
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      // Group Name Input
+                      NesContainer(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'GROUP NAME',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              TextField(
+                                controller: _groupNameController,
+                                decoration: const InputDecoration(
+                                  hintText: 'Enter group name...',
+                                  border: OutlineInputBorder(),
+                                  contentPadding: EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 8,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
 
-                    // Search for Users
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                      child: TextField(
-                        controller: _searchController,
-                        decoration: InputDecoration(
-                          labelText: 'Search users to add',
-                          border: const OutlineInputBorder(),
-                          prefixIcon: const Icon(Icons.search),
-                          suffixIcon: _isSearching
-                              ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child:
-                                      CircularProgressIndicator(strokeWidth: 2),
-                                )
-                              : null,
+                      const SizedBox(height: 16),
+
+                      // Search for Users
+                      NesContainer(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'SEARCH USERS',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              TextField(
+                                controller: _searchController,
+                                decoration: InputDecoration(
+                                  hintText: 'Type username or name...',
+                                  border: const OutlineInputBorder(),
+                                  prefixIcon: const Icon(Icons.search),
+                                  suffixIcon: _isSearching
+                                      ? const SizedBox(
+                                          width: 20,
+                                          height: 20,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                          ),
+                                        )
+                                      : null,
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 8,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
 
-                    // Selected Users
-                    _buildSelectedUsers(),
+                      const SizedBox(height: 16),
 
-                    // Search Results
-                    _buildSearchResults(),
+                      // Selected Users
+                      _buildSelectedUsers(),
 
-                    // Info text
-                    if (_selectedUsers.isEmpty &&
-                        _searchController.text.isEmpty)
-                      const Padding(
-                        padding: EdgeInsets.all(16.0),
-                        child: Text(
-                          'Search for users and add them to create a group',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(color: Colors.grey),
+                      // Search Results
+                      _buildSearchResults(),
+
+                      // Info text when empty
+                      if (_selectedUsers.isEmpty &&
+                          _searchController.text.isEmpty)
+                        Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: NesContainer(
+                            child: Padding(
+                              padding: const EdgeInsets.all(24.0),
+                              child: Column(
+                                children: [
+                                  const Icon(
+                                    Icons.group_add,
+                                    size: 48,
+                                    color: Colors.grey,
+                                  ),
+                                  const SizedBox(height: 16),
+                                  const Text(
+                                    'Create a New Group',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Search for users and add them to create a group chat',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
                         ),
-                      ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),

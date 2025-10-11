@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:urchat_back_testing/model/dto.dart';
 import 'package:urchat_back_testing/screens/group_pfp_dialog.dart';
 import 'package:urchat_back_testing/screens/user_profile.dart';
@@ -154,15 +155,51 @@ class _GroupManagementScreenState extends State<GroupManagementScreen> {
                   children: [
                     if (member.username == groupDetails.adminUsername)
                       Chip(
-                        label: const Text('Admin'),
-                        backgroundColor: Colors.blue[100],
+                        label: const Text(
+                          'Admin',
+                          // style: TextStyle(color: Colors.white),
+                        ),
+                        // backgroundColor: Colors.blue[100],
+                        elevation: 2,
                       ),
                     if (isCurrentUserAdmin &&
                         member.username != groupDetails.adminUsername)
-                      IconButton(
-                        icon:
-                            const Icon(Icons.person_remove, color: Colors.red),
-                        onPressed: () => _removeUser(member.username),
+                      PopupMenuButton<String>(
+                        icon: const Icon(Icons.more_vert),
+                        onSelected: (value) {
+                          if (value == 'remove' &&
+                              member.username != groupDetails.adminUsername) {
+                            _removeUser(member.username);
+                          } else if (value == 'transfer' &&
+                              member.username != groupDetails.adminUsername) {
+                            _confirmTransferAdmin(member.username);
+                          }
+                        },
+                        itemBuilder: (context) => [
+                          if (member.username != groupDetails.adminUsername)
+                            const PopupMenuItem(
+                              value: 'transfer',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.admin_panel_settings,
+                                      color: Colors.orange),
+                                  SizedBox(width: 8),
+                                  Text('Make Admin'),
+                                ],
+                              ),
+                            ),
+                          if (member.username != groupDetails.adminUsername)
+                            const PopupMenuItem(
+                              value: 'remove',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.person_remove, color: Colors.red),
+                                  SizedBox(width: 8),
+                                  Text('Remove from Group'),
+                                ],
+                              ),
+                            ),
+                        ],
                       ),
                   ],
                 ),
@@ -367,24 +404,13 @@ class _GroupManagementScreenState extends State<GroupManagementScreen> {
                   ),
                 ),
 
-              // Admin Leave Warning
-              if (isCurrentUserAdmin)
-                const Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: Text(
-                    'Note: As admin, you cannot leave the group. '
-                    'You must transfer admin rights first or delete the group.',
-                    style: TextStyle(color: Colors.orange),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-
               // Group Actions Section for Admin
               if (isCurrentUserAdmin)
                 Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+                    spacing: 3,
                     children: [
                       const Text(
                         'Admin Actions',
@@ -395,31 +421,58 @@ class _GroupManagementScreenState extends State<GroupManagementScreen> {
                       Wrap(
                         spacing: 8,
                         children: [
-                          ElevatedButton.icon(
-                            onPressed: () {
-                              // Add transfer admin functionality
-                              _showTransferAdminDialog(groupDetails);
-                            },
-                            icon: const Icon(Icons.admin_panel_settings),
-                            label: const Text('Transfer Admin'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.blue,
-                              foregroundColor: Colors.white,
+                          Padding(
+                            padding: const EdgeInsets.all(4.0),
+                            child: ElevatedButton.icon(
+                              onPressed: () {
+                                _showTransferAdminDialog(groupDetails);
+                              },
+                              icon: const Icon(Icons.admin_panel_settings),
+                              label: const Text('Transfer Admin'),
+                              style: ElevatedButton.styleFrom(
+                                elevation: 2,
+                                backgroundColor:
+                                    const Color.fromARGB(255, 9, 67, 114),
+                                foregroundColor: Colors.white,
+                              ),
                             ),
                           ),
-                          ElevatedButton.icon(
-                            onPressed: () {
-                              // Add change group picture functionality
-                              _showChangeGroupPictureDialog();
-                            },
-                            icon: const Icon(Icons.photo_camera),
-                            label: const Text('Change Picture'),
+                          Padding(
+                            padding: const EdgeInsets.all(4.0),
+                            child: ElevatedButton.icon(
+                              onPressed: () {
+                                _showChangeGroupPictureDialog();
+                              },
+                              icon: const Icon(Icons.photo_camera),
+                              label: const Text('Change Picture'),
+                              style: ElevatedButton.styleFrom(
+                                elevation: 2,
+                                backgroundColor:
+                                    const Color.fromARGB(255, 0, 133, 86),
+                                foregroundColor: Colors.white,
+                              ),
+                            ),
                           ),
                         ],
                       ),
                     ],
                   ),
                 ),
+              // Admin Leave Warning
+              if (isCurrentUserAdmin)
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Text(
+                    'Note: As admin, you cannot leave the group. '
+                    'You must transfer admin rights first or delete the group.',
+                    style: GoogleFonts.pressStart2p(
+                        color: Colors.orange, fontSize: 10),
+                    textAlign: TextAlign.start,
+                  ),
+                ),
+              SizedBox(
+                height: 10,
+              )
             ],
           );
         },
@@ -443,23 +496,30 @@ class _GroupManagementScreenState extends State<GroupManagementScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Transfer Admin Role'),
-        content: const Text('Select a member to transfer admin role to:'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: nonAdminMembers.length,
+            itemBuilder: (context, index) {
+              final member = nonAdminMembers[index];
+              return ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: _parseColor(member.pfpBg),
+                  child: Text(member.pfpIndex,
+                      style: const TextStyle(color: Colors.white)),
+                ),
+                title: Text(member.fullName),
+                subtitle: Text('@${member.username}'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _confirmTransferAdmin(member.username);
+                },
+              );
+            },
+          ),
+        ),
         actions: [
-          ...nonAdminMembers
-              .map((member) => ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor: _parseColor(member.pfpBg),
-                      child: Text(member.pfpIndex,
-                          style: const TextStyle(color: Colors.white)),
-                    ),
-                    title: Text(member.fullName),
-                    subtitle: Text('@${member.username}'),
-                    onTap: () {
-                      Navigator.pop(context);
-                      _confirmTransferAdmin(member.username);
-                    },
-                  ))
-              .toList(),
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Cancel'),
@@ -473,9 +533,10 @@ class _GroupManagementScreenState extends State<GroupManagementScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Confirm Transfer'),
+        title: const Text('Confirm Admin Transfer'),
         content: Text(
-            'Are you sure you want to transfer admin role to $newAdminUsername?'),
+            'Are you sure you want to transfer admin role to $newAdminUsername?\n\n'
+            'You will lose admin privileges after this transfer.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -491,10 +552,21 @@ class _GroupManagementScreenState extends State<GroupManagementScreen> {
     );
 
     if (confirmed == true) {
-      // Note: You'll need to add an API endpoint for transferring admin
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Admin transfer feature coming soon')),
-      );
+      try {
+        await ApiService.changeAdmin(widget.group.chatId, newAdminUsername);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text('Admin role transferred to $newAdminUsername')),
+        );
+        _refreshGroupDetails();
+
+        // Optionally navigate back since user is no longer admin
+        Navigator.pop(context);
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to transfer admin: $e')),
+        );
+      }
     }
   }
 

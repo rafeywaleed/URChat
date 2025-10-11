@@ -1681,7 +1681,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     // Check if message is a single emoji that has an animated version
     final isSingleAnimatedEmoji = _isSingleAnimatedEmoji(message.content);
 
-    // NEW: Wrap the message in a GestureDetector for long press
     Widget messageContent;
 
     if (isSingleAnimatedEmoji) {
@@ -1714,19 +1713,11 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                       ),
                     ),
                   ),
-                // Animated emoji
+                // Animated emoji - FIXED: Use the actual emoji string
                 Container(
-                    padding: const EdgeInsets.all(8),
-                    child: _isSingleAnimatedEmoji(message.content)
-                        ? AnimatedEmoji(
-                            AnimatedEmojiMapper.getAnimatedEmoji(
-                                message.content)!,
-                            size: 48,
-                          )
-                        : Text(
-                            message.content,
-                            style: TextStyle(fontSize: 48),
-                          )),
+                  padding: const EdgeInsets.all(8),
+                  child: _buildAnimatedEmojiWidget(message.content),
+                ),
                 // Timestamp
                 Padding(
                   padding: const EdgeInsets.only(top: 4),
@@ -1839,7 +1830,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       );
     }
 
-    // NEW: Wrap with GestureDetector for long press
+    // NEW: Wrap BOTH animated and regular messages with GestureDetector for long press
     return GestureDetector(
       onLongPress: canDelete
           ? () {
@@ -2038,25 +2029,52 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 
     if (trimmedContent.isEmpty) return false;
 
-    // More permissive emoji detection that handles various emoji formats
+    // More comprehensive emoji detection
     bool isSingleEmoji;
 
+    // Handle single character emojis
     if (trimmedContent.runes.length == 1) {
-      // Single character emoji
       isSingleEmoji = true;
-    } else {
-      // Check for emoji with skin tones, flags, or other modifiers
-      // This is a simplified check - you might want to use a proper emoji detection library
-      final complexEmojiRegex = RegExp(
-        r'^[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E6}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]+$',
+    }
+    // Handle emojis with skin tones, flags, or modifiers
+    else {
+      // Use a more comprehensive regex for emoji detection
+      final emojiRegex = RegExp(
+        r'^(\p{Emoji}|\p{Emoji_Presentation}|\p{Emoji_Modifier_Base}|\p{Emoji_Modifier}|\p{Emoji_Component})+$',
         unicode: true,
       );
-      isSingleEmoji = complexEmojiRegex.hasMatch(trimmedContent) &&
-          trimmedContent.runes.length <= 4; // Allow for skin tone modifiers
+
+      isSingleEmoji = emojiRegex.hasMatch(trimmedContent) &&
+          trimmedContent.runes.length <= 4; // Allow for modifiers
     }
 
-    return isSingleEmoji &&
+    final hasAnimatedVersion =
         AnimatedEmojiMapper.hasAnimatedVersion(trimmedContent);
+
+    print('🔍 Emoji Check: "$trimmedContent" - '
+        'Single: $isSingleEmoji, '
+        'Animated: $hasAnimatedVersion, '
+        'Length: ${trimmedContent.runes.length}');
+
+    return isSingleEmoji && hasAnimatedVersion;
+  }
+
+  Widget _buildAnimatedEmojiWidget(String emoji) {
+    final animatedEmojiData = AnimatedEmojiMapper.getAnimatedEmoji(emoji);
+
+    if (animatedEmojiData != null) {
+      return AnimatedEmoji(
+        animatedEmojiData,
+        size: 48,
+      );
+    } else {
+      // Fallback to regular text if animation fails
+      print('⚠️ No animated emoji data found for: $emoji');
+      return Text(
+        emoji,
+        style: const TextStyle(fontSize: 48),
+      );
+    }
   }
 
   String _getOtherUserName() {
@@ -2500,64 +2518,43 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     }
   }
 
-// NEW: Theme-consistent delete message dialog - RESPONSIVE
+  /// NEW: Theme-consistent delete message dialog - RESPONSIVE
   Future<bool?> _showDeleteMessageDialog() {
     final colorScheme = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return showDialog<bool>(
       context: context,
       builder: (BuildContext context) {
         // Get screen dimensions for responsive sizing
         final screenWidth = MediaQuery.of(context).size.width;
-        final screenHeight = MediaQuery.of(context).size.height;
 
         // Responsive breakpoints
         final bool isSmallScreen = screenWidth < 360;
         final bool isLargeScreen = screenWidth > 600;
-        final bool isVeryLargeScreen = screenWidth > 800;
 
         // Responsive sizing calculations
-        final double dialogPadding =
-            isSmallScreen ? 16 : (isLargeScreen ? 24 : 20);
-        final double elementSpacing =
-            isSmallScreen ? 12 : (isLargeScreen ? 24 : 20);
+        final double dialogPadding = isSmallScreen ? 16 : 20;
+        final double elementSpacing = isSmallScreen ? 12 : 16;
         final double smallElementSpacing = isSmallScreen ? 8 : 12;
-        final double buttonSpacing = isSmallScreen ? 8 : 12;
 
         // Responsive font sizes
-        final double headerFontSize =
-            isSmallScreen ? 10 : (isLargeScreen ? 14 : 12);
-        final double titleFontSize =
-            isSmallScreen ? 14 : (isLargeScreen ? 18 : 16);
-        final double subtitleFontSize =
-            isSmallScreen ? 12 : (isLargeScreen ? 16 : 14);
-        final double warningFontSize =
-            isSmallScreen ? 10 : (isLargeScreen ? 14 : 12);
-        final double buttonFontSize =
-            isSmallScreen ? 8 : (isLargeScreen ? 12 : 10);
-
-        // Responsive icon sizes
-        final double headerIconSize = isSmallScreen ? 16 : 20;
-        final double warningIconSize = isSmallScreen ? 14 : 16;
-
-        // Responsive dimensions
-        final double buttonHeight =
-            isSmallScreen ? 36 : (isLargeScreen ? 48 : 40);
-        final double headerPadding = isSmallScreen ? 8 : 12;
-        final double borderRadius = isSmallScreen ? 6 : 8;
+        final double headerFontSize = isSmallScreen ? 10 : 12;
+        final double titleFontSize = isSmallScreen ? 14 : 16;
+        final double subtitleFontSize = isSmallScreen ? 12 : 14;
+        final double buttonFontSize = isSmallScreen ? 10 : 12;
 
         return Dialog(
           backgroundColor: Colors.transparent,
-          insetPadding: EdgeInsets.symmetric(
-            horizontal: isSmallScreen ? 16 : (isLargeScreen ? 80 : 40),
-            vertical: isSmallScreen ? 16 : (isLargeScreen ? 60 : 40),
-          ),
+          insetPadding: EdgeInsets.all(16), // Consistent padding on all sides
           child: Container(
+            constraints: BoxConstraints(
+              maxWidth: 400, // Maximum width to prevent overflow
+              minWidth: 280, // Minimum width for content
+            ),
             padding: EdgeInsets.all(dialogPadding),
             decoration: BoxDecoration(
               color: colorScheme.background,
-              borderRadius: BorderRadius.circular(borderRadius * 1.5),
+              borderRadius: BorderRadius.circular(12),
               border: Border.all(
                 color: colorScheme.onSurface.withOpacity(0.2),
                 width: 2,
@@ -2565,32 +2562,30 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment:
+                  CrossAxisAlignment.center, // Center everything
               children: [
-                // Header
+                // Header - Centered
                 Container(
-                  width: double.infinity,
-                  padding: EdgeInsets.symmetric(vertical: headerPadding),
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   decoration: BoxDecoration(
                     color: Colors.red.withOpacity(0.9),
-                    borderRadius: BorderRadius.circular(borderRadius),
+                    borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
+                    mainAxisSize: MainAxisSize.min, // Take minimum width
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.delete_outline,
-                          color: Colors.white, size: headerIconSize),
-                      SizedBox(width: smallElementSpacing),
-                      Flexible(
-                        child: Text(
-                          'DELETE MESSAGE',
-                          style: GoogleFonts.pressStart2p(
-                            fontSize: headerFontSize,
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          textAlign: TextAlign.center,
-                          overflow: TextOverflow.ellipsis,
+                      Icon(Icons.delete_outline, color: Colors.white, size: 16),
+                      SizedBox(width: 8),
+                      Text(
+                        'DELETE MESSAGE',
+                        style: GoogleFonts.pressStart2p(
+                          fontSize: headerFontSize,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
                         ),
+                        textAlign: TextAlign.center,
                       ),
                     ],
                   ),
@@ -2598,11 +2593,13 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 
                 SizedBox(height: elementSpacing),
 
-                // Message content
+                // Message content - Centered
                 Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Text(
-                      'Are you sure you want to delete this message?',
+                      'Are you sure you want to delete\nthis message?',
                       style: TextStyle(
                         fontSize: titleFontSize,
                         color: colorScheme.onSurface,
@@ -2625,33 +2622,34 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 
                 SizedBox(height: elementSpacing),
 
-                // Warning note
+                // Warning note - Centered
                 Container(
-                  padding: EdgeInsets.all(isSmallScreen ? 8 : 12),
+                  padding: EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: Colors.orange.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(borderRadius),
+                    borderRadius: BorderRadius.circular(8),
                     border: Border.all(
                       color: Colors.orange.withOpacity(0.3),
                       width: 1,
                     ),
                   ),
                   child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(Icons.warning_amber_outlined,
-                          color: Colors.orange[800], size: warningIconSize),
-                      SizedBox(width: smallElementSpacing),
-                      Expanded(
+                          color: Colors.orange[800], size: 16),
+                      SizedBox(width: 8),
+                      Flexible(
                         child: Text(
                           'This will remove the message for everyone',
                           style: TextStyle(
-                            fontSize: warningFontSize,
+                            fontSize: 12,
                             color: Colors.orange[800],
                             fontWeight: FontWeight.bold,
-                            height: 1.2,
                           ),
+                          textAlign: TextAlign.center,
                           maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
@@ -2660,151 +2658,109 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 
                 SizedBox(height: elementSpacing),
 
-                // Action buttons - Stack vertically on very small screens
-                isSmallScreen
-                    ? Column(
-                        children: [
-                          // Delete button (comes first on small screens for better UX)
-                          Container(
-                            height: buttonHeight,
-                            width: double.infinity,
-                            decoration: BoxDecoration(
-                              color: Colors.red,
-                              borderRadius: BorderRadius.circular(borderRadius),
-                              border: Border.all(
-                                color: Colors.red.withOpacity(0.3),
-                                width: 2,
-                              ),
+                // Action buttons - Always centered with proper spacing
+                if (isSmallScreen)
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SizedBox(
+                        width: double.infinity,
+                        child: TextButton(
+                          onPressed: () => Navigator.of(context).pop(true),
+                          style: TextButton.styleFrom(
+                            backgroundColor: Colors.red,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
                             ),
-                            child: TextButton(
-                              onPressed: () {
-                                Navigator.of(context).pop(true);
-                              },
-                              style: TextButton.styleFrom(
-                                shape: RoundedRectangleBorder(
-                                  borderRadius:
-                                      BorderRadius.circular(borderRadius),
-                                ),
-                              ),
-                              child: Text(
-                                'DELETE',
-                                style: GoogleFonts.pressStart2p(
-                                  fontSize: buttonFontSize,
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
+                            padding: EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          child: Text(
+                            'DELETE',
+                            style: GoogleFonts.pressStart2p(
+                              fontSize: buttonFontSize,
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
-                          SizedBox(height: buttonSpacing),
-                          // Cancel button
-                          Container(
-                            height: buttonHeight,
-                            width: double.infinity,
-                            decoration: BoxDecoration(
-                              color: colorScheme.surface,
-                              borderRadius: BorderRadius.circular(borderRadius),
-                              border: Border.all(
+                        ),
+                      ),
+                      SizedBox(height: 8),
+                      SizedBox(
+                        width: double.infinity,
+                        child: TextButton(
+                          onPressed: () => Navigator.of(context).pop(false),
+                          style: TextButton.styleFrom(
+                            backgroundColor: colorScheme.surface,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              side: BorderSide(
                                 color: colorScheme.onSurface.withOpacity(0.3),
                                 width: 2,
                               ),
                             ),
-                            child: TextButton(
-                              onPressed: () {
-                                Navigator.of(context).pop(false);
-                              },
-                              style: TextButton.styleFrom(
-                                shape: RoundedRectangleBorder(
-                                  borderRadius:
-                                      BorderRadius.circular(borderRadius),
-                                ),
-                              ),
-                              child: Text(
-                                'CANCEL',
-                                style: GoogleFonts.pressStart2p(
-                                  fontSize: buttonFontSize,
-                                  color: colorScheme.onSurface,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
+                            padding: EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          child: Text(
+                            'CANCEL',
+                            style: GoogleFonts.pressStart2p(
+                              fontSize: buttonFontSize,
+                              color: colorScheme.onSurface,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
-                        ],
-                      )
-                    : Row(
-                        children: [
-                          // Cancel button
-                          Expanded(
-                            child: Container(
-                              height: buttonHeight,
-                              decoration: BoxDecoration(
-                                color: colorScheme.surface,
-                                borderRadius:
-                                    BorderRadius.circular(borderRadius),
-                                border: Border.all(
-                                  color: colorScheme.onSurface.withOpacity(0.3),
-                                  width: 2,
-                                ),
-                              ),
-                              child: TextButton(
-                                onPressed: () {
-                                  Navigator.of(context).pop(false);
-                                },
-                                style: TextButton.styleFrom(
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius:
-                                        BorderRadius.circular(borderRadius),
-                                  ),
-                                ),
-                                child: Text(
-                                  'CANCEL',
-                                  style: GoogleFonts.pressStart2p(
-                                    fontSize: buttonFontSize,
-                                    color: colorScheme.onSurface,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                          SizedBox(width: buttonSpacing),
-
-                          // Delete button
-                          Expanded(
-                            child: Container(
-                              height: buttonHeight,
-                              decoration: BoxDecoration(
-                                color: Colors.red,
-                                borderRadius:
-                                    BorderRadius.circular(borderRadius),
-                                border: Border.all(
-                                  color: Colors.red.withOpacity(0.3),
-                                  width: 2,
-                                ),
-                              ),
-                              child: TextButton(
-                                onPressed: () {
-                                  Navigator.of(context).pop(true);
-                                },
-                                style: TextButton.styleFrom(
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius:
-                                        BorderRadius.circular(borderRadius),
-                                  ),
-                                ),
-                                child: Text(
-                                  'DELETE',
-                                  style: GoogleFonts.pressStart2p(
-                                    fontSize: buttonFontSize,
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
+                    ],
+                  )
+                else
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(false),
+                        style: TextButton.styleFrom(
+                          backgroundColor: colorScheme.surface,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            side: BorderSide(
+                              color: colorScheme.onSurface.withOpacity(0.3),
+                              width: 2,
+                            ),
+                          ),
+                          padding: EdgeInsets.symmetric(
+                              horizontal: 24, vertical: 12),
+                        ),
+                        child: Text(
+                          'CANCEL',
+                          style: GoogleFonts.pressStart2p(
+                            fontSize: buttonFontSize,
+                            color: colorScheme.onSurface,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: 12),
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(true),
+                        style: TextButton.styleFrom(
+                          backgroundColor: Colors.red,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          padding: EdgeInsets.symmetric(
+                              horizontal: 24, vertical: 12),
+                        ),
+                        child: Text(
+                          'DELETE',
+                          style: GoogleFonts.pressStart2p(
+                            fontSize: buttonFontSize,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
               ],
             ),
           ),

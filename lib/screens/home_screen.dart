@@ -299,13 +299,22 @@ class _HomescreenState extends State<Homescreen>
 
   Future<void> _loadChats() async {
     try {
+      if (mounted) {
+        setState(() {
+          _isLoading = true;
+        });
+      }
+
       final cachedChats = await LocalCacheService.getCachedChats();
 
       if (cachedChats != null && cachedChats.isNotEmpty) {
         print('📦 Loading chats from cache');
+        // FIX: Use the helper method for proper type conversion
+        List<ChatRoom> convertedChats = _convertToChatRoomList(cachedChats);
+
         if (mounted) {
           setState(() {
-            _chats = cachedChats;
+            _chats = convertedChats;
             _errorMessage = '';
           });
         }
@@ -318,6 +327,12 @@ class _HomescreenState extends State<Homescreen>
           _errorMessage = 'Failed to load chats: $e';
         });
       }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -325,19 +340,27 @@ class _HomescreenState extends State<Homescreen>
     print('🔄 Fetching fresh chats from API...');
     try {
       final chats = await ApiService.getUserChats();
-      chats.sort((a, b) => b.lastActivity.compareTo(a.lastActivity));
 
-      await LocalCacheService.cacheChats(chats);
+      // FIX: Safe type conversion for API response
+      List<ChatRoom> convertedChats = _convertToChatRoomList(chats);
+      convertedChats.sort((a, b) => b.lastActivity.compareTo(a.lastActivity));
+
+      await LocalCacheService.cacheChats(convertedChats);
 
       if (mounted) {
         setState(() {
-          _chats = chats;
+          _chats = convertedChats;
           _errorMessage = '';
         });
       }
     } catch (e) {
       print('❌ Error loading fresh chats: $e');
       // Don't show error if we have cached chats
+      if (_chats.isEmpty && mounted) {
+        setState(() {
+          _errorMessage = 'Failed to load fresh chats: $e';
+        });
+      }
     }
   }
 
@@ -351,9 +374,12 @@ class _HomescreenState extends State<Homescreen>
 
       final invitations = await ApiService.getGroupInvitations();
 
+      // FIX: Use the helper method for proper type conversion
+      List<ChatRoom> convertedInvitations = _convertToChatRoomList(invitations);
+
       if (mounted) {
         setState(() {
-          _groupInvitations = invitations;
+          _groupInvitations = convertedInvitations;
           _isLoadingInvitations = false;
         });
       }
@@ -365,6 +391,56 @@ class _HomescreenState extends State<Homescreen>
         });
       }
     }
+  }
+
+// Helper method for safe type conversion
+  List<ChatRoom> _convertToChatRoomList(dynamic data) {
+    if (data == null) return [];
+
+    if (data is List<ChatRoom>) {
+      return data;
+    }
+
+    if (data is List<dynamic>) {
+      return data
+          .map<ChatRoom>((item) {
+            if (item is ChatRoom) {
+              return item;
+            } else if (item is Map<String, dynamic>) {
+              try {
+                return ChatRoom.fromJson(item);
+              } catch (e) {
+                print('⚠️ Error converting map to ChatRoom: $e');
+                return _createFallbackChatRoom();
+              }
+            } else if (item is ChatRoomDTO) {
+              return ChatRoom.convertChatDTOToChatRoom(item);
+            } else {
+              print('⚠️ Unknown chat data type: ${item.runtimeType}');
+              return _createFallbackChatRoom();
+            }
+          })
+          .where((chat) => chat != null)
+          .cast<ChatRoom>()
+          .toList();
+    }
+
+    print('⚠️ Unexpected data type for chat list: ${data.runtimeType}');
+    return [];
+  }
+
+  ChatRoom _createFallbackChatRoom() {
+    return ChatRoom(
+      chatId: 'fallback-${DateTime.now().millisecondsSinceEpoch}',
+      chatName: 'Unknown Chat',
+      isGroup: false,
+      lastMessage: 'Error loading chat',
+      lastActivity: DateTime.now(),
+      pfpIndex: '❓',
+      pfpBg: '#FF0000',
+      themeIndex: 0,
+      isDark: true,
+    );
   }
 
   void _loadChatsFromApi() async {
