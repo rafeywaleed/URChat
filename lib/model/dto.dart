@@ -638,3 +638,39 @@ class UserDTOConvertor {
     );
   }
 }
+
+class InAppNotification {
+  final String chatId;
+  final String chatName;
+  final String lastMessage;
+  final String pfpIndex;
+  final String pfpBg;
+
+  InAppNotification({
+    required this.chatId,
+    required this.chatName,
+    required this.lastMessage,
+    required this.pfpIndex,
+    required this.pfpBg,
+  });
+
+  factory InAppNotification.fromJson(Map<String, dynamic> json) {
+    return InAppNotification(
+      chatId: json['chatId'] ?? '',
+      chatName: json['chatName'] ?? '',
+      lastMessage: json['lastMessage'] ?? '',
+      pfpIndex: json['pfpIndex'] ?? '',
+      pfpBg: json['pfpBg'] ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'chatId': chatId,
+      'chatName': chatName,
+      'lastMessage': lastMessage,
+      'pfpIndex': pfpIndex,
+      'pfpBg': pfpBg,
+    };
+  }
+}

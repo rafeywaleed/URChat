@@ -94,11 +94,24 @@ class _HomescreenState extends State<Homescreen>
       }
     });
     _initializeWebSocket();
-
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _verifyNotificationSystem();
+    });
     // Keep the periodic debug from original file
     Timer.periodic(const Duration(seconds: 10), (timer) {
       _debugSubscriptions();
     });
+  }
+
+  void _verifyNotificationAdded() {
+    print('=== NOTIFICATION STATE CHECK ===');
+    print('📊 Total notifications: ${_messageNotifications.length}');
+    print('📱 Widget mounted: $mounted');
+    print('🔄 Last rebuild: ${DateTime.now()}');
+    _messageNotifications.forEach((n) {
+      print('  - ${n['chatName']}: ${n['message']}');
+    });
+    print('================================');
   }
 
   void _initializeWebSocket() {
@@ -113,10 +126,17 @@ class _HomescreenState extends State<Homescreen>
       onReadReceipt: (data) {
         print('👀 Read receipt: $data');
       },
-      onMessageDeleted:
-          _handleMessageDeleted, // NEW: Add message deletion handler
-      onChatDeleted: _handleChatDeleted, // NEW: Add chat deletion handler
+      onMessageDeleted: _handleMessageDeleted,
+      onChatDeleted: _handleChatDeleted,
     );
+
+    // Add connection listener
+    Timer.periodic(Duration(seconds: 2), (timer) {
+      if (!_webSocketService.isConnected) {
+        print('🔄 WebSocket not connected, reconnecting...');
+        _webSocketService.connect();
+      }
+    });
 
     _webSocketService.connect();
     _testWebSocketConnection();
@@ -449,12 +469,18 @@ class _HomescreenState extends State<Homescreen>
   }
 
   void _handleNewMessage(Message message) {
-    print('💬 New message received: ${message.content}');
+    _debugNotificationState(message);
 
-    final bool shouldShowNotification = _selectedChatId != message.chatId;
+    // Check if we should show notification
+    final bool shouldShowNotification =
+        _selectedChatId != message.chatId || !_showChatScreen;
+
+    print('🔔 Should show notification: $shouldShowNotification');
 
     if (shouldShowNotification) {
       _showMessageNotification(message);
+    } else {
+      print('🔕 Skipping notification - currently viewing this chat');
     }
 
     _refreshChatListForMessage(message);
@@ -489,6 +515,72 @@ class _HomescreenState extends State<Homescreen>
           }
         }
       });
+      var chat = _chats.first;
+      final notify = InAppNotification(
+          chatId: chat.chatId,
+          chatName: chat.chatName,
+          lastMessage: chat.lastMessage,
+          pfpBg: chat.pfpBg,
+          pfpIndex: chat.pfpIndex);
+
+      _showInAppNotification(notify);
+    }
+  }
+
+  void _showInAppNotification(InAppNotification notify) {
+    // Double-check we're not currently viewing this chat
+    if (_selectedChatId == notify.chatId && _showChatScreen) {
+      print('🔕 Skipping notification - currently viewing this chat');
+      return;
+    }
+
+    try {
+      // final chatRoom = _chats.firstWhere(
+      //   (chat) => chat.chatId == message.chatId,
+      //   orElse: () => ChatRoom(
+      //     chatId: message.chatId,
+      //     chatName: 'Unknown Chat',
+      //     isGroup: false,
+      //     lastMessage: '',
+      //     lastActivity: DateTime.now(),
+      //     pfpIndex: '💬',
+      //     pfpBg: '#4CAF50',
+      //     themeIndex: 0,
+      //     isDark: true,
+      //   ),
+      // );
+
+      final notification = {
+        'chatName': notify.chatName,
+        'message': notify.lastMessage,
+        'chatId': notify.chatId,
+      };
+
+      print(
+          '🔔 Creating notification: ${notify.chatId} - ${notify.lastMessage}');
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() {
+            _messageNotifications.add(notification);
+            print(
+                '✅ Notification added! Total count: ${_messageNotifications.length}');
+          });
+        }
+      });
+
+      Future.delayed(const Duration(seconds: 2), () {
+        if (mounted) {
+          setState(() {
+            _messageNotifications
+                .removeWhere((n) => n['id'] == notification['id']);
+            print(
+                '🗑️ Removed notification, count: ${_messageNotifications.length}');
+          });
+        }
+      });
+    } catch (e) {
+      print('❌ Error showing notification: $e');
     }
   }
 
@@ -743,67 +835,103 @@ class _HomescreenState extends State<Homescreen>
   }
 
   void _showMessageNotification(Message message) {
+    // Double-check we're not currently viewing this chat
     if (_selectedChatId == message.chatId && _showChatScreen) {
       print('🔕 Skipping notification - currently viewing this chat');
       return;
     }
 
-    final chatRoom = _chats.firstWhere(
-      (chat) => chat.chatId == message.chatId,
-      orElse: () => ChatRoom(
-        chatId: message.chatId,
-        chatName: 'Unknown Chat',
-        isGroup: false,
-        lastMessage: '',
-        lastActivity: DateTime.now(),
-        pfpIndex: '💬',
-        pfpBg: '#4CAF50',
-        themeIndex: 0,
-        isDark: true,
-      ),
-    );
+    try {
+      final chatRoom = _chats.firstWhere(
+        (chat) => chat.chatId == message.chatId,
+        orElse: () => ChatRoom(
+          chatId: message.chatId,
+          chatName: 'Unknown Chat',
+          isGroup: false,
+          lastMessage: '',
+          lastActivity: DateTime.now(),
+          pfpIndex: '💬',
+          pfpBg: '#4CAF50',
+          themeIndex: 0,
+          isDark: true,
+        ),
+      );
 
-    final notification = {
-      'id': DateTime.now().millisecondsSinceEpoch,
-      'chatName': chatRoom.chatName,
-      'message': message.content,
-      'sender': message.sender,
-      'chatId': message.chatId,
-      'timestamp': DateTime.now(),
-      'type':
-          'message', // NEW: Add type to distinguish from deletion notifications
-    };
+      final notification = {
+        'id': DateTime.now().millisecondsSinceEpoch,
+        'chatName': chatRoom.chatName,
+        'message': message.content,
+        'sender': message.sender,
+        'chatId': message.chatId,
+        'timestamp': DateTime.now(),
+        'type': 'message',
+      };
 
-    print(
-        '🔔 Showing notification: ${notification['chatName']} - ${notification['message']}');
+      print(
+          '🔔 Creating notification: ${notification['chatName']} - ${notification['message']}');
 
-    if (mounted) {
-      setState(() {
-        _messageNotifications.add(notification);
+      // CRITICAL FIX: Use post frame callback to ensure setState happens after current build
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() {
+            _messageNotifications.add(notification);
+            print(
+                '✅ Notification added! Total count: ${_messageNotifications.length}');
+          });
+        }
       });
-    }
 
-    Future.delayed(const Duration(seconds: 5), () {
-      if (mounted) {
-        setState(() {
-          _messageNotifications
-              .removeWhere((n) => n['id'] == notification['id']);
-        });
-      }
-    });
+      // Auto-remove notification after delay
+      Future.delayed(const Duration(seconds: 5), () {
+        if (mounted) {
+          setState(() {
+            _messageNotifications
+                .removeWhere((n) => n['id'] == notification['id']);
+            print(
+                '🗑️ Removed notification, count: ${_messageNotifications.length}');
+          });
+        }
+      });
+    } catch (e) {
+      print('❌ Error showing notification: $e');
+    }
+  }
+
+  void _debugNotificationState(Message message) {
+    print('=== NOTIFICATION DEBUG ===');
+    print('📱 Mounted: $mounted');
+    print('💬 Message received: ${message.content}');
+    print('🏠 Selected chat ID: $_selectedChatId');
+    print('💻 Show chat screen: $_showChatScreen');
+    print('🔔 Current notifications: ${_messageNotifications.length}');
+    print('📡 WebSocket connected: ${_webSocketService.isConnected}');
+    print('==========================');
   }
 
   Widget _buildMessageNotifications() {
-    if (_messageNotifications.isEmpty) return const SizedBox();
+    print(
+        '🎨 Building notifications widget. Count: ${_messageNotifications.length}');
+
+    if (_messageNotifications.isEmpty) {
+      print('⚠️ No notifications to display');
+      return const SizedBox.shrink();
+    }
 
     return Positioned(
       top: MediaQuery.of(context).padding.top + 8,
       left: 16,
       right: 16,
-      child: Column(
-        children: _messageNotifications.map((notification) {
-          return _buildGlassNotification(notification);
-        }).toList(),
+      child: IgnorePointer(
+        ignoring: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: _messageNotifications.map((notification) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: _buildGlassNotification(notification),
+            );
+          }).toList(),
+        ),
       ),
     );
   }
@@ -1289,6 +1417,20 @@ class _HomescreenState extends State<Homescreen>
     );
   }
 
+  void _testNotification() {
+    print('🧪 Testing notification system...');
+
+    final testMessage = Message(
+        id: 999,
+        content: 'Message',
+        sender: 'test_user',
+        chatId: _chats.isNotEmpty ? _chats.first.chatId : 'test_chat',
+        timestamp: DateTime.now(),
+        isOwnMessage: false);
+
+    _showMessageNotification(testMessage);
+  }
+
   Widget _buildChatsTab() {
     return RefreshIndicator(
       backgroundColor: _beige,
@@ -1433,36 +1575,32 @@ class _HomescreenState extends State<Homescreen>
   }
 
   Widget _buildMobileLayout() {
-    return Stack(
-      children: [
-        // Main content
-        _showChatScreen && _selectedChat != null
-            ? _buildSelectedChatView()
-            : _buildChatsList(),
+    return _showChatScreen && _selectedChat != null
+        ? _buildSelectedChatView()
+        : _buildChatsList();
+  }
 
-        // Message notifications
-        _buildMessageNotifications(),
+  Widget _buildDesktopLayout() {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _buildChatsList(),
+        _selectedChatId != null
+            ? _buildSelectedChatView()
+            : _buildEmptyChatView(),
       ],
     );
   }
 
-  Widget _buildDesktopLayout() {
-    return Stack(
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _buildChatsList(),
-            _selectedChatId != null
-                ? _buildSelectedChatView()
-                : _buildEmptyChatView(),
-          ],
-        ),
-
-        // Message notifications
-        _buildMessageNotifications(),
-      ],
-    );
+  void _verifyNotificationSystem() {
+    print('=== NOTIFICATION SYSTEM VERIFICATION ===');
+    print('📱 App mounted: $mounted');
+    print('🔔 Notifications in list: ${_messageNotifications.length}');
+    print('💬 Chats loaded: ${_chats.length}');
+    print('📡 WebSocket connected: ${_webSocketService.isConnected}');
+    print('🎯 Subscribed chats: ${_webSocketService.getSubscribedChats()}');
+    print('🔄 Build method called at: ${DateTime.now()}');
+    print('========================================');
   }
 
   Color _parseColor(String colorString) {
@@ -1496,11 +1634,20 @@ class _HomescreenState extends State<Homescreen>
       child: Scaffold(
           backgroundColor: _beige,
           appBar: _showChatScreen && _isMobileScreen ? null : _buildAppBar(),
-          body: _isLoading
-              ? _buildLoadingState()
-              : (_isMobileScreen
-                  ? _buildMobileLayout()
-                  : _buildDesktopLayout()),
+          body: Stack(
+            children: [
+              // Main content
+              _isLoading
+                  ? _buildLoadingState()
+                  : (_isMobileScreen
+                      ? _buildMobileLayout()
+                      : _buildDesktopLayout()),
+
+              // Notifications overlay - TOP LEVEL
+              if (_messageNotifications.isNotEmpty)
+                _buildMessageNotifications(),
+            ],
+          ),
           floatingActionButton: !_showChatScreen
               ? NesButton(
                   type: NesButtonType.primary,

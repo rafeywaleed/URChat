@@ -142,75 +142,140 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
         const Padding(
           padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Text(
-            'SELECTED MEMBERS',
+            'Selected Members',
             style: TextStyle(
               fontWeight: FontWeight.bold,
-              fontSize: 14,
+              fontSize: 16,
             ),
           ),
         ),
         SizedBox(
-          height: 100,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            itemCount: _selectedUsers.length,
-            itemBuilder: (context, index) {
-              final user = _selectedUsers[index];
-              return Container(
-                margin: const EdgeInsets.only(right: 12),
-                child: NesContainer(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Stack(
-                        children: [
-                          CircleAvatar(
-                            backgroundColor: _parseColor(user.pfpBg),
-                            radius: 24,
-                            child: Text(
-                              user.pfpIndex,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                          Positioned(
-                            top: -4,
-                            right: -4,
-                            child: NesButton(
-                              type: NesButtonType.error,
-                              onPressed: () => _removeUser(user),
-                              child: const Icon(
-                                Icons.close,
-                                size: 16,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      SizedBox(
-                        width: 70,
-                        child: Text(
-                          user.fullName,
-                          style: const TextStyle(fontSize: 12),
-                          overflow: TextOverflow.ellipsis,
-                          textAlign: TextAlign.center,
-                          maxLines: 2,
+          height: _getSelectedUsersHeight(),
+          child: _isMobile(context)
+              ? _buildSelectedUsersGrid()
+              : _buildSelectedUsersList(),
+        ),
+        const Divider(),
+      ],
+    );
+  }
+
+  Widget _buildSelectedUsersList() {
+    return ListView.builder(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      itemCount: _selectedUsers.length,
+      itemBuilder: (context, index) {
+        final user = _selectedUsers[index];
+        return Container(
+          margin: const EdgeInsets.only(right: 8),
+          child: Column(
+            children: [
+              Stack(
+                children: [
+                  CircleAvatar(
+                    backgroundColor: _parseColor(user.pfpBg),
+                    radius: _getAvatarRadius(),
+                    child: Text(
+                      user.pfpIndex,
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                  ),
+                  Positioned(
+                    top: 0,
+                    right: 0,
+                    child: GestureDetector(
+                      onTap: () => _removeUser(user),
+                      child: Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.close,
+                          size: _getCloseIconSize(),
+                          color: Colors.white,
                         ),
                       ),
-                    ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              SizedBox(
+                width: _getUserNameWidth(),
+                child: Text(
+                  user.fullName,
+                  style: TextStyle(fontSize: _getUserNameFontSize()),
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildSelectedUsersGrid() {
+    return GridView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: _getGridCrossAxisCount(),
+        crossAxisSpacing: 8,
+        mainAxisSpacing: 8,
+        childAspectRatio: 0.8,
+      ),
+      itemCount: _selectedUsers.length,
+      itemBuilder: (context, index) {
+        final user = _selectedUsers[index];
+        return Column(
+          children: [
+            Stack(
+              children: [
+                CircleAvatar(
+                  backgroundColor: _parseColor(user.pfpBg),
+                  radius: _getAvatarRadius(),
+                  child: Text(
+                    user.pfpIndex,
+                    style: const TextStyle(color: Colors.white),
                   ),
                 ),
-              );
-            },
-          ),
-        ),
-        const SizedBox(height: 16),
-      ],
+                Positioned(
+                  top: 0,
+                  right: 0,
+                  child: GestureDetector(
+                    onTap: () => _removeUser(user),
+                    child: Container(
+                      padding: const EdgeInsets.all(2),
+                      decoration: const BoxDecoration(
+                        color: Colors.red,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.close,
+                        size: _getCloseIconSize(),
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              user.fullName,
+              style: TextStyle(fontSize: _getUserNameFontSize()),
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              maxLines: 2,
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -221,26 +286,21 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
 
     if (_isSearching) {
       return const Padding(
-        padding: EdgeInsets.all(16.0),
-        child: Center(child: CircularProgressIndicator()),
+        padding: EdgeInsets.all(24.0),
+        child: Center(child: NesPixelRowLoadingIndicator()),
       );
     }
 
     if (_searchResults.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: NesContainer(
-          child: Center(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Text(
-                _searchController.text.length < 2
-                    ? 'Type at least 2 characters to search'
-                    : 'No users found for "${_searchController.text}"',
-                style: const TextStyle(color: Colors.grey),
-                textAlign: TextAlign.center,
-              ),
-            ),
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Text(
+            _searchController.text.length < 2
+                ? 'Type at least 2 characters to search'
+                : 'No users found',
+            style: const TextStyle(color: Colors.grey),
+            textAlign: TextAlign.center,
           ),
         ),
       );
@@ -252,73 +312,43 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
         const Padding(
           padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Text(
-            'SEARCH RESULTS',
+            'Search Results',
             style: TextStyle(
               fontWeight: FontWeight.bold,
-              fontSize: 14,
+              fontSize: 16,
             ),
           ),
         ),
-        NesContainer(
-          // margin: const EdgeInsets.symmetric(horizontal: 16),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxHeight: 200),
-            child: ListView.builder(
-              shrinkWrap: true,
-              physics: const AlwaysScrollableScrollPhysics(),
-              itemCount: _searchResults.length,
-              itemBuilder: (context, index) {
-                final user = _searchResults[index];
-                return NesButton(
-                  type: NesButtonType.normal,
-                  onPressed: () => _selectUser(user),
-                  child: Padding(
-                    padding:
-                        const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-                    child: Row(
-                      children: [
-                        CircleAvatar(
-                          backgroundColor: _parseColor(user.pfpBg),
-                          radius: 20,
-                          child: Text(
-                            user.pfpIndex,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                user.fullName,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              Text(
-                                '@${user.username}',
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
-                          ),
-                        ),
-                        const Icon(Icons.add, size: 20),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
+        ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: _searchResults.length,
+          itemBuilder: (context, index) {
+            final user = _searchResults[index];
+            return ListTile(
+              leading: CircleAvatar(
+                backgroundColor: _parseColor(user.pfpBg),
+                radius: _getListAvatarRadius(),
+                child: Text(
+                  user.pfpIndex,
+                  style: const TextStyle(color: Colors.white),
+                ),
+              ),
+              title: Text(
+                user.fullName,
+                style: TextStyle(fontSize: _getListTitleFontSize()),
+              ),
+              subtitle: Text(
+                '@${user.username}',
+                style: TextStyle(fontSize: _getListSubtitleFontSize()),
+              ),
+              trailing: Icon(Icons.add),
+              onTap: () => _selectUser(user),
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: _getListTileHorizontalPadding(),
+              ),
+            );
+          },
         ),
       ],
     );
@@ -332,185 +362,201 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
     }
   }
 
+  // Responsive helper methods
+  bool _isMobile(BuildContext context) {
+    return MediaQuery.of(context).size.width < 600;
+  }
+
+  bool _isTablet(BuildContext context) {
+    return MediaQuery.of(context).size.width >= 600 &&
+        MediaQuery.of(context).size.width < 1200;
+  }
+
+  double _getSelectedUsersHeight() {
+    final width = MediaQuery.of(context).size.width;
+    if (width < 400) return 120;
+    if (width < 600) return 100;
+    return 80;
+  }
+
+  double _getAvatarRadius() {
+    final width = MediaQuery.of(context).size.width;
+    if (width < 400) return 20;
+    if (width < 600) return 18;
+    return 16;
+  }
+
+  double _getListAvatarRadius() {
+    final width = MediaQuery.of(context).size.width;
+    if (width < 400) return 18;
+    return 20;
+  }
+
+  double _getCloseIconSize() {
+    final width = MediaQuery.of(context).size.width;
+    if (width < 400) return 10;
+    return 12;
+  }
+
+  double _getUserNameWidth() {
+    final width = MediaQuery.of(context).size.width;
+    if (width < 400) return 50;
+    if (width < 600) return 55;
+    return 60;
+  }
+
+  double _getUserNameFontSize() {
+    final width = MediaQuery.of(context).size.width;
+    if (width < 400) return 10;
+    return 12;
+  }
+
+  double _getListTitleFontSize() {
+    final width = MediaQuery.of(context).size.width;
+    if (width < 400) return 14;
+    return 16;
+  }
+
+  double _getListSubtitleFontSize() {
+    final width = MediaQuery.of(context).size.width;
+    if (width < 400) return 12;
+    return 14;
+  }
+
+  double _getListTileHorizontalPadding() {
+    final width = MediaQuery.of(context).size.width;
+    if (width < 400) return 8;
+    return 16;
+  }
+
+  int _getGridCrossAxisCount() {
+    final width = MediaQuery.of(context).size.width;
+    if (width < 400) return 4;
+    if (width < 600) return 5;
+    return 6;
+  }
+
   @override
   Widget build(BuildContext context) {
-    final isSmallScreen = MediaQuery.of(context).size.width < 500;
-
     return Dialog(
-      backgroundColor: Colors.transparent,
-      child: NesContainer(
-        width: isSmallScreen ? MediaQuery.of(context).size.width * 0.95 : 500,
-        height: isSmallScreen ? MediaQuery.of(context).size.height * 0.9 : 600,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      insetPadding: _getDialogPadding(),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: _getMaxDialogWidth(),
+          maxHeight: _getMaxDialogHeight(),
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             // Header
-            NesContainer(
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                child: Row(
-                  children: [
-                    const Icon(Icons.group_add, size: 24),
-                    const SizedBox(width: 12),
-                    const Text(
-                      'CREATE NEW GROUP',
+            Container(
+              padding: EdgeInsets.all(_getHeaderPadding()),
+              decoration: BoxDecoration(
+                color: const Color(0xFF5C4033),
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(16),
+                  topRight: Radius.circular(16),
+                ),
+              ),
+              child: Row(
+                children: [
+                  SizedBox(width: _getHeaderSpacing()),
+                  Expanded(
+                    child: Text(
+                      'Create New Group',
                       style: TextStyle(
+                        color: Colors.white,
+                        fontSize: _getHeaderFontSize(),
                         fontWeight: FontWeight.bold,
-                        fontSize: 16,
                       ),
                     ),
-                    const Spacer(),
-                    if (_isCreating)
-                      const SizedBox(
+                  ),
+                  if (_isCreating)
+                    SizedBox(
                         width: 20,
                         height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    else
-                      NesButton(
-                        type: NesButtonType.success,
-                        onPressed: _createGroup,
-                        child: const Text('CREATE'),
+                        child: NesHourglassLoadingIndicator())
+                  else
+                    IconButton(
+                      icon: NesIcon(
+                        iconData: NesIcons.check,
                       ),
-                    const SizedBox(width: 8),
-                    NesButton(
-                      type: NesButtonType.error,
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: const Text('CANCEL'),
+                      onPressed: _createGroup,
+                      tooltip: 'Create Group',
                     ),
-                  ],
-                ),
+                  IconButton(
+                    icon: NesIcon(
+                      iconData: NesIcons.close,
+                    ),
+                    onPressed: () => Navigator.of(context).pop(),
+                    tooltip: 'Cancel',
+                  ),
+                ],
               ),
             ),
 
             // Content
             Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: SingleChildScrollView(
-                  child: Column(
-                    children: [
-                      // Group Name Input
-                      NesContainer(
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'GROUP NAME',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              TextField(
-                                controller: _groupNameController,
-                                decoration: const InputDecoration(
-                                  hintText: 'Enter group name...',
-                                  border: OutlineInputBorder(),
-                                  contentPadding: EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 8,
-                                  ),
-                                ),
-                              ),
-                            ],
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    // Group Name Input
+                    Padding(
+                      padding: EdgeInsets.all(_getContentPadding()),
+                      child: TextField(
+                        controller: _groupNameController,
+                        decoration: const InputDecoration(
+                          labelText: 'Group Name',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.group),
+                        ),
+                      ),
+                    ),
+
+                    // Search for Users
+                    Padding(
+                      padding: EdgeInsets.symmetric(
+                          horizontal: _getContentPadding()),
+                      child: TextField(
+                        controller: _searchController,
+                        decoration: InputDecoration(
+                          labelText: 'Search users to add',
+                          border: const OutlineInputBorder(),
+                          prefixIcon: const Icon(Icons.search),
+                          // suffixIcon: _isSearching
+                          //     ? SizedBox(
+                          //         width: 20,
+                          //         height: 20,
+                          //         child: NesTerminalLoadingIndicator())
+                          //     : null,
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // Selected Users
+                    _buildSelectedUsers(),
+
+                    // Search Results
+                    _buildSearchResults(),
+
+                    // Info text
+                    if (_selectedUsers.isEmpty &&
+                        _searchController.text.isEmpty)
+                      Padding(
+                        padding: EdgeInsets.all(_getContentPadding()),
+                        child: Text(
+                          'Search for users and add them to create a group',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.grey,
+                            fontSize: _getInfoTextFontSize(),
                           ),
                         ),
                       ),
-
-                      const SizedBox(height: 16),
-
-                      // Search for Users
-                      NesContainer(
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'SEARCH USERS',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              TextField(
-                                controller: _searchController,
-                                decoration: InputDecoration(
-                                  hintText: 'Type username or name...',
-                                  border: const OutlineInputBorder(),
-                                  prefixIcon: const Icon(Icons.search),
-                                  suffixIcon: _isSearching
-                                      ? const SizedBox(
-                                          width: 20,
-                                          height: 20,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                          ),
-                                        )
-                                      : null,
-                                  contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 8,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 16),
-
-                      // Selected Users
-                      _buildSelectedUsers(),
-
-                      // Search Results
-                      _buildSearchResults(),
-
-                      // Info text when empty
-                      if (_selectedUsers.isEmpty &&
-                          _searchController.text.isEmpty)
-                        Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: NesContainer(
-                            child: Padding(
-                              padding: const EdgeInsets.all(24.0),
-                              child: Column(
-                                children: [
-                                  const Icon(
-                                    Icons.group_add,
-                                    size: 48,
-                                    color: Colors.grey,
-                                  ),
-                                  const SizedBox(height: 16),
-                                  const Text(
-                                    'Create a New Group',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    'Search for users and add them to create a group chat',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      color: Colors.grey[600],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
+                  ],
                 ),
               ),
             ),
@@ -518,6 +564,68 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
         ),
       ),
     );
+  }
+
+  // Additional responsive helper methods
+  EdgeInsets _getDialogPadding() {
+    final width = MediaQuery.of(context).size.width;
+    if (width < 400) return const EdgeInsets.all(8);
+    if (width < 600) return const EdgeInsets.all(12);
+    return const EdgeInsets.all(20);
+  }
+
+  double _getMaxDialogWidth() {
+    final width = MediaQuery.of(context).size.width;
+    if (width < 600) return width - 32;
+    return 500;
+  }
+
+  double _getMaxDialogHeight() {
+    final height = MediaQuery.of(context).size.height;
+    if (height < 600) return height - 50;
+    return 600;
+  }
+
+  double _getHeaderPadding() {
+    final width = MediaQuery.of(context).size.width;
+    if (width < 400) return 12;
+    return 16;
+  }
+
+  double _getHeaderIconSize() {
+    final width = MediaQuery.of(context).size.width;
+    if (width < 400) return 20;
+    return 24;
+  }
+
+  double _getHeaderSpacing() {
+    final width = MediaQuery.of(context).size.width;
+    if (width < 400) return 8;
+    return 12;
+  }
+
+  double _getHeaderFontSize() {
+    final width = MediaQuery.of(context).size.width;
+    if (width < 400) return 16;
+    return 18;
+  }
+
+  double _getActionIconSize() {
+    final width = MediaQuery.of(context).size.width;
+    if (width < 400) return 18;
+    return 24;
+  }
+
+  double _getContentPadding() {
+    final width = MediaQuery.of(context).size.width;
+    if (width < 400) return 12;
+    return 16;
+  }
+
+  double _getInfoTextFontSize() {
+    final width = MediaQuery.of(context).size.width;
+    if (width < 400) return 12;
+    return 14;
   }
 
   @override
