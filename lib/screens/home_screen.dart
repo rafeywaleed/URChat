@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:nes_ui/nes_ui.dart';
 import 'dart:async';
 import 'dart:ui';
@@ -1138,40 +1139,54 @@ class _HomescreenState extends State<Homescreen>
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Header with chat info
-                NesContainer(
-                  child: Row(
-                    children: [
-                      PixelCircle(
-                        color: _parseColor(chat.pfpBg),
-                        label: chat.pfpIndex,
-                      ),
-                      SizedBox(width: elementSpacing),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              chat.chatName,
-                              style: GoogleFonts.pressStart2p(
-                                fontSize: titleFontSize,
-                                color: _accent,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                              maxLines: 2,
-                            ),
-                            SizedBox(height: isSmallScreen ? 2 : 4),
-                            Text(
-                              chat.isGroup ? 'Group Chat' : 'Direct Message',
-                              style: GoogleFonts.vt323(
-                                fontSize: subtitleFontSize,
-                                color: _mutedText,
-                              ),
-                            ),
-                          ],
+                GestureDetector(
+                  onTap: () => chat.isGroup
+                      ? Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) =>
+                                  GroupManagementScreen(group: chat)),
+                        )
+                      : Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => OtherUserProfileScreen(
+                                  username: chat.chatName, fromChat: false)),
                         ),
-                      ),
-                    ],
+                  child: NesContainer(
+                    child: Row(
+                      children: [
+                        PixelCircle(
+                          color: _parseColor(chat.pfpBg),
+                          label: chat.pfpIndex,
+                        ),
+                        SizedBox(width: elementSpacing),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                chat.chatName,
+                                style: GoogleFonts.pressStart2p(
+                                  fontSize: titleFontSize,
+                                  color: _accent,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 2,
+                              ),
+                              SizedBox(height: isSmallScreen ? 2 : 4),
+                              Text(
+                                chat.isGroup ? 'Group Chat' : 'Direct Message',
+                                style: GoogleFonts.vt323(
+                                  fontSize: subtitleFontSize,
+                                  color: _mutedText,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
                 SizedBox(height: isSmallScreen ? 4 : 6),
@@ -1631,40 +1646,50 @@ class _HomescreenState extends State<Homescreen>
   Widget build(BuildContext context) {
     return WillPopScope(
       onWillPop: () => _exitAppDialog(),
-      child: Scaffold(
-          backgroundColor: _beige,
-          appBar: _showChatScreen && _isMobileScreen ? null : _buildAppBar(),
-          body: Stack(
-            children: [
-              // Main content
-              _isLoading
-                  ? _buildLoadingState()
-                  : (_isMobileScreen
-                      ? _buildMobileLayout()
-                      : _buildDesktopLayout()),
+      child: RawKeyboardListener(
+        focusNode: FocusNode(),
+        autofocus: true,
+        onKey: (RawKeyEvent event) {
+          if (event is RawKeyDownEvent &&
+              event.logicalKey == LogicalKeyboardKey.escape) {
+            _deselectChat();
+          }
+        },
+        child: Scaffold(
+            backgroundColor: _beige,
+            appBar: _showChatScreen && _isMobileScreen ? null : _buildAppBar(),
+            body: Stack(
+              children: [
+                // Main content
+                _isLoading
+                    ? _buildLoadingState()
+                    : (_isMobileScreen
+                        ? _buildMobileLayout()
+                        : _buildDesktopLayout()),
 
-              // Notifications overlay - TOP LEVEL
-              if (_messageNotifications.isNotEmpty)
-                _buildMessageNotifications(),
-            ],
-          ),
-          floatingActionButton: !_showChatScreen
-              ? NesButton(
-                  type: NesButtonType.primary,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.add_comment_outlined, size: 18),
-                      const SizedBox(width: 8),
-                      Text("New Chat",
-                          style: GoogleFonts.pressStart2p(fontSize: 10)),
-                    ],
-                  ),
-                  onPressed: () {
-                    _showFloatingActionMenu();
-                  },
-                )
-              : null),
+                // Notifications overlay - TOP LEVEL
+                if (_messageNotifications.isNotEmpty)
+                  _buildMessageNotifications(),
+              ],
+            ),
+            floatingActionButton: !_showChatScreen
+                ? NesButton(
+                    type: NesButtonType.primary,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.add_comment_outlined, size: 18),
+                        const SizedBox(width: 8),
+                        Text("New Chat",
+                            style: GoogleFonts.pressStart2p(fontSize: 10)),
+                      ],
+                    ),
+                    onPressed: () {
+                      _showFloatingActionMenu();
+                    },
+                  )
+                : null),
+      ),
     );
   }
 

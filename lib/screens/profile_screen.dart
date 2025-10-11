@@ -170,22 +170,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
+        leading: Padding(
+          padding: const EdgeInsets.fromLTRB(10, 10, 2, 2),
+          child: NesIconButton(
+            icon: NesIcons.leftArrowIndicator,
+            onPress: () => Navigator.pop(context),
+          ),
+        ),
         title: Text(
           'Profile',
           style: TextStyle(
             fontWeight: FontWeight.w600,
-            color: Colors.white,
+            color: Colors.black87,
           ),
         ),
-        backgroundColor: Color(0xFF5C4033),
-        foregroundColor: Colors.white,
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
         elevation: 0,
         centerTitle: true,
         actions: [
           if (_isEditing)
-            IconButton(
-              icon: Icon(Icons.close),
-              onPressed: _cancelEdit,
+            Padding(
+              padding: const EdgeInsets.fromLTRB(0, 0, 10, 0),
+              child: NesIconButton(
+                icon: NesIcons.close,
+                onPress: () => _cancelEdit,
+              ),
             ),
         ],
       ),

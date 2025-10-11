@@ -13,6 +13,7 @@ import 'package:urchat_back_testing/screens/group_management_screen.dart';
 import 'package:urchat_back_testing/screens/user_profile.dart';
 import 'package:urchat_back_testing/service/api_service.dart';
 import 'package:urchat_back_testing/service/chat_cache_service.dart';
+import 'package:urchat_back_testing/service/font_prefrences.dart';
 import 'package:urchat_back_testing/service/user_cache_service.dart';
 import 'package:urchat_back_testing/service/websocket_service.dart';
 import 'package:iconsax/iconsax.dart';
@@ -20,6 +21,7 @@ import 'package:urchat_back_testing/themes/butter/bfdemo.dart';
 import 'package:urchat_back_testing/themes/grid.dart';
 import 'package:urchat_back_testing/themes/meteor.dart';
 import 'package:urchat_back_testing/utils/animated_emoji_mapper.dart';
+import 'package:urchat_back_testing/utils/font_options.dart';
 import 'package:urchat_back_testing/widgets/animated_emoji_picker.dart';
 import 'package:urchat_back_testing/widgets/deletion_dialog.dart';
 
@@ -620,6 +622,9 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 
   bool _showEmojiPicker = false;
 
+  late String _selectedFont;
+  String _committedFont = ChatFonts.defaultFont;
+
   @override
   void initState() {
     super.initState();
@@ -649,6 +654,10 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _scrollToBottom();
     });
+
+    _selectedFont = ChatFonts.defaultFont;
+    _committedFont = ChatFonts.defaultFont;
+    _loadSavedFont();
   }
 
   @override
@@ -660,6 +669,39 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     _scrollController.dispose();
     _messageController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadSavedFont() async {
+    final savedFont =
+        await FontPreferenceService.getChatFont(widget.chatRoom.chatId);
+    if (savedFont != null && mounted) {
+      setState(() {
+        _selectedFont = savedFont;
+        _committedFont = savedFont;
+      });
+    }
+  }
+
+  void _changeFont(String fontKey) {
+    if (mounted) {
+      setState(() {
+        _selectedFont = fontKey;
+      });
+    }
+  }
+
+  void _saveFontChanges() async {
+    setState(() {
+      _committedFont = _selectedFont;
+    });
+    await FontPreferenceService.saveChatFont(
+        widget.chatRoom.chatId, _selectedFont);
+  }
+
+  void _revertFontChanges() {
+    setState(() {
+      _selectedFont = _committedFont;
+    });
   }
 
   void _loadInitialMessages() async {
@@ -875,6 +917,8 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   void _showThemeMenu() async {
     int tempTheme = widget.selectedTheme;
     bool tempDarkMode = widget.isDarkMode;
+    String tempFont = _selectedFont;
+
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -903,7 +947,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // NES Style Header - Now uses theme colors
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.symmetric(vertical: 8),
@@ -929,7 +972,90 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 
                     const SizedBox(height: 20),
 
-                    // Theme Mode Toggle - NES Style with theme colors
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: colorScheme.surface,
+                        border: Border.all(
+                          color: colorScheme.onSurface.withOpacity(0.2),
+                          width: 2,
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.text_fields,
+                                color: colorScheme.onSurface,
+                              ),
+                              const SizedBox(width: 12),
+                              Text(
+                                'CHAT FONT',
+                                style: TextStyle(
+                                  color: colorScheme.onSurface,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children:
+                                ChatFonts.availableFonts.entries.map((font) {
+                              final isSelected = tempFont == font.key;
+                              return GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    tempFont = font.key;
+                                  });
+                                  _changeFont(font.key);
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 6,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: isSelected
+                                        ? colorScheme.primary
+                                        : colorScheme.background,
+                                    border: Border.all(
+                                      color: isSelected
+                                          ? colorScheme.primary
+                                          : colorScheme.onSurface
+                                              .withOpacity(0.3),
+                                      width: 2,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    font.value,
+                                    style: ChatFonts.getTextStyle(
+                                      font.key,
+                                      baseStyle: TextStyle(
+                                        color: isSelected
+                                            ? colorScheme.onPrimary
+                                            : colorScheme.onSurface,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // Theme Mode Toggle
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
@@ -1032,7 +1158,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 
                     const SizedBox(height: 16),
 
-                    // Theme Style Selection - NES Style with theme colors
+                    // Theme Style Selection
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
@@ -1115,7 +1241,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 
                     const SizedBox(height: 20),
 
-                    // NES Style Buttons with theme colors
+                    // NES Style Buttons
                     Row(
                       children: [
                         // Cancel Button
@@ -1132,6 +1258,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                             child: TextButton(
                               onPressed: () {
                                 widget.onThemeCancel?.call();
+                                _revertFontChanges(); // NEW: Revert font changes too
                                 Navigator.of(context).pop();
                               },
                               style: TextButton.styleFrom(
@@ -1166,6 +1293,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                             child: TextButton(
                               onPressed: () {
                                 widget.onThemeSave?.call();
+                                _saveFontChanges(); // NEW: Save font changes
                                 Navigator.of(context).pop();
                               },
                               style: TextButton.styleFrom(
@@ -1339,10 +1467,13 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
           ),
           child: Text(
             _formatDate(date),
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey.shade700,
-              fontWeight: FontWeight.w500,
+            style: ChatFonts.getTextStyle(
+              _selectedFont,
+              baseStyle: TextStyle(
+                fontSize: 12,
+                color: Colors.grey.shade700,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
         ),
@@ -1675,11 +1806,16 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         };
     final colorScheme = Theme.of(context).colorScheme;
 
-    // NEW: Check if message can be deleted
     final canDelete = _canDeleteMessage(message);
 
-    // Check if message is a single emoji that has an animated version
     final isSingleAnimatedEmoji = _isSingleAnimatedEmoji(message.content);
+    final messageTextStyle = ChatFonts.getTextStyle(
+      _selectedFont,
+      baseStyle: TextStyle(
+        color: isOwnMessage ? colorScheme.onSurface : Colors.white,
+        fontSize: 14,
+      ),
+    );
 
     Widget messageContent;
 
@@ -1706,7 +1842,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                     padding: const EdgeInsets.only(bottom: 4, left: 8),
                     child: Text(
                       profile['fullName'] ?? message.sender,
-                      style: TextStyle(
+                      style: messageTextStyle.copyWith(
                         color: colorScheme.onSurface.withOpacity(0.7),
                         fontWeight: FontWeight.w500,
                         fontSize: 12,
@@ -1723,7 +1859,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                   padding: const EdgeInsets.only(top: 4),
                   child: Text(
                     _formatMessageTime(message.timestamp),
-                    style: TextStyle(
+                    style: messageTextStyle.copyWith(
                       color: colorScheme.onSurface.withOpacity(0.5),
                       fontSize: 10,
                     ),
@@ -1747,7 +1883,8 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
             if (showAvatar) ...[
               _buildUserAvatar(message.sender),
               const SizedBox(width: 8),
-            ],
+            ] else
+              SizedBox(width: 20),
             Flexible(
               child: Container(
                 padding:
@@ -1782,7 +1919,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                         padding: const EdgeInsets.only(bottom: 4),
                         child: Text(
                           profile['fullName'] ?? message.sender,
-                          style: TextStyle(
+                          style: messageTextStyle.copyWith(
                             color: isOwnMessage
                                 ? colorScheme.onSurface
                                 : Colors.white,
@@ -1793,7 +1930,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                       ),
                     Text(
                       message.content,
-                      style: TextStyle(
+                      style: messageTextStyle.copyWith(
                         color:
                             isOwnMessage ? colorScheme.onSurface : Colors.white,
                       ),
@@ -1804,7 +1941,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                       children: [
                         Text(
                           _formatMessageTime(message.timestamp),
-                          style: TextStyle(
+                          style: messageTextStyle.copyWith(
                             color: isOwnMessage ? Colors.grey : Colors.white70,
                             fontSize: 10,
                           ),
@@ -1824,13 +1961,17 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                 ),
               ),
             ),
-            if (!showAvatar) const SizedBox(width: 8),
+            if (!showAvatar)
+              const SizedBox(width: 3)
+            else
+              SizedBox(
+                width: 20,
+              )
           ],
         ),
       );
     }
 
-    // NEW: Wrap BOTH animated and regular messages with GestureDetector for long press
     return GestureDetector(
       onLongPress: canDelete
           ? () {
@@ -2137,21 +2278,30 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                 children: [
                   Text(
                     widget.chatRoom.chatName,
-                    style: const TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.bold),
+                    style: ChatFonts.getTextStyle(
+                      _selectedFont,
+                      baseStyle: const TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
                   ),
                   AnimatedSwitcher(
                     duration: const Duration(milliseconds: 300),
                     child: _typingUser.isNotEmpty
                         ? Text(
                             '$_typingUser is typing...',
-                            style: const TextStyle(
-                                fontSize: 12, color: Colors.white70),
+                            style: ChatFonts.getTextStyle(
+                              _selectedFont,
+                              baseStyle: const TextStyle(
+                                  fontSize: 12, color: Colors.white70),
+                            ),
                           )
                         : Text(
                             widget.chatRoom.isGroup ? 'Group' : 'Online',
-                            style: const TextStyle(
-                                fontSize: 12, color: Colors.white70),
+                            style: ChatFonts.getTextStyle(
+                              _selectedFont,
+                              baseStyle: const TextStyle(
+                                  fontSize: 12, color: Colors.white70),
+                            ),
                           ),
                   ),
                 ],
@@ -2349,11 +2499,14 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
             padding: const EdgeInsets.all(8.0),
             child: Row(
               children: [
-                const Text(
+                Text(
                   'Quick Emojis',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
+                  style: ChatFonts.getTextStyle(
+                    _selectedFont,
+                    baseStyle: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
                   ),
                 ),
                 const Spacer(),
@@ -2462,16 +2615,16 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         await ApiService.deleteMessage(widget.chatRoom.chatId, messageId);
 
         // Show success message
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Message deleted',
-              style: TextStyle(fontFamily: 'VT323', fontSize: 14),
-            ),
-            backgroundColor: Colors.green,
-            duration: Duration(seconds: 2),
-          ),
-        );
+        // ScaffoldMessenger.of(context).showSnackBar(
+        //   SnackBar(
+        //     content: Text(
+        //       'Message deleted',
+        //       style: TextStyle(fontFamily: 'VT323', fontSize: 14),
+        //     ),
+        //     backgroundColor: Colors.green,
+        //     duration: Duration(seconds: 2),
+        //   ),
+        // );
       } catch (e) {
         // If API call fails, reload messages to restore state
         _loadInitialMessages();

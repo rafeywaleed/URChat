@@ -160,17 +160,25 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen> {
           'User Profile',
           style: TextStyle(
             fontWeight: FontWeight.w600,
-            color: colorScheme.onPrimary,
+            color: widget.fromChat ? colorScheme.onPrimary : Colors.black,
           ),
         ),
-        backgroundColor: colorScheme.primary,
+        backgroundColor: widget.fromChat ? colorScheme.primary : Colors.white,
         foregroundColor: colorScheme.onPrimary,
         elevation: 0,
         centerTitle: true,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
-        ),
+        leading: !widget.fromChat
+            ? Padding(
+                padding: const EdgeInsets.fromLTRB(10, 10, 0, 0),
+                child: NesIconButton(
+                  icon: NesIcons.leftArrowIndicator,
+                  onPress: () => Navigator.pop(context),
+                ),
+              )
+            : IconButton(
+                icon: Icon(Icons.arrow_back),
+                onPressed: () => Navigator.pop(context),
+              ),
       ),
       body: _isLoading
           ? Center(
@@ -540,6 +548,7 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen> {
               ),
               child: Text(
                 'Back',
+                textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: isSmallScreen ? 14 : 16,
                   fontWeight: FontWeight.w600,
