@@ -448,6 +448,35 @@ class ApiService {
     }
   }
 
+  //============= FCMMETHODS ===============
+
+  static Future<void> saveFcmToken(String fcmToken) async {
+    final response = await _makeAuthenticatedRequest(() async {
+      return await http.post(
+        Uri.parse('$baseUrl/notifications/token'),
+        headers: headers,
+        body: jsonEncode({'fcmToken': fcmToken}),
+      );
+    });
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to save FCM token');
+    }
+  }
+
+  static Future<void> removeFcmToken() async {
+    final response = await _makeAuthenticatedRequest(() async {
+      return await http.delete(
+        Uri.parse('$baseUrl/notifications/token'),
+        headers: headers,
+      );
+    });
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to remove FCM token');
+    }
+  }
+
   // ============ THEME METHODS ============
   static Future<void> updateChatTheme(
       Map<String, dynamic> chatTheme, String chatId) async {

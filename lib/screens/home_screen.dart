@@ -18,6 +18,7 @@ import 'package:urchat_back_testing/screens/search_delegate.dart';
 import 'package:urchat_back_testing/screens/user_profile.dart';
 import 'package:urchat_back_testing/service/api_service.dart';
 import 'package:urchat_back_testing/service/local_cache_service.dart';
+import 'package:urchat_back_testing/service/notification_service.dart';
 import 'package:urchat_back_testing/service/websocket_service.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:urchat_back_testing/widgets/deletion_dialog.dart';
@@ -89,19 +90,54 @@ class _HomescreenState extends State<Homescreen>
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _loadInitialData().then((_) {
-      // After loading data, check if we need to open a specific chat
       if (widget.openChatOnStart == true && widget.initialChatId != null) {
         _openInitialChat();
       }
     });
+
     _initializeWebSocket();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _verifyNotificationSystem();
     });
-    // Keep the periodic debug from original file
+
     Timer.periodic(const Duration(seconds: 10), (timer) {
       _debugSubscriptions();
     });
+
+    _setupNotificationListener();
+  }
+
+  void _setupNotificationListener() {
+    NotificationService().notificationStream.listen((data) {
+      _handleNotification(data);
+    });
+  }
+
+  void _handleNotification(Map<String, dynamic> data) {
+    final type = data['type'];
+    final chatId = data['chatId'];
+    final sender = data['sender'];
+    final message = data['message'];
+
+    if (type == 'NEW_MESSAGE' && chatId != null) {
+      // Refresh chat list to show updated last message
+      _loadFreshChats();
+
+      // Show in-app notification if not viewing that chat
+      if (_selectedChatId != chatId || !_showChatScreen) {
+        final notification = {
+          'chatName': data['chatName'] ?? 'New Message',
+          'message': '$sender: $message',
+          'chatId': chatId,
+        };
+
+        if (mounted) {
+          setState(() {
+            _messageNotifications.add(notification);
+          });
+        }
+      }
+    }
   }
 
   void _verifyNotificationAdded() {
@@ -258,35 +294,42 @@ class _HomescreenState extends State<Homescreen>
   }
 
   void _openInitialChat() {
-    if (widget.initialChatId != null && mounted) {
-      try {
-        // Try to find the chat in existing chats
-        final existingChat = _chats.firstWhere(
-          (chat) => chat.chatId == widget.initialChatId,
-        );
+    // Only open initial chat if explicitly requested AND we have a valid chatId
+    if (widget.openChatOnStart == true &&
+        widget.initialChatId != null &&
+        mounted) {
+      print('🚀 Opening initial chat: ${widget.initialChatId}');
 
-        // Chat found, select it
-        Future.delayed(Duration(milliseconds: 300), () {
-          if (mounted) _selectChat(existingChat);
-        });
-      } catch (e) {
-        // If chat not found, refresh and try again
-        _loadFreshChats().then((_) {
-          try {
-            final refreshedChat = _chats.firstWhere(
-              (chat) => chat.chatId == widget.initialChatId,
-            );
-            if (mounted) {
-              Future.delayed(Duration(milliseconds: 300), () {
-                if (mounted) _selectChat(refreshedChat);
-              });
+      // Add a small delay to ensure the UI is built
+      Future.delayed(Duration(milliseconds: 500), () {
+        if (!mounted) return;
+
+        try {
+          // Try to find the chat in existing chats
+          final existingChat = _chats.firstWhere(
+            (chat) => chat.chatId == widget.initialChatId,
+          );
+
+          // Chat found, select it
+          _selectChat(existingChat);
+        } catch (e) {
+          // If chat not found, refresh and try again
+          print(
+              '⚠️ Chat not found, refreshing and retrying: ${widget.initialChatId}');
+          _loadFreshChats().then((_) {
+            if (!mounted) return;
+            try {
+              final refreshedChat = _chats.firstWhere(
+                (chat) => chat.chatId == widget.initialChatId,
+              );
+              _selectChat(refreshedChat);
+            } catch (e) {
+              print(
+                  '❌ Chat not found even after refresh: ${widget.initialChatId}');
             }
-          } catch (e) {
-            print(
-                '⚠️ Chat not found even after refresh: ${widget.initialChatId}');
-          }
-        });
-      }
+          });
+        }
+      });
     }
   }
 
@@ -315,6 +358,17 @@ class _HomescreenState extends State<Homescreen>
           ),
         );
       }
+    }
+  }
+
+  @override
+  void didUpdateWidget(Homescreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (widget.openChatOnStart == true &&
+        widget.initialChatId != oldWidget.initialChatId &&
+        widget.initialChatId != null) {
+      _openInitialChat();
     }
   }
 

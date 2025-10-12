@@ -1,95 +1,106 @@
-// import 'package:flutter/material.dart';
-// import 'package:provider/provider.dart';
-// import 'auth_screen.dart';
-// import 'chat_list_screen.dart';
-// import 'chat_screen.dart';
-// import 'group_management_screen.dart';
-// import 'profile_screen.dart';
-// import 'auth_service.dart';
-// import 'chat_service.dart';
-// import 'websocket_service.dart';
-
-// void main() {
-//   runApp(MyApp());
-// }
-
-// class MyApp extends StatelessWidget {
-//   @override
-//   Widget build(BuildContext context) {
-//     return MultiProvider(
-//       providers: [
-//         ChangeNotifierProvider(create: (_) => AuthService()),
-//         ChangeNotifierProvider(create: (_) => ChatService()),
-//         ChangeNotifierProvider(create: (_) => WebSocketService()),
-//       ],
-//       child: MaterialApp(
-//         title: 'URChat',
-//         theme: ThemeData(
-//           primarySwatch: Colors.blue,
-//           visualDensity: VisualDensity.adaptivePlatformDensity,
-//         ),
-//         home: AuthWrapper(),
-//         routes: {
-//           '/chat_list': (context) => ChatListScreen(),
-//           '/profile': (context) => ProfileScreen(),
-//           '/group_management': (context) => GroupManagementScreen(),
-//         },
-//       ),
-//     );
-//   }
-// }
-
-// class AuthWrapper extends StatelessWidget {
-//   @override
-//   Widget build(BuildContext context) {
-//     final authService = Provider.of<AuthService>(context);
-
-//     if (authService.isAuthenticated) {
-//       return ChatListScreen();
-//     } else {
-//       return AuthScreen();
-//     }
-//   }
-// }
-
-// import 'dart:developer';
-
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:nes_ui/nes_ui.dart';
-import 'package:urchat_back_testing/main.dart';
+import 'package:urchat_back_testing/firebase_options.dart';
 import 'package:urchat_back_testing/model/user.dart';
 import 'package:urchat_back_testing/screens/auth_screen.dart';
 import 'package:urchat_back_testing/screens/home_screen.dart';
 import 'package:urchat_back_testing/service/api_service.dart';
 import 'package:urchat_back_testing/service/local_cache_service.dart';
-import 'package:urchat_back_testing/themes/theme_manager.dart';
-import 'package:web_socket_channel/web_socket_channel.dart';
-import 'package:web_socket_channel/status.dart' as status;
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:async';
+import 'package:urchat_back_testing/service/notification_service.dart';
+
+// Global navigator key for notification handling - ADD THIS LINE
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // ThemeManager().initializeThemes();
-  await LocalCacheService.init();
-  await ApiService.init();
+  // ✅ Proper Firebase initialization with generated options
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
+  try {
+    await LocalCacheService.init();
+    await ApiService.init();
+    await NotificationService().initialize();
+  } catch (e) {
+    print("❌ Error during app initialization: $e");
+  }
+
   runApp(MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  final NotificationService _notificationService = NotificationService();
+
+  @override
+  void initState() {
+    super.initState();
+    _setupNotificationListener();
+  }
+
+  void _setupNotificationListener() {
+    _notificationService.notificationStream.listen((data) {
+      // DON'T navigate automatically - just handle data if needed
+      final type = data['type'];
+      final chatId = data['chatId'];
+
+      if (type == 'NEW_MESSAGE' && chatId != null) {
+        print('📱 Notification received for chat: $chatId');
+        // Just log it - don't navigate!
+        // Navigation should only happen when user clicks the notification
+      }
+    });
+  }
+  // void _handleNotification(Map<String, dynamic> data) {
+  //   final type = data['type'];
+  //   final chatId = data['chatId'];
+
+  //   if (type == 'NEW_MESSAGE' && chatId != null) {
+  //     WidgetsBinding.instance.addPostFrameCallback((_) {
+  //       final currentRoute = navigatorKey.currentState?.widget.pages.last.name;
+
+  //       if (currentRoute == '/') {
+  //         // We're already on home screen, just open the chat
+  //         navigatorKey.currentState?.push(
+  //           MaterialPageRoute(
+  //             builder: (context) => Homescreen(
+  //               initialChatId: chatId,
+  //               openChatOnStart: true,
+  //             ),
+  //           ),
+  //         );
+  //       } else {
+  //         // Navigate to home first, then open chat
+  //         navigatorKey.currentState?.pushAndRemoveUntil(
+  //           MaterialPageRoute(
+  //               builder: (context) => Homescreen(
+  //                     initialChatId: chatId,
+  //                     openChatOnStart: true,
+  //                   )),
+  //           (route) => false,
+  //         );
+  //       }
+  //     });
+  //   }
+  // }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'URChat',
       theme: flutterNesTheme(),
-      // theme: ThemeData(
-      //   primarySwatch: Colors.brown,
-      //   scaffoldBackgroundColor: const Color(0xFFF5F5DC),
-      //   visualDensity: VisualDensity.adaptivePlatformDensity,
-      // ),
+      navigatorKey: navigatorKey, // ADD THIS LINE
       home: FutureBuilder(
         future: Future.delayed(Duration(milliseconds: 500)),
         builder: (context, snapshot) {
@@ -102,17 +113,23 @@ class MyApp extends StatelessWidget {
       ),
     );
   }
-}
 
-Future<User> getUserProfile(String username) async {
-  final response = await http.get(
-    Uri.parse('${ApiService.baseUrl}/users/$username'),
-    headers: ApiService.headers,
-  );
+  @override
+  void dispose() {
+    _notificationService.dispose();
+    super.dispose();
+  }
 
-  if (response.statusCode == 200) {
-    return User.fromJson(jsonDecode(response.body));
-  } else {
-    throw Exception('Failed to load user profile');
+  Future<User> getUserProfile(String username) async {
+    final response = await http.get(
+      Uri.parse('${ApiService.baseUrl}/users/$username'),
+      headers: ApiService.headers,
+    );
+
+    if (response.statusCode == 200) {
+      return User.fromJson(jsonDecode(response.body));
+    } else {
+      throw Exception('Failed to load user profile');
+    }
   }
 }

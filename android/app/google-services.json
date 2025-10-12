@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "980678477813",
+    "project_id": "urchat-a5",
+    "storage_bucket": "urchat-a5.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:980678477813:android:e64bfec51549f6062b02bc",
+        "android_client_info": {
+          "package_name": "com.example.urchat_back_testing"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCJELy26JibsR48H6oLmTIFXZz65wwLx5g"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:980678477813:android:165e2c07da1cea6b2b02bc",
+        "android_client_info": {
+          "package_name": "com.exotech.urchat"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCJELy26JibsR48H6oLmTIFXZz65wwLx5g"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
