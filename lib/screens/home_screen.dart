@@ -1481,13 +1481,19 @@ class _HomescreenState extends State<Homescreen>
                   child: NesIconButton(
                     icon: NesIcons.bell,
                     onPress: () async {
-                      await NotificationService().enableWebNotifications();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Notifications enabled!'),
-                          backgroundColor: Colors.green,
-                        ),
-                      );
+                      // Now enableWebNotifications returns a boolean
+                      final success =
+                          await NotificationService().enableWebNotifications();
+
+                      if (success) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Notifications enabled! 🎉'),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                      } else {}
+
                       if (mounted) setState(() {});
                     },
                   ),

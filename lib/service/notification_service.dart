@@ -29,6 +29,126 @@ class NotificationService {
   bool _isInitialized = false;
   bool _isInitializing = false;
 
+  // Fix: Make enableWebNotifications return bool
+  Future<bool> enableWebNotifications() async {
+    if (!kIsWeb) return false;
+
+    try {
+      print('🌐 Enabling web notifications...');
+
+      // First request browser permission
+      final permissionGranted = await showBrowserPermissionDialog();
+
+      if (permissionGranted) {
+        // Only proceed if permission was granted
+        await _requestPermissions();
+        await _getTokenAndSendToServer();
+        print('✅ Web notifications enabled successfully');
+        return true;
+      } else {
+        print('❌ User denied notification permission');
+        return false;
+      }
+    } catch (e) {
+      print('❌ Error enabling web notifications: $e');
+      return false;
+    }
+  }
+
+  Future<bool> hasNotificationPermission() async {
+    if (kIsWeb) {
+      try {
+        // Use JavaScript interop to check permission status
+        if (js.context.hasProperty('Notification')) {
+          final permission = js.context['Notification']['permission'];
+          return permission == 'granted';
+        }
+      } catch (e) {
+        print('❌ Error checking notification permission: $e');
+      }
+      return false;
+    } else {
+      // For mobile, check Firebase messaging permission
+      final settings = await _firebaseMessaging.getNotificationSettings();
+      return settings.authorizationStatus == AuthorizationStatus.authorized;
+    }
+  }
+
+  Future<bool> showBrowserPermissionDialog() async {
+    try {
+      if (js.context.hasProperty('Notification')) {
+        final permission = await _requestBrowserPermission();
+        return permission == 'granted';
+      }
+      return false;
+    } catch (e) {
+      print('❌ Error showing browser permission dialog: $e');
+      return false;
+    }
+  }
+
+  // Fix: Correct JavaScript interop for permission request
+  Future<String> _requestBrowserPermission() async {
+    try {
+      // Correct way to call Notification.requestPermission()
+      final notification = js.context['Notification'];
+      final requestPermission = notification['requestPermission'];
+
+      // Call the function and await the promise
+      final promise = requestPermission.apply([]);
+
+      // Convert the promise to a Future
+      return await promiseToFuture(promise);
+    } catch (e) {
+      print('❌ Error requesting browser permission: $e');
+      return 'denied';
+    }
+  }
+
+  // Helper method to convert JS promise to Dart Future
+  Future<String> promiseToFuture(js.JsObject promise) {
+    final completer = Completer<String>();
+
+    final then = promise['then'];
+    then.callMethod('call', [
+      promise,
+      js.allowInterop((result) {
+        completer.complete(result.toString());
+      }),
+      js.allowInterop((error) {
+        completer.complete('denied');
+      })
+    ]);
+
+    return completer.future;
+  }
+
+  // Alternative simpler method using eval
+  Future<bool> requestBrowserPermissionSimple() async {
+    try {
+      final result = js.context.callMethod('eval', [
+        '''
+        new Promise((resolve) => {
+          if ('Notification' in window) {
+            Notification.requestPermission().then((permission) => {
+              resolve(permission)
+            });
+          } else {
+            resolve('unsupported');
+          }
+        })
+        '''
+      ]);
+
+      final permission = await promiseToFuture(result);
+      return permission == 'granted';
+    } catch (e) {
+      print('❌ Error in simple permission request: $e');
+      return false;
+    }
+  }
+
+  // Your existing methods continue below...
   Future<void> initialize() async {
     if (_isInitialized || _isInitializing) return;
 
@@ -205,25 +325,6 @@ class NotificationService {
     print('✅ Message handlers setup complete');
   }
 
-  Future<bool> hasNotificationPermission() async {
-    if (kIsWeb) {
-      try {
-        // Use JavaScript interop to check permission status
-        if (js.context.hasProperty('Notification')) {
-          final permission = js.context['Notification']['permission'];
-          return permission == 'granted';
-        }
-      } catch (e) {
-        print('❌ Error checking notification permission: $e');
-      }
-      return false;
-    } else {
-      // For mobile, check Firebase messaging permission
-      final settings = await _firebaseMessaging.getNotificationSettings();
-      return settings.authorizationStatus == AuthorizationStatus.authorized;
-    }
-  }
-
   void _showWebInAppNotification(RemoteMessage message) {
     final notificationData = {
       'chatName': message.data['chatName'] ??
@@ -322,20 +423,6 @@ class NotificationService {
 
   void _handleGroupInvitation(String groupName) {
     print('🎯 Group invitation received: $groupName');
-  }
-
-  // Public methods for web
-  Future<void> enableWebNotifications() async {
-    if (!kIsWeb) return;
-
-    try {
-      print('🌐 Enabling web notifications...');
-      await _requestPermissions();
-      await _getTokenAndSendToServer();
-      print('✅ Web notifications enabled');
-    } catch (e) {
-      print('❌ Error enabling web notifications: $e');
-    }
   }
 
   Future<void> removeFcmToken() async {
