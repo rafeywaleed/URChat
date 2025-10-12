@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:nes_ui/nes_ui.dart';
 import 'dart:async';
@@ -1464,6 +1465,14 @@ class _HomescreenState extends State<Homescreen>
       ),
       title: Text('URChat', style: GoogleFonts.pressStart2p(fontSize: 14)),
       actions: [
+        if (kIsWeb)
+          ElevatedButton(
+            onPressed: () async {
+              await NotificationService().requestPermissions();
+              await NotificationService().getTokenAndSendToServer();
+            },
+            child: Text('Enable Notifications'),
+          ),
         PopupMenuButton(
           child: NesIcon(iconData: NesIcons.threeVerticalDots),
           itemBuilder: (_) => [

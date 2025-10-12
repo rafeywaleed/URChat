@@ -9,7 +9,6 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:urchat_back_testing/firebase_options.dart';
 import 'package:urchat_back_testing/main.dart';
 import 'package:urchat_back_testing/screens/home_screen.dart';
-// import 'package:urchat_back_testing/old-firebase-options.dart';
 import 'package:urchat_back_testing/service/api_service.dart';
 
 class NotificationService {
@@ -42,11 +41,13 @@ class NotificationService {
       // Step 2: Setup local notifications
       await _setupLocalNotifications();
 
-      // Step 3: Request permissions (non-blocking)
-      _requestPermissions();
+      if (!kIsWeb) {
+        await requestPermissions();
+        await getTokenAndSendToServer();
+      } else {
+        print('🌐 Web: Wait for user gesture to request notifications');
+      }
 
-      // Step 4: Get token and setup message handling
-      await _getTokenAndSendToServer();
       _setupForegroundMessageHandling();
 
       _isInitialized = true;
@@ -109,7 +110,7 @@ class NotificationService {
     }
   }
 
-  Future<void> _requestPermissions() async {
+  Future<void> requestPermissions() async {
     try {
       print('📝 Requesting notification permissions...');
 
@@ -144,7 +145,7 @@ class NotificationService {
     }
   }
 
-  Future<void> _getTokenAndSendToServer() async {
+  Future<void> getTokenAndSendToServer() async {
     try {
       print('🔑 Getting FCM token...');
       String? token = await _firebaseMessaging.getToken();
@@ -209,95 +210,87 @@ class NotificationService {
     print('✅ Message handlers setup complete');
   }
 
-  void _setupWebNotificationHandling() {
+  Future<void> _setupWebNotificationHandling() async {
     print('🌐 Setting up web notification handling...');
 
-    // Handle initial message (app was terminated)
-    FirebaseMessaging.instance
-        .getInitialMessage()
-        .then((RemoteMessage? message) {
-      if (message != null) {
-        print('🌐 Initial message from terminated app: ${message.data}');
-        _handleNotificationData(
-            message.data); // Navigate if app was opened from notification
-      }
-    });
-  }
+    try {
+      // Request permission for web
+      NotificationSettings settings =
+          await _firebaseMessaging.requestPermission(
+        alert: true,
+        announcement: false,
+        badge: true,
+        carPlay: false,
+        criticalAlert: false,
+        provisional: false,
+        sound: true,
+      );
 
-  void _handleNotificationTap(String? payload) {
-    if (payload != null) {
-      try {
-        Map<String, dynamic> data = jsonDecode(payload);
-        print('👆 Local notification TAPPED - Navigating to chat: $data');
-        _handleNotificationData(data); // Navigate on tap
-      } catch (e) {
-        print('❌ Error parsing notification payload: $e');
-      }
-    }
-  }
+      print('🌐 Web notification permission: ${settings.authorizationStatus}');
 
-  void _handleNotificationData(Map<String, dynamic> data) {
-    print('🎯 Handling notification data: $data');
-
-    final type = data['type'];
-    final chatId = data['chatId'];
-    final isGroup = data['isGroup'] == 'true';
-
-    if (type == 'NEW_MESSAGE' && chatId != null) {
-      print('💬 Notification tapped for chat: $chatId - Navigating...');
-      // Navigate to chat when notification is clicked
-      _navigateToChat(chatId);
-    } else if (type == 'GROUP_INVITATION') {
-      final groupName = data['groupName'];
-      print('👥 Group invitation notification for: $groupName');
-      _handleGroupInvitation(groupName);
-    }
-  }
-
-  void _navigateToChat(String chatId) {
-    // Use the global navigator key to navigate safely
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      // Check current route to avoid rebuilding HomeScreen
-      NavigatorState? navigator = navigatorKey.currentState;
-
-      if (navigator != null) {
-        // Check if we're already on a HomeScreen
-        bool isAlreadyOnHomeScreen = false;
-        navigator.popUntil((route) {
-          if (route.settings.name == '/' || route is MaterialPageRoute) {
-            isAlreadyOnHomeScreen = true;
-          }
-          return true;
+      // Handle initial message (app was terminated and opened via notification)
+      RemoteMessage? initialMessage =
+          await _firebaseMessaging.getInitialMessage();
+      if (initialMessage != null) {
+        print('🌐 Initial message from terminated app: ${initialMessage.data}');
+        // Wait a bit for app to initialize, then navigate
+        Future.delayed(Duration(seconds: 2), () {
+          _handleNotificationData(initialMessage.data);
         });
-
-        if (isAlreadyOnHomeScreen) {
-          // We're already on home screen, push the chat screen on top
-          navigator.push(
-            MaterialPageRoute(
-              builder: (context) => Homescreen(
-                initialChatId: chatId,
-                openChatOnStart: true,
-              ),
-            ),
-          );
-        } else {
-          // Navigate to home first, then open chat
-          navigator.pushAndRemoveUntil(
-            MaterialPageRoute(
-              builder: (context) => Homescreen(
-                initialChatId: chatId,
-                openChatOnStart: true,
-              ),
-            ),
-            (route) => false,
-          );
-        }
       }
-    });
+
+      // Handle notification click when app is in background
+      FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+        print('👆 Web notification tapped (background): ${message.data}');
+        _handleNotificationData(message.data);
+      });
+
+      // Handle foreground messages for web
+      FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+        print('📱 Web foreground message: ${message.data}');
+
+        // For web, we rely on the service worker to show notifications
+        // The service worker (firebase-messaging-sw.js) will handle this
+        print('🌐 Notification should be handled by service worker');
+
+        // You can also show a custom in-app notification for web
+        _showWebInAppNotification(message);
+      });
+
+      print('✅ Web notification handling setup complete');
+    } catch (e) {
+      print('❌ Web notification setup failed: $e');
+    }
+  }
+
+  void _showWebInAppNotification(RemoteMessage message) {
+    // For web, show a custom in-app notification instead of browser notifications
+    if (kIsWeb) {
+      final notificationData = {
+        'chatName': message.data['chatName'] ?? 'New Message',
+        'message':
+            '${message.data['sender'] ?? 'Someone'}: ${message.data['message'] ?? 'New message'}',
+        'chatId': message.data['chatId'],
+        'type': 'message'
+      };
+
+      // Broadcast to stream for in-app notification display
+      if (!_notificationStreamController.isClosed) {
+        _notificationStreamController.add(notificationData);
+      }
+    }
   }
 
   Future<void> _showLocalNotification(RemoteMessage message) async {
     try {
+      // For web, don't use flutter_local_notifications as it doesn't work well on web
+      if (kIsWeb) {
+        print(
+            '🌐 Skipping local notification for web - using service worker instead');
+        return;
+      }
+
+      // Only show local notifications for mobile
       const AndroidNotificationDetails androidPlatformChannelSpecifics =
           AndroidNotificationDetails(
         'urchat_channel',
@@ -326,6 +319,79 @@ class NotificationService {
     }
   }
 
+  void _handleNotificationTap(String? payload) {
+    if (payload != null) {
+      try {
+        Map<String, dynamic> data = jsonDecode(payload);
+        print('👆 Local notification TAPPED - Navigating to chat: $data');
+        _handleNotificationData(data);
+      } catch (e) {
+        print('❌ Error parsing notification payload: $e');
+      }
+    }
+  }
+
+  void _handleNotificationData(Map<String, dynamic> data) {
+    print('🎯 Handling notification data: $data');
+
+    final type = data['type'];
+    final chatId = data['chatId'];
+
+    if (type == 'NEW_MESSAGE' && chatId != null) {
+      print('💬 Notification tapped for chat: $chatId - Navigating...');
+      _navigateToChat(chatId);
+    } else if (type == 'GROUP_INVITATION') {
+      final groupName = data['groupName'];
+      print('👥 Group invitation notification for: $groupName');
+      _handleGroupInvitation(groupName);
+    }
+  }
+
+  void _navigateToChat(String chatId) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      NavigatorState? navigator = navigatorKey.currentState;
+
+      if (navigator != null) {
+        // Check if we're already on a HomeScreen
+        bool isAlreadyOnHomeScreen = false;
+        navigator.popUntil((route) {
+          if (route.settings.name == '/' || route is MaterialPageRoute) {
+            isAlreadyOnHomeScreen = true;
+          }
+          return true;
+        });
+
+        if (isAlreadyOnHomeScreen) {
+          navigator.push(
+            MaterialPageRoute(
+              builder: (context) => Homescreen(
+                initialChatId: chatId,
+                openChatOnStart: true,
+              ),
+            ),
+          );
+        } else {
+          navigator.pushAndRemoveUntil(
+            MaterialPageRoute(
+              builder: (context) => Homescreen(
+                initialChatId: chatId,
+                openChatOnStart: true,
+              ),
+            ),
+            (route) => false,
+          );
+        }
+      }
+    });
+  }
+
+  void _handleGroupInvitation(String groupName) {
+    print('🎯 Group invitation received: $groupName');
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      print('📬 New group invitation: $groupName');
+    });
+  }
+
   Future<void> removeFcmToken() async {
     try {
       await ApiService.removeFcmToken();
@@ -333,19 +399,6 @@ class NotificationService {
     } catch (e) {
       print('❌ Error removing FCM token: $e');
     }
-  }
-
-  void _handleGroupInvitation(String groupName) {
-    // Show a local notification or dialog about the invitation
-    // You can also automatically refresh the invitations list
-    print('🎯 Group invitation received: $groupName');
-
-    // Optionally show a local dialog or snackbar
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      // You can show a dialog or update the UI to reflect new invitation
-      // For now, just log it - you can implement UI updates later
-      print('📬 New group invitation: $groupName');
-    });
   }
 
   void dispose() {

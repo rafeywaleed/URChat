@@ -12,13 +12,10 @@ import 'dart:convert';
 import 'dart:async';
 import 'package:urchat_back_testing/service/notification_service.dart';
 
-// Global navigator key for notification handling - ADD THIS LINE
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // ✅ Proper Firebase initialization with generated options
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
@@ -50,14 +47,10 @@ class _MyAppState extends State<MyApp> {
 
   void _setupNotificationListener() {
     _notificationService.notificationStream.listen((data) {
-      // DON'T navigate automatically - just handle data if needed
       final type = data['type'];
       final chatId = data['chatId'];
-
       if (type == 'NEW_MESSAGE' && chatId != null) {
         print('📱 Notification received for chat: $chatId');
-        // Just log it - don't navigate!
-        // Navigation should only happen when user clicks the notification
       }
     });
   }
@@ -100,7 +93,7 @@ class _MyAppState extends State<MyApp> {
       debugShowCheckedModeBanner: false,
       title: 'URChat',
       theme: flutterNesTheme(),
-      navigatorKey: navigatorKey, // ADD THIS LINE
+      navigatorKey: navigatorKey,
       home: FutureBuilder(
         future: Future.delayed(Duration(milliseconds: 500)),
         builder: (context, snapshot) {
