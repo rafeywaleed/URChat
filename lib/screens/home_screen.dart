@@ -1465,13 +1465,36 @@ class _HomescreenState extends State<Homescreen>
       ),
       title: Text('URChat', style: GoogleFonts.pressStart2p(fontSize: 14)),
       actions: [
+        // In your Homescreen build method, replace the web notification section with:
+
         if (kIsWeb)
-          ElevatedButton(
-            onPressed: () async {
-              await NotificationService().requestPermissions();
-              await NotificationService().getTokenAndSendToServer();
+          FutureBuilder<bool>(
+            future: NotificationService().hasNotificationPermission(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return NesTerminalLoadingIndicator();
+              }
+
+              if (snapshot.hasData && !snapshot.data!) {
+                return Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: NesIconButton(
+                    icon: NesIcons.bell,
+                    onPress: () async {
+                      await NotificationService().enableWebNotifications();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Notifications enabled!'),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                      if (mounted) setState(() {});
+                    },
+                  ),
+                );
+              }
+              return SizedBox.shrink();
             },
-            child: Text('Enable Notifications'),
           ),
         PopupMenuButton(
           child: NesIcon(iconData: NesIcons.threeVerticalDots),

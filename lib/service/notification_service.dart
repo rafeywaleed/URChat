@@ -1,4 +1,5 @@
 // lib/service/notification_service.dart
+import 'dart:js' as js;
 import 'dart:async';
 import 'dart:convert';
 import 'package:firebase_core/firebase_core.dart';
@@ -35,27 +36,21 @@ class NotificationService {
     print('🔄 Starting notification service initialization...');
 
     try {
-      // Step 1: Initialize Firebase with error handling
       await _setupFirebase();
-
-      // Step 2: Setup local notifications
       await _setupLocalNotifications();
+      _setupMessageHandling();
 
+      // For web, we'll request permissions when user interacts
       if (!kIsWeb) {
-        await requestPermissions();
-        await getTokenAndSendToServer();
-      } else {
-        print('🌐 Web: Wait for user gesture to request notifications');
+        await _requestPermissions();
+        await _getTokenAndSendToServer();
       }
-
-      _setupForegroundMessageHandling();
 
       _isInitialized = true;
       print('✅ Notification service initialized successfully');
     } catch (e, stackTrace) {
       print('❌ Error initializing notification service: $e');
       print('Stack trace: $stackTrace');
-      // Don't rethrow - we don't want to crash the app
     } finally {
       _isInitializing = false;
     }
@@ -75,13 +70,16 @@ class NotificationService {
   }
 
   Future<void> _setupLocalNotifications() async {
+    if (kIsWeb) {
+      print('🌐 Skipping local notifications setup for web');
+      return;
+    }
+
     try {
       print('🔔 Setting up local notifications...');
-
       const AndroidInitializationSettings androidSettings =
           AndroidInitializationSettings('@mipmap/ic_launcher');
 
-      // For iOS (even if not used, keep for compatibility)
       const DarwinInitializationSettings iosSettings =
           DarwinInitializationSettings(
         requestAlertPermission: false,
@@ -106,46 +104,31 @@ class NotificationService {
       print('✅ Local notifications setup complete');
     } catch (e) {
       print('❌ Local notifications setup failed: $e');
-      // Don't rethrow - local notifications are optional
     }
   }
 
-  Future<void> requestPermissions() async {
+  Future<void> _requestPermissions() async {
     try {
       print('📝 Requesting notification permissions...');
 
-      if (kIsWeb) {
-        // Web permissions
-        NotificationSettings settings =
-            await _firebaseMessaging.requestPermission(
-          alert: true,
-          announcement: false,
-          badge: true,
-          carPlay: false,
-          criticalAlert: false,
-          provisional: false,
-          sound: true,
-        );
-        print(
-            '🌐 Web notification permission: ${settings.authorizationStatus}');
-      } else {
-        // Mobile permissions
-        NotificationSettings settings =
-            await _firebaseMessaging.requestPermission(
-          alert: true,
-          badge: true,
-          sound: true,
-        );
-        print(
-            '📱 Mobile notification permission: ${settings.authorizationStatus}');
-      }
+      NotificationSettings settings =
+          await _firebaseMessaging.requestPermission(
+        alert: true,
+        announcement: false,
+        badge: true,
+        carPlay: false,
+        criticalAlert: false,
+        provisional: false,
+        sound: true,
+      );
+
+      print('📱 Notification permission: ${settings.authorizationStatus}');
     } catch (e) {
       print('⚠️ Permission request failed: $e');
-      // Continue without permissions
     }
   }
 
-  Future<void> getTokenAndSendToServer() async {
+  Future<void> _getTokenAndSendToServer() async {
     try {
       print('🔑 Getting FCM token...');
       String? token = await _firebaseMessaging.getToken();
@@ -181,116 +164,88 @@ class NotificationService {
     }
   }
 
-  void _setupForegroundMessageHandling() {
+  void _setupMessageHandling() {
     print('🎯 Setting up message handlers...');
 
-    // Handle messages when app is in foreground - JUST SHOW NOTIFICATION, DON'T NAVIGATE
+    // Handle messages when app is in foreground
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       print('📱 Foreground message received:');
       print('   Title: ${message.notification?.title}');
       print('   Body: ${message.notification?.body}');
       print('   Data: ${message.data}');
 
-      _showLocalNotification(message);
-      // DON'T call _handleNotificationData here - just show the notification
+      if (kIsWeb) {
+        // For web, show custom in-app notification
+        _showWebInAppNotification(message);
+      } else {
+        // For mobile, show local notification
+        _showLocalNotification(message);
+      }
     });
 
-    // Handle notification tap when app is in background/terminated - NAVIGATE ONLY ON TAP
+    // Handle notification tap when app is in background/terminated
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-      print('👆 Background notification TAPPED - Navigating to chat:');
+      print('👆 Notification TAPPED - Navigating to chat:');
       print('   Data: ${message.data}');
-      _handleNotificationData(message.data); // This should navigate
+      _handleNotificationData(message.data);
     });
 
-    // For web specific handling
-    if (kIsWeb) {
-      _setupWebNotificationHandling();
-    }
+    // Handle initial message when app is opened from terminated state
+    FirebaseMessaging.instance
+        .getInitialMessage()
+        .then((RemoteMessage? message) {
+      if (message != null) {
+        print('🚀 Initial message from terminated state: ${message.data}');
+        Future.delayed(Duration(seconds: 3), () {
+          _handleNotificationData(message.data);
+        });
+      }
+    });
 
     print('✅ Message handlers setup complete');
   }
 
-  Future<void> _setupWebNotificationHandling() async {
-    print('🌐 Setting up web notification handling...');
-
-    try {
-      // Request permission for web
-      NotificationSettings settings =
-          await _firebaseMessaging.requestPermission(
-        alert: true,
-        announcement: false,
-        badge: true,
-        carPlay: false,
-        criticalAlert: false,
-        provisional: false,
-        sound: true,
-      );
-
-      print('🌐 Web notification permission: ${settings.authorizationStatus}');
-
-      // Handle initial message (app was terminated and opened via notification)
-      RemoteMessage? initialMessage =
-          await _firebaseMessaging.getInitialMessage();
-      if (initialMessage != null) {
-        print('🌐 Initial message from terminated app: ${initialMessage.data}');
-        // Wait a bit for app to initialize, then navigate
-        Future.delayed(Duration(seconds: 2), () {
-          _handleNotificationData(initialMessage.data);
-        });
+  Future<bool> hasNotificationPermission() async {
+    if (kIsWeb) {
+      try {
+        // Use JavaScript interop to check permission status
+        if (js.context.hasProperty('Notification')) {
+          final permission = js.context['Notification']['permission'];
+          return permission == 'granted';
+        }
+      } catch (e) {
+        print('❌ Error checking notification permission: $e');
       }
-
-      // Handle notification click when app is in background
-      FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-        print('👆 Web notification tapped (background): ${message.data}');
-        _handleNotificationData(message.data);
-      });
-
-      // Handle foreground messages for web
-      FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-        print('📱 Web foreground message: ${message.data}');
-
-        // For web, we rely on the service worker to show notifications
-        // The service worker (firebase-messaging-sw.js) will handle this
-        print('🌐 Notification should be handled by service worker');
-
-        // You can also show a custom in-app notification for web
-        _showWebInAppNotification(message);
-      });
-
-      print('✅ Web notification handling setup complete');
-    } catch (e) {
-      print('❌ Web notification setup failed: $e');
+      return false;
+    } else {
+      // For mobile, check Firebase messaging permission
+      final settings = await _firebaseMessaging.getNotificationSettings();
+      return settings.authorizationStatus == AuthorizationStatus.authorized;
     }
   }
 
   void _showWebInAppNotification(RemoteMessage message) {
-    // For web, show a custom in-app notification instead of browser notifications
-    if (kIsWeb) {
-      final notificationData = {
-        'chatName': message.data['chatName'] ?? 'New Message',
-        'message':
-            '${message.data['sender'] ?? 'Someone'}: ${message.data['message'] ?? 'New message'}',
-        'chatId': message.data['chatId'],
-        'type': 'message'
-      };
+    final notificationData = {
+      'chatName': message.data['chatName'] ??
+          message.notification?.title ??
+          'New Message',
+      'message': message.notification?.body ??
+          '${message.data['sender'] ?? 'Someone'}: ${message.data['message'] ?? 'New message'}',
+      'chatId': message.data['chatId'],
+      'type': 'message',
+      'timestamp': DateTime.now().millisecondsSinceEpoch,
+    };
 
-      // Broadcast to stream for in-app notification display
-      if (!_notificationStreamController.isClosed) {
-        _notificationStreamController.add(notificationData);
-      }
+    // Broadcast to stream for in-app notification display
+    if (!_notificationStreamController.isClosed) {
+      _notificationStreamController.add(notificationData);
     }
   }
 
   Future<void> _showLocalNotification(RemoteMessage message) async {
-    try {
-      // For web, don't use flutter_local_notifications as it doesn't work well on web
-      if (kIsWeb) {
-        print(
-            '🌐 Skipping local notification for web - using service worker instead');
-        return;
-      }
+    if (kIsWeb) return; // Skip for web
 
-      // Only show local notifications for mobile
+    try {
       const AndroidNotificationDetails androidPlatformChannelSpecifics =
           AndroidNotificationDetails(
         'urchat_channel',
@@ -352,44 +307,35 @@ class NotificationService {
       NavigatorState? navigator = navigatorKey.currentState;
 
       if (navigator != null) {
-        // Check if we're already on a HomeScreen
-        bool isAlreadyOnHomeScreen = false;
-        navigator.popUntil((route) {
-          if (route.settings.name == '/' || route is MaterialPageRoute) {
-            isAlreadyOnHomeScreen = true;
-          }
-          return true;
-        });
-
-        if (isAlreadyOnHomeScreen) {
-          navigator.push(
-            MaterialPageRoute(
-              builder: (context) => Homescreen(
-                initialChatId: chatId,
-                openChatOnStart: true,
-              ),
+        navigator.pushAndRemoveUntil(
+          MaterialPageRoute(
+            builder: (context) => Homescreen(
+              initialChatId: chatId,
+              openChatOnStart: true,
             ),
-          );
-        } else {
-          navigator.pushAndRemoveUntil(
-            MaterialPageRoute(
-              builder: (context) => Homescreen(
-                initialChatId: chatId,
-                openChatOnStart: true,
-              ),
-            ),
-            (route) => false,
-          );
-        }
+          ),
+          (route) => false,
+        );
       }
     });
   }
 
   void _handleGroupInvitation(String groupName) {
     print('🎯 Group invitation received: $groupName');
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      print('📬 New group invitation: $groupName');
-    });
+  }
+
+  // Public methods for web
+  Future<void> enableWebNotifications() async {
+    if (!kIsWeb) return;
+
+    try {
+      print('🌐 Enabling web notifications...');
+      await _requestPermissions();
+      await _getTokenAndSendToServer();
+      print('✅ Web notifications enabled');
+    } catch (e) {
+      print('❌ Error enabling web notifications: $e');
+    }
   }
 
   Future<void> removeFcmToken() async {
