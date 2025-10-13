@@ -238,22 +238,27 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen> {
               ),
             ],
           ),
-          child: CircleAvatar(
-            backgroundColor: bgColor,
-            radius: isSmallScreen ? 48 : 56,
-            child: AnimatedEmojiMapper.hasAnimatedVersion(pfpEmoji)
-                ? AnimatedEmojiMapper.getAnimatedEmojiWidget(
-                      pfpEmoji,
-                      size: isSmallScreen ? 36 : 48,
-                    ) ??
-                    Text(
+          child: Hero(
+            tag: widget.fromChat
+                ? "user_avatar_${widget.username}"
+                : "chat_avatar_${widget.username}",
+            child: CircleAvatar(
+              backgroundColor: bgColor,
+              radius: isSmallScreen ? 48 : 56,
+              child: AnimatedEmojiMapper.hasAnimatedVersion(pfpEmoji)
+                  ? AnimatedEmojiMapper.getAnimatedEmojiWidget(
+                        pfpEmoji,
+                        size: isSmallScreen ? 36 : 48,
+                      ) ??
+                      Text(
+                        pfpEmoji,
+                        style: TextStyle(fontSize: isSmallScreen ? 36 : 48),
+                      )
+                  : Text(
                       pfpEmoji,
                       style: TextStyle(fontSize: isSmallScreen ? 36 : 48),
-                    )
-                : Text(
-                    pfpEmoji,
-                    style: TextStyle(fontSize: isSmallScreen ? 36 : 48),
-                  ),
+                    ),
+            ),
           ),
         ),
         SizedBox(height: isSmallScreen ? 12 : 16),
@@ -548,7 +553,6 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen> {
               ),
               child: Text(
                 'Back',
-                textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: isSmallScreen ? 14 : 16,
                   fontWeight: FontWeight.w600,
@@ -600,11 +604,13 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen> {
           child: NesButton(
             type: NesButtonType.normal,
             onPressed: () => Navigator.pop(context),
-            child: Text(
-              'Back',
-              style: TextStyle(
-                fontSize: isSmallScreen ? 14 : 16,
-                fontWeight: FontWeight.w600,
+            child: Center(
+              child: Text(
+                'Back',
+                style: TextStyle(
+                  fontSize: isSmallScreen ? 14 : 16,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ),

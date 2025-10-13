@@ -14,6 +14,7 @@ import 'package:urchat_back_testing/screens/chatting.dart';
 import 'package:urchat_back_testing/screens/group_management_screen.dart';
 import 'package:urchat_back_testing/screens/group_pfp_dialog.dart';
 import 'package:urchat_back_testing/screens/new_group.dart';
+import 'package:urchat_back_testing/screens/offline_screen.dart';
 import 'package:urchat_back_testing/screens/profile_screen.dart';
 import 'package:urchat_back_testing/screens/search_delegate.dart';
 import 'package:urchat_back_testing/screens/user_profile.dart';
@@ -110,7 +111,7 @@ class _HomescreenState extends State<Homescreen>
 
   void _setupNotificationListener() {
     NotificationService().notificationStream.listen((data) {
-      _handleNotification(data);
+      // _handleNotification(data);
     });
   }
 
@@ -534,7 +535,7 @@ class _HomescreenState extends State<Homescreen>
     print('🔔 Should show notification: $shouldShowNotification');
 
     if (shouldShowNotification) {
-      _showMessageNotification(message);
+      // _showMessageNotification(message);
     } else {
       print('🔕 Skipping notification - currently viewing this chat');
     }
@@ -995,26 +996,30 @@ class _HomescreenState extends State<Homescreen>
   Widget _buildGlassNotification(Map<String, dynamic> notification) {
     final isDeletion = notification['type'] == 'deletion';
 
+    ChatRoom? chat;
+    try {
+      chat = _chats.firstWhere((c) => c.chatId == notification['chatId']);
+    } catch (e) {
+      // If chat not found, create a fallback using notification data
+      chat = ChatRoom(
+        chatId: notification['chatId'],
+        chatName: notification['chatName'],
+        isGroup: false,
+        lastMessage: '',
+        lastActivity: DateTime.now(),
+        pfpIndex: notification['pfpIndex'] ??
+            '💬', // Use from notification if available
+        pfpBg: notification['pfpBg'] ??
+            '#4CAF50', // Use from notification if available
+        themeIndex: 0,
+        isDark: true,
+      );
+    }
     return GestureDetector(
       onTap: isDeletion
           ? null
           : () {
-              final chat = _chats.firstWhere(
-                (chat) => chat.chatId == notification['chatId'],
-                orElse: () => ChatRoom(
-                  chatId: notification['chatId'],
-                  chatName: notification['chatName'],
-                  isGroup: false,
-                  lastMessage: '',
-                  lastActivity: DateTime.now(),
-                  pfpIndex: '💬',
-                  pfpBg: '#4CAF50',
-                  themeIndex: 0,
-                  isDark: true,
-                ),
-              );
-
-              _selectChat(chat);
+              _selectChat(chat!);
               if (mounted) {
                 setState(() {
                   _messageNotifications.remove(notification);
@@ -1026,14 +1031,9 @@ class _HomescreenState extends State<Homescreen>
         backgroundColor: isDeletion ? Colors.orange.withOpacity(0.1) : null,
         child: Row(
           children: [
-            NesContainer(
-              width: 36,
-              height: 36,
-              backgroundColor: isDeletion ? Colors.orange : _accent,
-              child: Center(
-                child: Icon(isDeletion ? Icons.delete_outline : Icons.chat,
-                    color: Colors.white, size: 16),
-              ),
+            PixelCircle(
+              color: _parseColor(chat.pfpBg),
+              label: chat.pfpIndex,
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -1113,9 +1113,12 @@ class _HomescreenState extends State<Homescreen>
               : (isHovered ? Colors.grey.shade300 : _surface),
           child: Row(
             children: [
-              PixelCircle(
-                color: _parseColor(chat.pfpBg),
-                label: chat.pfpIndex,
+              Hero(
+                tag: "chat_avatar_${chat.chatId}",
+                child: PixelCircle(
+                  color: _parseColor(chat.pfpBg),
+                  label: chat.pfpIndex,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -1211,9 +1214,14 @@ class _HomescreenState extends State<Homescreen>
                   child: NesContainer(
                     child: Row(
                       children: [
-                        PixelCircle(
-                          color: _parseColor(chat.pfpBg),
-                          label: chat.pfpIndex,
+                        Hero(
+                          tag: chat.isGroup
+                              ? "chat_avatar_${chat.chatId}"
+                              : "user_avatar_${chat.chatName}",
+                          child: PixelCircle(
+                            color: _parseColor(chat.pfpBg),
+                            label: chat.pfpIndex,
+                          ),
                         ),
                         SizedBox(width: elementSpacing),
                         Expanded(
@@ -1502,6 +1510,15 @@ class _HomescreenState extends State<Homescreen>
               return SizedBox.shrink();
             },
           ),
+        ElevatedButton(
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => MazeGamePage()),
+            );
+          },
+          child: Text("Game"),
+        ),
         PopupMenuButton(
           child: NesIcon(iconData: NesIcons.threeVerticalDots),
           itemBuilder: (_) => [

@@ -97,6 +97,13 @@ class _SearchScreenState extends State<SearchScreen> {
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
+        leading: Padding(
+          padding: const EdgeInsets.fromLTRB(10, 10, 2, 2),
+          child: NesIconButton(
+            icon: NesIcons.leftArrowIndicator,
+            onPress: () => Navigator.pop(context),
+          ),
+        ),
         backgroundColor: const Color(0xFF5C4033),
         title: NesContainer(
           padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -104,7 +111,7 @@ class _SearchScreenState extends State<SearchScreen> {
             children: [
               Icon(
                 Icons.search,
-                color: Colors.grey[600],
+                color: const Color.fromARGB(255, 0, 0, 0),
                 size: 20,
               ),
               const SizedBox(width: 8),
@@ -128,7 +135,8 @@ class _SearchScreenState extends State<SearchScreen> {
               ),
               if (_searchController.text.isNotEmpty)
                 IconButton(
-                  icon: Icon(Icons.clear, size: 18, color: Colors.grey[600]),
+                  icon: Icon(Icons.clear,
+                      size: 18, color: const Color.fromARGB(255, 0, 0, 0)),
                   onPressed: () {
                     _searchController.clear();
                     _searchUsers("");
@@ -276,12 +284,15 @@ class _SearchScreenState extends State<SearchScreen> {
                       width: 2,
                     ),
                   ),
-                  child: CircleAvatar(
-                    backgroundColor: bgColor,
-                    child: Text(
-                      user.pfpIndex,
-                      style: TextStyle(
-                        fontSize: isSmallScreen ? 20 : 24,
+                  child: Hero(
+                    tag: "user_avatar_${user.username}",
+                    child: CircleAvatar(
+                      backgroundColor: bgColor,
+                      child: Text(
+                        user.pfpIndex,
+                        style: TextStyle(
+                          fontSize: isSmallScreen ? 20 : 24,
+                        ),
                       ),
                     ),
                   ),

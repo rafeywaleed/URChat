@@ -928,14 +928,14 @@ class _NesEmojiColorPickerState extends State<NesEmojiColorPicker> {
                 decoration: BoxDecoration(
                   color: _selectedColor,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.black, width: 3),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black26,
-                      blurRadius: 8,
-                      offset: Offset(2, 2),
-                    ),
-                  ],
+                  // border: Border.all(color: Colors.black, width: 3),
+                  // boxShadow: [
+                  //   BoxShadow(
+                  //     color: Colors.black26,
+                  //     blurRadius: 8,
+                  //     offset: Offset(2, 2),
+                  //   ),
+                  // ],
                 ),
                 child: Center(
                   child: AnimatedEmojiMapper.hasAnimatedVersion(_selectedEmoji)

@@ -143,10 +143,13 @@ class _GroupManagementScreenState extends State<GroupManagementScreen> {
                             fromChat: true,
                           )),
                 ),
-                leading: CircleAvatar(
-                  backgroundColor: _parseColor(member.pfpBg),
-                  child: Text(member.pfpIndex,
-                      style: const TextStyle(color: Colors.white)),
+                leading: Hero(
+                  tag: "user_avatar_${member.username}",
+                  child: CircleAvatar(
+                    backgroundColor: _parseColor(member.pfpBg),
+                    child: Text(member.pfpIndex,
+                        style: const TextStyle(color: Colors.white)),
+                  ),
                 ),
                 title: Text(member.fullName),
                 subtitle: Text('@${member.username}'),
@@ -228,10 +231,13 @@ class _GroupManagementScreenState extends State<GroupManagementScreen> {
         ),
         ...pending
             .map((invite) => ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: _parseColor(invite.pfpBg),
-                    child: Text(invite.pfpIndex,
-                        style: const TextStyle(color: Colors.white)),
+                  leading: Hero(
+                    tag: "user_avatar_${invite.username}",
+                    child: CircleAvatar(
+                      backgroundColor: _parseColor(invite.pfpBg),
+                      child: Text(invite.pfpIndex,
+                          style: const TextStyle(color: Colors.white)),
+                    ),
                   ),
                   title: Text(invite.fullName),
                   subtitle: Text('@${invite.username}'),
@@ -319,11 +325,14 @@ class _GroupManagementScreenState extends State<GroupManagementScreen> {
             children: [
               // Group Info Header
               ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: _parseColor(groupDetails.pfpBg),
-                  child: Text(groupDetails.pfpIndex,
-                      style: const TextStyle(color: Colors.white)),
-                  radius: 30,
+                leading: Hero(
+                  tag: "chat_avatar_${widget.group.chatId}",
+                  child: CircleAvatar(
+                    backgroundColor: _parseColor(groupDetails.pfpBg),
+                    child: Text(groupDetails.pfpIndex,
+                        style: const TextStyle(color: Colors.white)),
+                    radius: 30,
+                  ),
                 ),
                 title: Text(
                   groupDetails.chatName,

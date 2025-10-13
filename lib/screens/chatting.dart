@@ -1067,10 +1067,8 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                       ),
                       child: Row(
                         children: [
-                          Icon(
-                            Iconsax.color_swatch,
-                            color: colorScheme.onSurface,
-                          ),
+                          Icon(Icons.brightness_6,
+                              color: colorScheme.onSurface),
                           const SizedBox(width: 12),
                           Text(
                             'MODE',
@@ -1174,7 +1172,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                           Row(
                             children: [
                               Icon(
-                                Iconsax.paintbucket,
+                                Icons.brush,
                                 color: colorScheme.onSurface,
                               ),
                               const SizedBox(width: 12),
@@ -1946,15 +1944,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                             fontSize: 10,
                           ),
                         ),
-                        // NEW: Add delete icon for own messages
-                        if (canDelete) ...[
-                          const SizedBox(width: 8),
-                          Icon(
-                            Icons.check,
-                            size: 12,
-                            color: isOwnMessage ? Colors.green : Colors.white70,
-                          ),
-                        ],
                       ],
                     ),
                   ],
@@ -2263,7 +2252,9 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
           child: Row(
             children: [
               Hero(
-                tag: "Avatar",
+                tag: widget.chatRoom.isGroup
+                    ? "chat_avatar_${widget.chatRoom.chatId}"
+                    : "user_avatar_${widget.chatRoom.chatName}",
                 child: CircleAvatar(
                   backgroundColor: _parseColor(widget.chatRoom.pfpBg),
                   child: Text(
@@ -2311,7 +2302,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Iconsax.paintbucket),
+            icon: const Icon(Icons.tune),
             onPressed: _showThemeMenu,
           ),
         ],
@@ -2347,6 +2338,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                     // Message Text Field
                     Expanded(
                       child: TextField(
+                        autofocus: true,
                         controller: _messageController,
                         decoration: InputDecoration(
                           hintText: 'Type a message...',

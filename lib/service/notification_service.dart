@@ -1,5 +1,4 @@
 // lib/service/notification_service.dart
-import 'dart:js' as js;
 import 'dart:async';
 import 'dart:convert';
 import 'package:firebase_core/firebase_core.dart';
@@ -29,124 +28,114 @@ class NotificationService {
   bool _isInitialized = false;
   bool _isInitializing = false;
 
-  // Fix: Make enableWebNotifications return bool
   Future<bool> enableWebNotifications() async {
-    if (!kIsWeb) return false;
-
     try {
-      print('🌐 Enabling web notifications...');
+      NotificationSettings settings =
+          await _firebaseMessaging.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
 
-      // First request browser permission
-      final permissionGranted = await showBrowserPermissionDialog();
+      final granted =
+          settings.authorizationStatus == AuthorizationStatus.authorized;
+      print('🔔 Notification permission granted: $granted');
 
-      if (permissionGranted) {
-        // Only proceed if permission was granted
-        await _requestPermissions();
+      if (granted) {
         await _getTokenAndSendToServer();
-        print('✅ Web notifications enabled successfully');
-        return true;
-      } else {
-        print('❌ User denied notification permission');
-        return false;
       }
+
+      return granted;
     } catch (e) {
-      print('❌ Error enabling web notifications: $e');
+      print('❌ Error enabling notifications: $e');
       return false;
     }
   }
 
   Future<bool> hasNotificationPermission() async {
-    if (kIsWeb) {
-      try {
-        // Use JavaScript interop to check permission status
-        if (js.context.hasProperty('Notification')) {
-          final permission = js.context['Notification']['permission'];
-          return permission == 'granted';
-        }
-      } catch (e) {
-        print('❌ Error checking notification permission: $e');
-      }
-      return false;
-    } else {
-      // For mobile, check Firebase messaging permission
-      final settings = await _firebaseMessaging.getNotificationSettings();
+    try {
+      NotificationSettings settings =
+          await _firebaseMessaging.getNotificationSettings();
       return settings.authorizationStatus == AuthorizationStatus.authorized;
-    }
-  }
-
-  Future<bool> showBrowserPermissionDialog() async {
-    try {
-      if (js.context.hasProperty('Notification')) {
-        final permission = await _requestBrowserPermission();
-        return permission == 'granted';
-      }
-      return false;
     } catch (e) {
-      print('❌ Error showing browser permission dialog: $e');
+      print('❌ Error checking notification permission: $e');
       return false;
     }
   }
 
-  // Fix: Correct JavaScript interop for permission request
-  Future<String> _requestBrowserPermission() async {
-    try {
-      // Correct way to call Notification.requestPermission()
-      final notification = js.context['Notification'];
-      final requestPermission = notification['requestPermission'];
+  // Future<bool> showBrowserPermissionDialog() async {
+  //   try {
+  //     if (js.context.hasProperty('Notification')) {
+  //       final permission = await _requestBrowserPermission();
+  //       return permission == 'granted';
+  //     }
+  //     return false;
+  //   } catch (e) {
+  //     print('❌ Error showing browser permission dialog: $e');
+  //     return false;
+  //   }
+  // }
 
-      // Call the function and await the promise
-      final promise = requestPermission.apply([]);
+  // // Fix: Correct JavaScript interop for permission request
+  // Future<String> _requestBrowserPermission() async {
+  //   try {
+  //     // Correct way to call Notification.requestPermission()
+  //     final notification = js.context['Notification'];
+  //     final requestPermission = notification['requestPermission'];
 
-      // Convert the promise to a Future
-      return await promiseToFuture(promise);
-    } catch (e) {
-      print('❌ Error requesting browser permission: $e');
-      return 'denied';
-    }
-  }
+  //     // Call the function and await the promise
+  //     final promise = requestPermission.apply([]);
 
-  // Helper method to convert JS promise to Dart Future
-  Future<String> promiseToFuture(js.JsObject promise) {
-    final completer = Completer<String>();
+  //     // Convert the promise to a Future
+  //     return await promiseToFuture(promise);
+  //   } catch (e) {
+  //     print('❌ Error requesting browser permission: $e');
+  //     return 'denied';
+  //   }
+  // }
 
-    final then = promise['then'];
-    then.callMethod('call', [
-      promise,
-      js.allowInterop((result) {
-        completer.complete(result.toString());
-      }),
-      js.allowInterop((error) {
-        completer.complete('denied');
-      })
-    ]);
+  // // Helper method to convert JS promise to Dart Future
+  // Future<String> promiseToFuture(js.JsObject promise) {
+  //   final completer = Completer<String>();
 
-    return completer.future;
-  }
+  //   final then = promise['then'];
+  //   then.callMethod('call', [
+  //     promise,
+  //     js.allowInterop((result) {
+  //       completer.complete(result.toString());
+  //     }),
+  //     js.allowInterop((error) {
+  //       completer.complete('denied');
+  //     })
+  //   ]);
 
-  // Alternative simpler method using eval
-  Future<bool> requestBrowserPermissionSimple() async {
-    try {
-      final result = js.context.callMethod('eval', [
-        '''
-        new Promise((resolve) => {
-          if ('Notification' in window) {
-            Notification.requestPermission().then((permission) => {
-              resolve(permission)
-            });
-          } else {
-            resolve('unsupported');
-          }
-        })
-        '''
-      ]);
+  //   return completer.future;
+  // }
 
-      final permission = await promiseToFuture(result);
-      return permission == 'granted';
-    } catch (e) {
-      print('❌ Error in simple permission request: $e');
-      return false;
-    }
-  }
+  // // Alternative simpler method using eval
+  // Future<bool> requestBrowserPermissionSimple() async {
+  //   try {
+  //     final result = js.context.callMethod('eval', [
+  //       '''
+  //       new Promise((resolve) => {
+  //         if ('Notification' in window) {
+  //           Notification.requestPermission().then((permission) => {
+  //             resolve(permission)
+  //           });
+  //         } else {
+  //           resolve('unsupported');
+  //         }
+  //       })
+  //       '''
+  //     ]);
+
+  //     final permission = await promiseToFuture(result);
+  //     return permission == 'granted';
+  //   } catch (e) {
+  //     print('❌ Error in simple permission request: $e');
+  //     return false;
+  //   }
+  // }
 
   // Your existing methods continue below...
   Future<void> initialize() async {
