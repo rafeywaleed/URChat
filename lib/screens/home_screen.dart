@@ -1,3 +1,4 @@
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:nes_ui/nes_ui.dart';
@@ -9,7 +10,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import 'package:urchat_back_testing/model/dto.dart';
 import 'package:urchat_back_testing/model/message.dart';
-import 'package:urchat_back_testing/screens/auth_screen.dart';
+import 'package:urchat_back_testing/screens/auth/auth_screen.dart';
 import 'package:urchat_back_testing/screens/chatting.dart';
 import 'package:urchat_back_testing/screens/group_management_screen.dart';
 import 'package:urchat_back_testing/screens/group_pfp_dialog.dart';
@@ -87,6 +88,14 @@ class _HomescreenState extends State<Homescreen>
     }
   }
 
+  bool _isInternetConnected = true;
+  final Connectivity _connectivity = Connectivity();
+  late StreamSubscription<List<ConnectivityResult>> _connectivitySubscription;
+
+  late Timer _connectionTimer;
+  late Timer _debugTimer;
+  late final FocusNode _focusNode;
+
   @override
   void initState() {
     super.initState();
@@ -97,14 +106,29 @@ class _HomescreenState extends State<Homescreen>
       }
     });
 
+    _focusNode = FocusNode();
+    _connectionTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
+      if (!_webSocketService.isConnected) {
+        _webSocketService.connect();
+      }
+    });
+
+    _debugTimer = Timer.periodic(const Duration(seconds: 10), (timer) {
+      _debugSubscriptions();
+    });
+
+    _initConnectivity();
+    _connectivitySubscription =
+        _connectivity.onConnectivityChanged.listen(_updateConnectionStatus);
+
     _initializeWebSocket();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _verifyNotificationSystem();
     });
 
-    Timer.periodic(const Duration(seconds: 10), (timer) {
-      _debugSubscriptions();
-    });
+    // Timer.periodic(const Duration(seconds: 10), (timer) {
+    //   _debugSubscriptions();
+    // });
 
     _setupNotificationListener();
   }
@@ -169,7 +193,6 @@ class _HomescreenState extends State<Homescreen>
       onChatDeleted: _handleChatDeleted,
     );
 
-    // Add connection listener
     Timer.periodic(Duration(seconds: 2), (timer) {
       if (!_webSocketService.isConnected) {
         print('🔄 WebSocket not connected, reconnecting...');
@@ -849,6 +872,68 @@ class _HomescreenState extends State<Homescreen>
     }
   }
 
+  void _handleNotificationSettings() async {
+    if (kIsWeb) {
+      // For web - enable notifications
+      final success = await NotificationService().enableWebNotifications();
+
+      if (success && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Web notifications enabled! 🎉'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        setState(() {}); // Refresh to hide the icon
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to enable notifications'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+    } else {
+      // For mobile - request permission
+      final hasPermission =
+          await NotificationService().hasNotificationPermission();
+
+      if (!hasPermission) {
+        await NotificationService().requestPermissions();
+
+        // Check again after requesting
+        final newPermission =
+            await NotificationService().hasNotificationPermission();
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(newPermission
+                  ? 'Notification permission granted! 🎉'
+                  : 'Notification permission denied'),
+              backgroundColor: newPermission ? Colors.green : Colors.orange,
+            ),
+          );
+
+          // Refresh UI to hide icon if permission was granted
+          if (newPermission) {
+            setState(() {});
+          }
+        }
+      } else {
+        // Already have permission - show status
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Notifications are already enabled'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      }
+    }
+  }
+
   // Check if we're on mobile screen
   bool get _isMobileScreen {
     final mediaQuery = MediaQuery.of(context);
@@ -1473,56 +1558,71 @@ class _HomescreenState extends State<Homescreen>
       ),
       title: Text('URChat', style: GoogleFonts.pressStart2p(fontSize: 14)),
       actions: [
-        // In your Homescreen build method, replace the web notification section with:
-
+        // Notification icon - only shown when notifications are disabled
         if (kIsWeb)
           FutureBuilder<bool>(
             future: NotificationService().hasNotificationPermission(),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return NesTerminalLoadingIndicator();
+                return const SizedBox.shrink(); // Hide while loading
               }
-
-              if (snapshot.hasData && !snapshot.data!) {
-                return Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: NesIconButton(
-                    icon: NesIcons.bell,
-                    onPress: () async {
-                      // Now enableWebNotifications returns a boolean
-                      final success =
-                          await NotificationService().enableWebNotifications();
-
-                      if (success) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Notifications enabled! 🎉'),
-                            backgroundColor: Colors.green,
-                          ),
-                        );
-                      } else {}
-
-                      if (mounted) setState(() {});
-                    },
-                  ),
-                );
-              }
-              return SizedBox.shrink();
+              final hasPermission = snapshot.data ?? false;
+              // Only show notification icon if permissions are NOT granted
+              return hasPermission
+                  ? const SizedBox.shrink()
+                  : Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: NesIconButton(
+                        icon: NesIcons.bell,
+                        onPress: () async {
+                          final success = await NotificationService()
+                              .enableWebNotifications();
+                          if (success && mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Web notifications enabled! 🎉'),
+                                backgroundColor: Colors.green,
+                              ),
+                            );
+                            setState(() {}); // Refresh to hide the icon
+                          } else if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Failed to enable notifications'),
+                                backgroundColor: Colors.orange,
+                              ),
+                            );
+                          }
+                        },
+                      ),
+                    );
             },
           ),
-        ElevatedButton(
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => MazeGamePage()),
-            );
-          },
-          child: Text("Game"),
-        ),
+        if (!kIsWeb)
+          FutureBuilder<bool>(
+            future: NotificationService().hasNotificationPermission(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const SizedBox.shrink(); // Hide while loading
+              }
+              final hasPermission = snapshot.data ?? false;
+              // Only show notification icon if permissions are NOT granted
+              return hasPermission
+                  ? const SizedBox.shrink()
+                  : Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: NesIconButton(
+                        icon: NesIcons.bell,
+                        onPress: _handleNotificationSettings,
+                      ),
+                    );
+            },
+          ),
         PopupMenuButton(
           child: NesIcon(iconData: NesIcons.threeVerticalDots),
           itemBuilder: (_) => [
             const PopupMenuItem(value: 'profile', child: Text('Profile')),
+            const PopupMenuItem(value: 'game', child: Text('Maze')),
             const PopupMenuItem(value: 'logout', child: Text('Logout')),
           ],
           onSelected: (value) {
@@ -1530,6 +1630,11 @@ class _HomescreenState extends State<Homescreen>
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => ProfileScreen()),
+              );
+            } else if (value == 'game') {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => MazeGamePage()),
               );
             } else if (value == 'logout') {
               _logout();
@@ -1663,25 +1768,139 @@ class _HomescreenState extends State<Homescreen>
     return Expanded(
       child: NesContainer(
         backgroundColor: _bgLight,
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.chat_bubble_outline_rounded,
-                  size: 100, color: _accent.withOpacity(0.2)),
-              const SizedBox(height: 24),
-              _buildRunningTextBanner(),
-              Text(
-                "Select a chat or start a new one",
-                style: GoogleFonts.vt323(color: _mutedText, fontSize: 14),
-              ),
-            ],
-          )
-              .animate()
-              .fadeIn(duration: 800.ms)
-              .moveY(begin: 10, curve: Curves.easeOutQuart),
-        ),
+        child: _isInternetConnected
+            ? Center(
+                child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.chat_bubble_outline_rounded,
+                      size: 100, color: _accent.withOpacity(0.2)),
+                  const SizedBox(height: 24),
+                  _buildRunningTextBanner(),
+                  Text(
+                    "Select a chat or start a new one",
+                    style: GoogleFonts.vt323(color: _mutedText, fontSize: 14),
+                  ),
+                ],
+              )
+                    .animate()
+                    .fadeIn(duration: 800.ms)
+                    .moveY(begin: 10, curve: Curves.easeOutQuart))
+            : _buildOfflineState(),
       ),
+    );
+  }
+
+  Widget _buildOfflineState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // Connection status indicator
+          NesContainer(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // NesBlinker(
+                //   child: Icon(
+                //     Icons.signal_wifi_off,
+                //     size: 16,
+                //     color: Colors.orange,
+                //   ),
+                // ),
+                const SizedBox(width: 8),
+                NesRunningText(
+                  text: "No Internet Connection",
+                  textStyle: GoogleFonts.pressStart2p(
+                      fontSize: 10, color: Colors.orange),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 40),
+
+          // Offline icon
+          Icon(
+            Icons.cloud_off,
+            size: 80,
+            color: _accent.withOpacity(0.3),
+          ),
+
+          const SizedBox(height: 24),
+
+          // Offline message
+          Text(
+            "You're offline",
+            style: GoogleFonts.pressStart2p(
+              fontSize: 14,
+              color: _mutedText,
+            ),
+          ),
+
+          const SizedBox(height: 8),
+
+          Text(
+            "Try escaping Phantom meanwhile",
+            style: GoogleFonts.vt323(
+              fontSize: 12,
+              color: _mutedText,
+            ),
+            textAlign: TextAlign.center,
+          ),
+
+          const SizedBox(height: 32),
+
+          NesButton(
+            type: NesButtonType.primary,
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => MazeGamePage()),
+              );
+            },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  NesIcon(iconData: NesIcons.gamepad),
+                  const SizedBox(width: 12),
+                  Text(
+                    "PLAY GAME",
+                    style: GoogleFonts.pressStart2p(fontSize: 10),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          // Retry connection button
+          NesButton(
+            type: NesButtonType.normal,
+            onPressed: () {
+              _initConnectivity();
+              _loadInitialData();
+            },
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.refresh, size: 16),
+                const SizedBox(width: 8),
+                Text(
+                  "RETRY CONNECTION",
+                  style: GoogleFonts.pressStart2p(fontSize: 8),
+                ),
+              ],
+            ),
+          ),
+        ],
+      )
+          .animate()
+          .fadeIn(duration: 800.ms)
+          .moveY(begin: 10, curve: Curves.easeOutQuart),
     );
   }
 
@@ -1699,6 +1918,10 @@ class _HomescreenState extends State<Homescreen>
   }
 
   Widget _buildMobileLayout() {
+    if (!_isInternetConnected && (!_showChatScreen || _selectedChat == null)) {
+      return _buildOfflineState();
+    }
+
     return _showChatScreen && _selectedChat != null
         ? _buildSelectedChatView()
         : _buildChatsList();
@@ -1754,9 +1977,24 @@ class _HomescreenState extends State<Homescreen>
   @override
   Widget build(BuildContext context) {
     return WillPopScope(
-      onWillPop: () => _exitAppDialog(),
+      onWillPop: () async {
+        if (_isMobileScreen && _selectedChat != null) {
+          _deselectChat();
+          return false;
+        }
+        final result = await NesDialog.show<bool>(
+          context: context,
+          builder: (context) => const NesConfirmDialog(
+            cancelLabel: "Cancel",
+            confirmLabel: "Exit",
+            message: "Are you sure you want to quit the app?",
+          ),
+        );
+
+        return result ?? false;
+      },
       child: RawKeyboardListener(
-        focusNode: FocusNode(),
+        focusNode: _focusNode,
         autofocus: true,
         onKey: (RawKeyEvent event) {
           if (event is RawKeyDownEvent &&
@@ -1926,63 +2164,56 @@ class _HomescreenState extends State<Homescreen>
   Widget _buildRunningTextBanner() {
     return SizedBox(
       height: 40,
-      child: AnimatedOpacity(
+      child: AnimatedSwitcher(
         duration: const Duration(milliseconds: 500),
-        opacity: _showRunningText ? 1.0 : 0.0,
         child: _currentTextIndex == 0
-            ? Center(
-                child: NesRunningText(
-                  onEnd: () {
-                    Future.delayed(const Duration(seconds: 1), () {
-                      if (mounted) {
-                        setState(() {
-                          _showRunningText = false;
-                        });
-
-                        // After fade out, switch text and fade in
-                        Future.delayed(const Duration(milliseconds: 500), () {
-                          if (mounted) {
-                            setState(() {
-                              _currentTextIndex = 1;
-                              _showRunningText = true;
-                            });
-                          }
-                        });
-                      }
-                    });
-                  },
-                  text: "Welcome to URChat",
-                  textStyle: TextStyle(fontSize: _isLargeScreen ? 14 : 12),
-                ),
+            ? _buildRunningTextItem(
+                key: ValueKey('text0'),
+                text: "Welcome to URChat",
+                fontSize: _isLargeScreen ? 14 : 12,
+                onComplete: () => _switchRunningText(),
               )
-            : Center(
-                child: NesRunningText(
-                  onEnd: () {
-                    // Wait a bit after text completes, then fade out and switch
-                    Future.delayed(const Duration(seconds: 1), () {
-                      if (mounted) {
-                        setState(() {
-                          _showRunningText = false;
-                        });
-
-                        // After fade out, switch text and fade in
-                        Future.delayed(const Duration(milliseconds: 500), () {
-                          if (mounted) {
-                            setState(() {
-                              _currentTextIndex = 0;
-                              _showRunningText = true;
-                            });
-                          }
-                        });
-                      }
-                    });
-                  },
-                  text: "Messages will be automatically\ndeleted after 30 days",
-                  textStyle: TextStyle(fontSize: _isLargeScreen ? 12 : 10),
-                ),
+            : _buildRunningTextItem(
+                key: ValueKey('text1'),
+                text: "Messages will be automatically\ndeleted after 7 days",
+                fontSize: _isLargeScreen ? 12 : 10,
+                onComplete: () => _switchRunningText(),
               ),
       ),
     );
+  }
+
+  Widget _buildRunningTextItem({
+    required Key key,
+    required String text,
+    required double fontSize,
+    required VoidCallback onComplete,
+  }) {
+    return KeyedSubtree(
+      key: key,
+      child: NesRunningText(
+        onEnd: onComplete,
+        text: text,
+        textStyle: TextStyle(fontSize: fontSize),
+      ),
+    );
+  }
+
+  void _switchRunningText() {
+    Future.delayed(const Duration(seconds: 1), () {
+      if (!mounted) return;
+      setState(() {
+        _showRunningText = false;
+      });
+
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (!mounted) return;
+        setState(() {
+          _currentTextIndex = (_currentTextIndex + 1) % 2;
+          _showRunningText = true;
+        });
+      });
+    });
   }
 
   void _logout() async {
@@ -2008,7 +2239,12 @@ class _HomescreenState extends State<Homescreen>
   @override
   void dispose() {
     _tabController.dispose();
+    _connectivitySubscription.cancel();
+    _connectionTimer.cancel();
+    _debugTimer.cancel();
+    _timer.cancel();
     _webSocketService.disconnect();
+    _focusNode.dispose();
     super.dispose();
   }
 
@@ -2024,5 +2260,41 @@ class _HomescreenState extends State<Homescreen>
         print('❌ WebSocket failed to connect');
       }
     });
+  }
+
+  Future<void> _initConnectivity() async {
+    try {
+      final result = await _connectivity.checkConnectivity();
+      _updateConnectionStatus(result);
+    } catch (e) {
+      print('❌ Error checking connectivity: $e');
+      if (mounted) {
+        setState(() {
+          _isInternetConnected = false;
+        });
+      }
+    }
+  }
+
+// FIXED: Parameter type changed to List<ConnectivityResult>
+  void _updateConnectionStatus(List<ConnectivityResult> results) {
+    // Consider connected if any connectivity method is available
+    final isConnected =
+        results.any((result) => result != ConnectivityResult.none);
+
+    if (mounted) {
+      setState(() {
+        _isInternetConnected = isConnected;
+
+        // Auto-reconnect WebSocket when connection is restored
+        if (_isInternetConnected && !_webSocketService.isConnected) {
+          _webSocketService.connect();
+        } else if (!_isInternetConnected) {
+          _webSocketService.disconnect();
+        }
+      });
+    }
+
+    print('🌐 Connectivity changed: $results → Connected: $isConnected');
   }
 }

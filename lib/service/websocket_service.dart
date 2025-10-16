@@ -1,13 +1,16 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:stomp_dart_client/stomp_dart_client.dart';
 import 'package:urchat_back_testing/model/message.dart';
 import 'package:urchat_back_testing/service/api_service.dart';
-
 import '../model/chat_room.dart';
 
 class WebSocketService {
   StompClient? _stompClient;
+
+  // Keep all callbacks as they were
   ValueChanged<Message> onMessageReceived;
   ValueChanged<List<ChatRoom>> onChatListUpdated;
   ValueChanged<Map<String, dynamic>> onTyping;
@@ -15,14 +18,20 @@ class WebSocketService {
   ValueChanged<Map<String, dynamic>> onMessageDeleted;
   ValueChanged<String> onChatDeleted;
 
+  // Subscription management - keep as is
   final Map<String, StompUnsubscribe> _messageDeletionSubscriptions = {};
-
   final Map<String, StompUnsubscribe> _chatSubscriptions = {};
   final Map<String, StompUnsubscribe> _typingSubscriptions = {};
   StompUnsubscribe? _chatListSubscription;
 
+  // Connection state management - NEW: Add these to fix the issues
   String? _currentChatId;
   bool _isConnected = false;
+  bool _isConnecting = false;
+  Timer? _reconnectTimer;
+  int _reconnectAttempts = 0;
+  static const int _maxReconnectAttempts = 10; // Increased limit
+  static const Duration _initialReconnectDelay = Duration(seconds: 3);
 
   WebSocketService({
     required this.onMessageReceived,
@@ -34,6 +43,12 @@ class WebSocketService {
   });
 
   void connect() {
+    // NEW: Prevent multiple connection attempts
+    if (_isConnecting || _isConnected) {
+      print('ℹ️ WebSocket already connecting or connected, skipping...');
+      return;
+    }
+
     final token = ApiService.accessToken;
     if (token == null) {
       print('❌ No access token available for WebSocket connection');
@@ -41,6 +56,8 @@ class WebSocketService {
     }
 
     print('🔌 Connecting to WebSocket...');
+    _isConnecting = true;
+    _cancelPendingReconnect(); // NEW: Cancel any pending reconnects
 
     try {
       _stompClient = StompClient(
@@ -50,20 +67,22 @@ class WebSocketService {
           onWebSocketError: (dynamic error) {
             print('❌ WebSocket error: $error');
             _isConnected = false;
-            Future.delayed(Duration(seconds: 3), () {
-              if (!_isConnected) {
-                print('🔄 Attempting to reconnect...');
-                connect();
-              }
-            });
+            _isConnecting = false;
+
+            // FIXED: Use our controlled reconnect instead of immediate retry
+            _scheduleReconnect();
           },
           onStompError: (dynamic error) {
             print('❌ STOMP error: $error');
             _isConnected = false;
+            _isConnecting = false;
+            _scheduleReconnect(); // FIXED: Use controlled reconnect
           },
           onDisconnect: (frame) {
             print('🔌 WebSocket disconnected');
             _isConnected = false;
+            _isConnecting = false;
+            _scheduleReconnect(); // FIXED: Use controlled reconnect
           },
           stompConnectHeaders: {
             'Authorization': 'Bearer $token',
@@ -73,6 +92,7 @@ class WebSocketService {
           },
           connectionTimeout: Duration(seconds: 10),
           useSockJS: true,
+          // KEEP: This is fine, but we'll control reconnects manually
           reconnectDelay: Duration(milliseconds: 5000),
           beforeConnect: () async {
             print('🔄 Preparing to connect to WebSocket...');
@@ -83,16 +103,59 @@ class WebSocketService {
       _stompClient!.activate();
     } catch (e) {
       print('❌ Error activating WebSocket: $e');
-      Future.delayed(Duration(seconds: 3), () {
-        connect();
-      });
+      _isConnecting = false;
+      _scheduleReconnect(); // FIXED: Use controlled reconnect
     }
+  }
+
+  // NEW: Controlled reconnect method
+  void _scheduleReconnect() {
+    _cancelPendingReconnect();
+
+    // Don't reconnect if we've exceeded max attempts
+    if (_reconnectAttempts >= _maxReconnectAttempts) {
+      print(
+          '🚫 Max reconnect attempts ($_maxReconnectAttempts) reached. Giving up.');
+      return;
+    }
+
+    _reconnectAttempts++;
+    final delay = _calculateReconnectDelay();
+
+    print(
+        '🔄 Scheduling reconnect attempt $_reconnectAttempts/$_maxReconnectAttempts in ${delay.inSeconds}s');
+
+    _reconnectTimer = Timer(delay, () {
+      if (!_isConnected && !_isConnecting) {
+        connect();
+      }
+    });
+  }
+
+  // NEW: Calculate reconnect delay with exponential backoff
+  Duration _calculateReconnectDelay() {
+    final baseDelay = _initialReconnectDelay.inSeconds;
+    final exponentialDelay = baseDelay * pow(2, _reconnectAttempts - 1).toInt();
+    final jitter = Random().nextDouble() * 0.3; // Up to 30% jitter
+    final totalDelay = exponentialDelay * (1 + jitter);
+
+    return Duration(
+        seconds: totalDelay.clamp(1, 30).toInt()); // Cap at 30 seconds
+  }
+
+  // NEW: Cancel pending reconnect
+  void _cancelPendingReconnect() {
+    _reconnectTimer?.cancel();
+    _reconnectTimer = null;
   }
 
   void _onConnect(StompFrame frame) {
     print('✅ Connected to WebSocket successfully');
     print('📦 Connection frame: ${frame.headers}');
     _isConnected = true;
+    _isConnecting = false;
+    _reconnectAttempts = 0; // NEW: Reset reconnect counter
+    _cancelPendingReconnect(); // NEW: Cancel any pending reconnects
 
     // Subscribe to chat list updates
     subscribeToChatListUpdates();
@@ -112,6 +175,7 @@ class WebSocketService {
     }
   }
 
+  // ALL YOUR EXISTING METHODS STAY EXACTLY THE SAME FROM HERE DOWN
   void subscribeToChatListUpdates() {
     if (!_isConnected || _stompClient == null) {
       print('❌ Cannot subscribe to chat list: WebSocket not connected');
@@ -228,8 +292,6 @@ class WebSocketService {
     // Subscribe to message deletion events
     print('🎯 SUBSCRIBING TO: /topic/chat/$chatId/message-deleted');
 
-    _chatSubscriptions[chatId] = messageUnsubscribe;
-
     final deletionUnsubscribe = _stompClient!.subscribe(
       destination: '/topic/chat/$chatId/message-deleted',
       callback: (StompFrame frame) {
@@ -326,6 +388,11 @@ class WebSocketService {
   void disconnect() {
     print('🔌 Disconnecting WebSocket...');
 
+    // NEW: Cancel any pending reconnects
+    _cancelPendingReconnect();
+    _isConnecting = false;
+    _reconnectAttempts = 0;
+
     // Unsubscribe from chat list updates
     _chatListSubscription?.call();
     _chatListSubscription = null;
@@ -340,6 +407,11 @@ class WebSocketService {
       unsubscribe();
     }
     _typingSubscriptions.clear();
+
+    for (var unsubscribe in _messageDeletionSubscriptions.values) {
+      unsubscribe();
+    }
+    _messageDeletionSubscriptions.clear();
 
     _stompClient?.deactivate();
     _isConnected = false;
@@ -385,5 +457,13 @@ class WebSocketService {
       body: '',
     );
     print('📋 Requested chat list refresh');
+  }
+
+  void reconnectWithNewToken() {
+    print('🔄 Reconnecting WebSocket with refreshed token...');
+    disconnect();
+    Future.delayed(Duration(milliseconds: 500), () {
+      connect();
+    });
   }
 }

@@ -4,6 +4,7 @@ import 'package:urchat_back_testing/model/chat_room.dart';
 import 'package:urchat_back_testing/model/dto.dart';
 import 'package:urchat_back_testing/model/message.dart';
 import 'package:urchat_back_testing/model/user.dart';
+import 'package:urchat_back_testing/service/websocket_service.dart';
 import 'storage_service.dart';
 
 class ApiService {
@@ -13,6 +14,8 @@ class ApiService {
   static String? accessToken;
   static String? refreshToken;
   static String? currentUsername;
+
+  static WebSocketService? _webSocketService;
 
   static Future<void> init() async {
     await _storage.init();
@@ -94,6 +97,85 @@ class ApiService {
       accessToken = null;
       refreshToken = null;
       currentUsername = null;
+    }
+  }
+
+  static Future<void> initiateRegistration(RegisterRequest request) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/auth/initiate-registration'),
+      headers: headers,
+      body: jsonEncode(request.toJson()),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Registration initiation failed: ${response.body}');
+    }
+  }
+
+  static Future<AuthResponse> completeRegistration(
+      RegisterRequest request, String otp) async {
+    final completeRequest = {
+      'registerRequest': request.toJson(),
+      'otp': otp,
+    };
+
+    final response = await http.post(
+      Uri.parse('$baseUrl/auth/complete-registration'),
+      headers: headers,
+      body: jsonEncode(completeRequest),
+    );
+
+    if (response.statusCode == 200) {
+      final authResponse = AuthResponse.fromJson(jsonDecode(response.body));
+      await _saveAuthData(authResponse);
+      return authResponse;
+    } else {
+      throw Exception('Registration completion failed: ${response.body}');
+    }
+  }
+
+  // ============ PASSWORD RESET METHODS ============
+  static Future<void> forgotPassword(String email) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/auth/forgot-password'),
+      headers: headers,
+      body: jsonEncode({'email': email, 'purpose': 'PASSWORD_RESET'}),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Password reset request failed: ${response.body}');
+    }
+  }
+
+  static Future<void> resetPassword(
+      String email, String otp, String newPassword) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/auth/reset-password'),
+      headers: headers,
+      body: jsonEncode({
+        'email': email,
+        'otp': otp,
+        'newPassword': newPassword,
+      }),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Password reset failed: ${response.body}');
+    }
+  }
+
+  static Future<void> resendOtp(String email, String purpose) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/auth/resend-otp'),
+      headers: headers,
+      body: jsonEncode({
+        'email': email,
+        'purpose': purpose,
+      }),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to resend OTP: ${response.body}');
     }
   }
 
@@ -512,7 +594,6 @@ class ApiService {
   static Future<http.Response> _makeAuthenticatedRequest(
     Future<http.Response> Function() requestFn,
   ) async {
-    // Check if we need to refresh access token before making request
     if (_storage.shouldRefreshAccessToken) {
       print('🔄 Access token needs refresh');
       final success = await _refreshAccessToken();
@@ -521,28 +602,38 @@ class ApiService {
       }
     }
 
-    // Make the request
     var response = await requestFn();
 
     // If we get 401, try to refresh token and retry once
-    if (response.statusCode == 401) {
-      print('🔄 Token rejected (401), attempting refresh...');
-      final success = await _refreshAccessToken();
-      if (success) {
-        response = await requestFn();
-      } else {
-        throw Exception('Authentication failed. Please login again.');
+    int retryCount = 0;
+    const maxRetries = 3;
+
+    while (retryCount <= maxRetries) {
+      if (response.statusCode == 401) {
+        print('🔄 Token rejected (401), attempting refresh...');
+        final success = await _refreshAccessToken();
+        if (success) {
+          response = await requestFn();
+        } else {
+          throw Exception('Authentication failed. Please login again.');
+        }
       }
+
+      if (response.statusCode == 401 && retryCount < maxRetries) {
+        retryCount++;
+        continue;
+      }
+
+      return response;
     }
 
-    return response;
+    throw Exception('Max retry attempts exceeded');
   }
 
   static Future<bool> _refreshAccessToken() async {
     try {
       print('🔄 Refreshing access token...');
 
-      // Check if refresh token is valid
       if (refreshToken == null || _storage.isRefreshTokenExpired) {
         print('❌ Refresh token expired or missing');
         await logout();
@@ -559,6 +650,7 @@ class ApiService {
         final tokenResponse =
             TokenRefreshResponse.fromJson(jsonDecode(response.body));
         await _saveTokenData(tokenResponse);
+        _webSocketService?.reconnectWithNewToken();
         print('✅ Access token refreshed successfully');
         return true;
       } else {
@@ -595,5 +687,9 @@ class ApiService {
     );
     accessToken = tokenResponse.accessToken;
     refreshToken = tokenResponse.refreshToken;
+  }
+
+  static void setWebSocketService(WebSocketService webSocketService) {
+    _webSocketService = webSocketService;
   }
 }

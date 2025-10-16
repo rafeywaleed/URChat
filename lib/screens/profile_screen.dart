@@ -200,7 +200,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ],
       ),
       body: _isLoading && _userData == null
-          ? Center(
+          ? const Center(
               child: NesPixelRowLoadingIndicator(
                 count: 3,
               ),
@@ -213,15 +213,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 child: Column(
                   children: [
-                    // Profile Picture Section
                     _buildProfilePictureSection(isSmallScreen),
                     SizedBox(height: isSmallScreen ? 24 : 32),
-
-                    // User Info Section
                     _buildUserInfoSection(isSmallScreen),
                     SizedBox(height: isSmallScreen ? 20 : 24),
-
-                    // Action Button
                     _buildActionButton(isSmallScreen),
                   ],
                 ),

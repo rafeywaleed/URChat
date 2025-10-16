@@ -96,18 +96,12 @@ class RegisterRequest {
   final String email;
   final String password;
   final String fullName;
-  final String bio;
-  final String pfpIndex;
-  final String pfpBg;
 
   RegisterRequest({
     required this.username,
     required this.email,
     required this.password,
     required this.fullName,
-    required this.bio,
-    required this.pfpIndex,
-    required this.pfpBg,
   });
 
   Map<String, dynamic> toJson() {
@@ -116,9 +110,6 @@ class RegisterRequest {
       'email': email,
       'password': password,
       'fullName': fullName,
-      'bio': bio,
-      'pfpIndex': pfpIndex,
-      'pfpBg': pfpBg,
     };
   }
 }

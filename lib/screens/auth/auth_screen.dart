@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:nes_ui/nes_ui.dart';
+import 'package:urchat_back_testing/model/dto.dart';
+import 'package:urchat_back_testing/screens/auth/email_inout_widget.dart';
+import 'package:urchat_back_testing/screens/auth/otp_verification_dialog.dart';
+import 'package:urchat_back_testing/screens/auth/password_reset_screen.dart';
 import 'package:urchat_back_testing/screens/home_screen.dart';
 import 'package:urchat_back_testing/service/api_service.dart';
 
@@ -16,6 +20,7 @@ class _AuthScreenState extends State<AuthScreen> {
   final _fullNameController = TextEditingController();
   bool _isLogin = true;
   bool _isLoading = false;
+  bool _obscurePassword = true;
 
   final Color _beige = const Color(0xFFF5F5DC);
   final Color _brown = const Color(0xFF5C4033);
@@ -31,24 +36,39 @@ class _AuthScreenState extends State<AuthScreen> {
       if (_isLogin) {
         await ApiService.login(
             _usernameController.text, _passwordController.text);
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => Homescreen()),
+        );
       } else {
-        await ApiService.register(
-          _usernameController.text,
-          _emailController.text,
-          _passwordController.text,
-          _fullNameController.text,
+        final registerRequest = RegisterRequest(
+          username: _usernameController.text,
+          email: _emailController.text,
+          password: _passwordController.text,
+          fullName: _fullNameController.text,
+        );
+
+        await ApiService.initiateRegistration(registerRequest);
+
+        await showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => OtpVerificationDialog(
+            registerRequest: registerRequest,
+            onVerificationSuccess: () {
+              _usernameController.clear();
+              _passwordController.clear();
+              _emailController.clear();
+              _fullNameController.clear();
+
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => Homescreen()),
+              );
+            },
+          ),
         );
       }
-
-      _usernameController.clear();
-      _passwordController.clear();
-      _emailController.clear();
-      _fullNameController.clear();
-
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => Homescreen()),
-      );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -63,7 +83,7 @@ class _AuthScreenState extends State<AuthScreen> {
     }
   }
 
-  InputDecoration _inputStyle(String label) {
+  InputDecoration _inputStyle(String label, {bool isPassword = false}) {
     return InputDecoration(
       labelText: label,
       labelStyle: TextStyle(color: _brown, fontWeight: FontWeight.w500),
@@ -78,7 +98,32 @@ class _AuthScreenState extends State<AuthScreen> {
         borderRadius: BorderRadius.circular(14),
       ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      // Add suffix icon for password fields
+      suffixIcon: isPassword
+          ? IconButton(
+              icon: Icon(
+                _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                color: _brown.withOpacity(0.6),
+              ),
+              onPressed: () {
+                setState(() {
+                  _obscurePassword = !_obscurePassword;
+                });
+              },
+            )
+          : null,
     );
+  }
+
+  // Password validation method
+  String? _validatePassword(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Please enter password';
+    }
+    // if (value.length < 6) {
+    //   return '6 characters';
+    // }
+    return null;
   }
 
   @override
@@ -142,11 +187,41 @@ class _AuthScreenState extends State<AuthScreen> {
                               const SizedBox(height: 16),
                               TextFormField(
                                 controller: _passwordController,
-                                decoration: _inputStyle("Password"),
-                                obscureText: true,
-                                validator: (value) =>
-                                    value!.isEmpty ? "Enter password" : null,
+                                decoration:
+                                    _inputStyle("Password", isPassword: true),
+                                obscureText: _obscurePassword,
+                                validator:
+                                    _validatePassword, // Use the validation method
                               ),
+                              _isLogin
+                                  ? TextButton(
+                                      onPressed: () async {
+                                        final email = await showDialog<String>(
+                                          context: context,
+                                          builder: (context) =>
+                                              EmailInputDialog(),
+                                        );
+
+                                        if (email != null && email.isNotEmpty) {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) =>
+                                                  PasswordResetScreen(
+                                                      email: email),
+                                            ),
+                                          );
+                                        }
+                                      },
+                                      child: Text(
+                                        'Forgot Password?',
+                                        style: TextStyle(
+                                          color: _brown,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    )
+                                  : SizedBox.shrink(),
                             ],
                           )
                         : Column(
@@ -161,9 +236,18 @@ class _AuthScreenState extends State<AuthScreen> {
                               const SizedBox(height: 16),
                               TextFormField(
                                 controller: _emailController,
+                                keyboardType: TextInputType.emailAddress,
                                 decoration: _inputStyle("Email"),
-                                validator: (value) =>
-                                    value!.isEmpty ? "Enter email" : null,
+                                validator: (value) {
+                                  if (value!.isEmpty) {
+                                    return 'Enter email';
+                                  }
+                                  // Basic email validation
+                                  if (!value.contains('@')) {
+                                    return 'Enter a valid email';
+                                  }
+                                  return null;
+                                },
                               ),
                               const SizedBox(height: 16),
                               TextFormField(
@@ -175,10 +259,11 @@ class _AuthScreenState extends State<AuthScreen> {
                               const SizedBox(height: 16),
                               TextFormField(
                                 controller: _passwordController,
-                                decoration: _inputStyle("Password"),
-                                obscureText: true,
-                                validator: (value) =>
-                                    value!.isEmpty ? "Enter password" : null,
+                                decoration:
+                                    _inputStyle("Password", isPassword: true),
+                                obscureText: _obscurePassword,
+                                validator:
+                                    _validatePassword, // Use the validation method
                               ),
                             ],
                           ),
@@ -209,6 +294,11 @@ class _AuthScreenState extends State<AuthScreen> {
                     onPressed: () {
                       setState(() {
                         _isLogin = !_isLogin;
+                        // Clear form when switching modes
+                        if (_isLogin) {
+                          _emailController.clear();
+                          _fullNameController.clear();
+                        }
                       });
                     },
                     child: Text(

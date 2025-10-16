@@ -5,20 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:nes_ui/nes_ui.dart';
 
-class MazeApp extends StatelessWidget {
-  const MazeApp({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Maze Chase',
-      theme: flutterNesTheme(),
-      home: const MazeGamePage(),
-    );
-  }
-}
-
 class MazeGamePage extends StatefulWidget {
   const MazeGamePage({Key? key}) : super(key: key);
 
@@ -40,6 +26,8 @@ class _MazeGamePageState extends State<MazeGamePage> {
   int _score = 0;
   int _highScore = 0;
 
+  final FocusNode _focusNode = FocusNode();
+
   @override
   void initState() {
     super.initState();
@@ -49,6 +37,7 @@ class _MazeGamePageState extends State<MazeGamePage> {
 
   @override
   void dispose() {
+    _focusNode.dispose();
     _chaseTimer?.cancel();
     super.dispose();
   }
@@ -128,12 +117,18 @@ class _MazeGamePageState extends State<MazeGamePage> {
     if (playerR == chaserR && playerC == chaserC) {
       _gameOver = true;
       _score = 0;
+      HapticFeedback.heavyImpact();
+      // Add a slight delay for a more dramatic effect
+      Future.delayed(const Duration(milliseconds: 100), () {
+        HapticFeedback.mediumImpact();
+      });
       _showDialog('GAME OVER', 'The Phantom caught you! Score reset.');
     } else if (playerR == rows - 1 && playerC == cols - 1) {
       _gameOver = true;
       _won = true;
       _score++;
       if (_score > _highScore) _highScore = _score;
+      HapticFeedback.mediumImpact();
       _showDialog('LEVEL CLEAR!', 'You escaped the maze! +1 Score');
     }
   }
@@ -218,7 +213,7 @@ class _MazeGamePageState extends State<MazeGamePage> {
   @override
   Widget build(BuildContext context) {
     return RawKeyboardListener(
-      focusNode: FocusNode(),
+      focusNode: _focusNode,
       autofocus: true,
       onKey: _handleKeyEvent,
       child: Scaffold(
@@ -226,8 +221,10 @@ class _MazeGamePageState extends State<MazeGamePage> {
         body: SafeArea(
           child: LayoutBuilder(
             builder: (context, constraints) {
-              final isDesktop = constraints.maxWidth >= 800;
-              final isMobile = constraints.maxWidth < 800;
+              final isDesktop = constraints.maxWidth > constraints.maxHeight;
+              // final isMobile ;
+              // final isDesktop = constraints.maxWidth >= 800;
+              // final isMobile = constraints.maxWidth < 800;
 
               return SingleChildScrollView(
                 child: Container(
@@ -320,8 +317,8 @@ class _MazeGamePageState extends State<MazeGamePage> {
                   child: NesContainer(
                     padding: const EdgeInsets.all(12),
                     child: Container(
-                      width: mazeSize + 12, // Fixed width
-                      height: mazeSize + 12, // Fixed height
+                      width: mazeSize + 12,
+                      height: mazeSize + 12,
                       decoration: BoxDecoration(
                         border: Border.all(color: Colors.black, width: 2),
                       ),
@@ -500,6 +497,12 @@ class _MazeGamePageState extends State<MazeGamePage> {
     final buttonSize = isMobile ? 50.0 : 40.0;
     final spacing = isMobile ? 6.0 : 8.0;
 
+    // Helper function for vibration + movement
+    void _vibrateAndMove(int dx, int dy) {
+      HapticFeedback.lightImpact();
+      _movePlayer(dx, dy);
+    }
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.center,
@@ -520,7 +523,7 @@ class _MazeGamePageState extends State<MazeGamePage> {
               angle: pi / 2,
               child: NesIconButton(
                 icon: NesIcons.leftArrowIndicator,
-                onPress: () => _movePlayer(-1, 0),
+                onPress: () => _vibrateAndMove(-1, 0),
                 size: Size(buttonSize, buttonSize),
               ),
             ),
@@ -542,7 +545,7 @@ class _MazeGamePageState extends State<MazeGamePage> {
           mainAxisSize: MainAxisSize.min,
           children: [
             NesIconButton(
-              onPress: () => _movePlayer(0, -1),
+              onPress: () => _vibrateAndMove(0, -1),
               icon: NesIcons.leftArrowIndicator,
               size: Size(buttonSize, buttonSize),
             ),
@@ -556,7 +559,7 @@ class _MazeGamePageState extends State<MazeGamePage> {
             ),
             NesIconButton(
               icon: NesIcons.rightArrowIndicator,
-              onPress: () => _movePlayer(0, 1),
+              onPress: () => _vibrateAndMove(0, 1),
               size: Size(buttonSize, buttonSize),
             ),
           ],
@@ -580,7 +583,7 @@ class _MazeGamePageState extends State<MazeGamePage> {
               angle: -pi / 2,
               child: NesIconButton(
                 icon: NesIcons.leftArrowIndicator,
-                onPress: () => _movePlayer(1, 0),
+                onPress: () => _vibrateAndMove(1, 0),
                 size: Size(buttonSize, buttonSize),
               ),
             ),

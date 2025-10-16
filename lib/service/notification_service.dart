@@ -1,4 +1,5 @@
 // lib/service/notification_service.dart
+
 import 'dart:async';
 import 'dart:convert';
 import 'package:firebase_core/firebase_core.dart';
@@ -174,6 +175,36 @@ class NotificationService {
       print('✅ Firebase initialized successfully');
     } catch (e) {
       print('❌ Firebase initialization failed: $e');
+      rethrow;
+    }
+  }
+
+  // Add this method to the NotificationService class
+  Future<void> requestPermissions() async {
+    try {
+      print('📝 Requesting notification permissions...');
+
+      NotificationSettings settings =
+          await _firebaseMessaging.requestPermission(
+        alert: true,
+        announcement: false,
+        badge: true,
+        carPlay: false,
+        criticalAlert: false,
+        provisional: false,
+        sound: true,
+      );
+
+      print('📱 Notification permission: ${settings.authorizationStatus}');
+
+      // If permission granted, get token and send to server
+      if (settings.authorizationStatus == AuthorizationStatus.authorized) {
+        await _getTokenAndSendToServer();
+      }
+
+      return;
+    } catch (e) {
+      print('⚠️ Permission request failed: $e');
       rethrow;
     }
   }

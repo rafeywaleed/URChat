@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:nes_ui/nes_ui.dart';
 import 'package:urchat_back_testing/firebase_options.dart';
 import 'package:urchat_back_testing/model/user.dart';
-import 'package:urchat_back_testing/screens/auth_screen.dart';
+import 'package:urchat_back_testing/screens/auth/auth_screen.dart';
 import 'package:urchat_back_testing/screens/home_screen.dart';
 import 'package:urchat_back_testing/service/api_service.dart';
 import 'package:urchat_back_testing/service/local_cache_service.dart';
@@ -92,7 +92,7 @@ class _MyAppState extends State<MyApp> {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'URChat',
-      theme: flutterNesTheme(),
+      theme: _getScaledNesTheme(),
       navigatorKey: navigatorKey,
       home: FutureBuilder(
         future: Future.delayed(Duration(milliseconds: 500)),
@@ -124,5 +124,45 @@ class _MyAppState extends State<MyApp> {
     } else {
       throw Exception('Failed to load user profile');
     }
+  }
+
+  ThemeData _getScaledNesTheme() {
+    final nesTheme = flutterNesTheme();
+
+    return nesTheme.copyWith(
+      textTheme: _scaleTextTheme(nesTheme.textTheme),
+      primaryTextTheme: _scaleTextTheme(nesTheme.primaryTextTheme),
+    );
+  }
+
+  TextTheme _scaleTextTheme(TextTheme textTheme) {
+    return TextTheme(
+      displayLarge: _scaleTextStyle(textTheme.displayLarge),
+      displayMedium: _scaleTextStyle(textTheme.displayMedium),
+      displaySmall: _scaleTextStyle(textTheme.displaySmall),
+      headlineLarge: _scaleTextStyle(textTheme.headlineLarge),
+      headlineMedium: _scaleTextStyle(textTheme.headlineMedium),
+      headlineSmall: _scaleTextStyle(textTheme.headlineSmall),
+      titleLarge: _scaleTextStyle(textTheme.titleLarge),
+      titleMedium: _scaleTextStyle(textTheme.titleMedium),
+      titleSmall: _scaleTextStyle(textTheme.titleSmall),
+      bodyLarge: _scaleTextStyle(textTheme.bodyLarge),
+      bodyMedium: _scaleTextStyle(textTheme.bodyMedium),
+      bodySmall: _scaleTextStyle(textTheme.bodySmall),
+      labelLarge: _scaleTextStyle(textTheme.labelLarge),
+      labelMedium: _scaleTextStyle(textTheme.labelMedium),
+      labelSmall: _scaleTextStyle(textTheme.labelSmall),
+    );
+  }
+
+  TextStyle? _scaleTextStyle(TextStyle? textStyle) {
+    if (textStyle == null) return null;
+
+    if (textStyle.fontSize == null) {
+      return textStyle.copyWith(fontSize: 12.0);
+    }
+    return textStyle.copyWith(
+      fontSize: textStyle.fontSize! - 4.0,
+    );
   }
 }

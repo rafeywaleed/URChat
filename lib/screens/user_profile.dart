@@ -577,11 +577,7 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen> {
                 ? SizedBox(
                     width: 20,
                     height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                    ),
-                  )
+                    child: NesHourglassLoadingIndicator())
                 : Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [

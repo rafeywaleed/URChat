@@ -2338,10 +2338,18 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                     // Message Text Field
                     Expanded(
                       child: TextField(
+                        style: ChatFonts.getTextStyle(_selectedFont),
                         autofocus: true,
                         controller: _messageController,
                         decoration: InputDecoration(
                           hintText: 'Type a message...',
+                          hintStyle: ChatFonts.getTextStyle(
+                            _selectedFont,
+                            baseStyle: TextStyle(),
+                          ),
+                          labelStyle: ChatFonts.getTextStyle(
+                            _selectedFont,
+                          ),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(24),
                           ),
