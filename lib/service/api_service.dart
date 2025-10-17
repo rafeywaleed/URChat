@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:urchat_back_testing/model/chat_room.dart';
 import 'package:urchat_back_testing/model/dto.dart';
@@ -8,7 +9,7 @@ import 'package:urchat_back_testing/service/websocket_service.dart';
 import 'storage_service.dart';
 
 class ApiService {
-  static const String baseUrl = 'http://192.168.0.102:8081';
+  static final String baseUrl = dotenv.env['BASE_URL'] ?? "";
   static final StorageService _storage = StorageService();
 
   static String? accessToken;
@@ -39,7 +40,6 @@ class ApiService {
 
   static bool get hasStoredAuth => _storage.isLoggedIn;
 
-  // ============ AUTH METHODS ============
   static Future<AuthResponse> register(
       String username, String email, String password, String fullName) async {
     final response = await http.post(
@@ -134,7 +134,6 @@ class ApiService {
     }
   }
 
-  // ============ PASSWORD RESET METHODS ============
   static Future<void> forgotPassword(String email) async {
     final response = await http.post(
       Uri.parse('$baseUrl/auth/forgot-password'),
@@ -604,7 +603,6 @@ class ApiService {
 
     var response = await requestFn();
 
-    // If we get 401, try to refresh token and retry once
     int retryCount = 0;
     const maxRetries = 3;
 

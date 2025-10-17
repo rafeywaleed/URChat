@@ -120,9 +120,9 @@ class _AuthScreenState extends State<AuthScreen> {
     if (value == null || value.isEmpty) {
       return 'Please enter password';
     }
-    // if (value.length < 6) {
-    //   return '6 characters';
-    // }
+    if (value.length < 6) {
+      return '6 characters';
+    }
     return null;
   }
 
