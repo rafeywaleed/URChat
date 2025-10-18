@@ -8,24 +8,24 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import 'package:urchat_back_testing/model/dto.dart';
-import 'package:urchat_back_testing/model/message.dart';
-import 'package:urchat_back_testing/screens/auth/auth_screen.dart';
-import 'package:urchat_back_testing/screens/chatting.dart';
-import 'package:urchat_back_testing/screens/group_management_screen.dart';
-import 'package:urchat_back_testing/screens/group_pfp_dialog.dart';
-import 'package:urchat_back_testing/screens/new_group.dart';
-import 'package:urchat_back_testing/screens/offline_screen.dart';
-import 'package:urchat_back_testing/screens/profile_screen.dart';
-import 'package:urchat_back_testing/screens/search_delegate.dart';
-import 'package:urchat_back_testing/screens/user_profile.dart';
-import 'package:urchat_back_testing/service/api_service.dart';
-import 'package:urchat_back_testing/service/local_cache_service.dart';
-import 'package:urchat_back_testing/service/notification_service.dart';
-import 'package:urchat_back_testing/service/websocket_service.dart';
+import 'package:urchat/model/dto.dart';
+import 'package:urchat/model/message.dart';
+import 'package:urchat/screens/auth/auth_screen.dart';
+import 'package:urchat/screens/chatting.dart';
+import 'package:urchat/screens/group_management_screen.dart';
+import 'package:urchat/screens/group_pfp_dialog.dart';
+import 'package:urchat/screens/new_group.dart';
+import 'package:urchat/screens/offline_screen.dart';
+import 'package:urchat/screens/profile_screen.dart';
+import 'package:urchat/screens/search_delegate.dart';
+import 'package:urchat/screens/user_profile.dart';
+import 'package:urchat/service/api_service.dart';
+import 'package:urchat/service/local_cache_service.dart';
+import 'package:urchat/service/notification_service.dart';
+import 'package:urchat/service/websocket_service.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:urchat_back_testing/widgets/deletion_dialog.dart';
-import 'package:urchat_back_testing/widgets/pixle_circle.dart';
+import 'package:urchat/widgets/deletion_dialog.dart';
+import 'package:urchat/widgets/pixle_circle.dart';
 
 import '../model/chat_room.dart';
 
@@ -1558,9 +1558,9 @@ class _HomescreenState extends State<Homescreen>
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
       leading: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: NesIcon(iconData: NesIcons.musicNote),
-      ),
+          padding: const EdgeInsets.all(8.0),
+          // child: NesIcon(iconData: NesIcons.musicNote),
+          child: Image.asset("assets/urchat_logo.png")),
       title: Text('URChat', style: GoogleFonts.pressStart2p(fontSize: 14)),
       actions: [
         // Notification icon - only shown when notifications are disabled

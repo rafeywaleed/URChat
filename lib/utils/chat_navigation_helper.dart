@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:urchat_back_testing/screens/home_screen.dart';
-import 'package:urchat_back_testing/service/api_service.dart';
+import 'package:urchat/screens/home_screen.dart';
+import 'package:urchat/service/api_service.dart';
 
 class NavigationHelper {
   static void navigateToChat(BuildContext context, String username) async {

@@ -1,7 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:urchat_back_testing/themes/butter/bf_path.dart';
+import 'package:urchat/themes/butter/bf_path.dart';
 
 class ButterflyDemo extends StatefulWidget {
   const ButterflyDemo({Key? key}) : super(key: key);

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:animated_emoji/animated_emoji.dart';
-import 'package:urchat_back_testing/utils/animated_emoji_mapper.dart';
+import 'package:urchat/utils/animated_emoji_mapper.dart';
 
 class AnimatedEmojiPickerScreen extends StatefulWidget {
   final Function(String emoji) onEmojiSelected;

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:nes_ui/nes_ui.dart';
-import 'package:urchat_back_testing/service/api_service.dart';
+import 'package:urchat/service/api_service.dart';
 
 class EmailInputDialog extends StatefulWidget {
   const EmailInputDialog({Key? key}) : super(key: key);

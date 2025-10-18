@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:nes_ui/nes_ui.dart';
-import 'package:urchat_back_testing/model/dto.dart';
-import 'package:urchat_back_testing/model/user.dart';
-import 'package:urchat_back_testing/service/api_service.dart';
+import 'package:urchat/model/dto.dart';
+import 'package:urchat/model/user.dart';
+import 'package:urchat/service/api_service.dart';
 
 class CreateGroupDialog extends StatefulWidget {
   final Function(GroupChatRoomDTO)? onGroupCreated;

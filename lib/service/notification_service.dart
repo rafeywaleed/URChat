@@ -7,10 +7,10 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:urchat_back_testing/firebase_options.dart';
-import 'package:urchat_back_testing/main.dart';
-import 'package:urchat_back_testing/screens/home_screen.dart';
-import 'package:urchat_back_testing/service/api_service.dart';
+import 'package:urchat/firebase_options.dart';
+import 'package:urchat/main.dart';
+import 'package:urchat/screens/home_screen.dart';
+import 'package:urchat/service/api_service.dart';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();

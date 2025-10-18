@@ -1,11 +1,11 @@
 import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
-import 'package:urchat_back_testing/model/chat_room.dart';
-import 'package:urchat_back_testing/model/dto.dart';
-import 'package:urchat_back_testing/model/message.dart';
-import 'package:urchat_back_testing/model/user.dart';
-import 'package:urchat_back_testing/service/websocket_service.dart';
+import 'package:urchat/model/chat_room.dart';
+import 'package:urchat/model/dto.dart';
+import 'package:urchat/model/message.dart';
+import 'package:urchat/model/user.dart';
+import 'package:urchat/service/websocket_service.dart';
 import 'storage_service.dart';
 
 class ApiService {

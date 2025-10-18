@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:urchat_back_testing/model/dto.dart';
+import 'package:urchat/model/dto.dart';
 
 class UserCacheService {
   static const String _userPrefix = 'cached_user_';

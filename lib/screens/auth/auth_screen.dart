@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:nes_ui/nes_ui.dart';
-import 'package:urchat_back_testing/model/dto.dart';
-import 'package:urchat_back_testing/screens/auth/email_inout_widget.dart';
-import 'package:urchat_back_testing/screens/auth/otp_verification_dialog.dart';
-import 'package:urchat_back_testing/screens/auth/password_reset_screen.dart';
-import 'package:urchat_back_testing/screens/home_screen.dart';
-import 'package:urchat_back_testing/service/api_service.dart';
+import 'package:urchat/model/dto.dart';
+import 'package:urchat/screens/auth/email_inout_widget.dart';
+import 'package:urchat/screens/auth/otp_verification_dialog.dart';
+import 'package:urchat/screens/auth/password_reset_screen.dart';
+import 'package:urchat/screens/home_screen.dart';
+import 'package:urchat/service/api_service.dart';
 
 class AuthScreen extends StatefulWidget {
   @override
@@ -190,7 +190,7 @@ class _AuthScreenState extends State<AuthScreen> {
                                 decoration:
                                     _inputStyle("Password", isPassword: true),
                                 obscureText: _obscurePassword,
-                                validator: _validatePassword,
+                                // validator: _validatePassword,
                               ),
                               const SizedBox(height: 8),
                               if (_isLogin)
@@ -264,8 +264,8 @@ class _AuthScreenState extends State<AuthScreen> {
                                 decoration:
                                     _inputStyle("Password", isPassword: true),
                                 obscureText: _obscurePassword,
-                                validator:
-                                    _validatePassword, // Use the validation method
+                                // validator:
+                                //     _validatePassword, // Use the validation method
                               ),
                             ],
                           ),

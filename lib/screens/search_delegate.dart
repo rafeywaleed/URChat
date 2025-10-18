@@ -1,12 +1,12 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:nes_ui/nes_ui.dart';
-import 'package:urchat_back_testing/model/user.dart';
-import 'package:urchat_back_testing/screens/home_screen.dart';
-import 'package:urchat_back_testing/screens/user_profile.dart';
+import 'package:urchat/model/user.dart';
+import 'package:urchat/screens/home_screen.dart';
+import 'package:urchat/screens/user_profile.dart';
 
-import 'package:urchat_back_testing/service/api_service.dart';
-import 'package:urchat_back_testing/utils/chat_navigation_helper.dart';
+import 'package:urchat/service/api_service.dart';
+import 'package:urchat/utils/chat_navigation_helper.dart';
 
 class SearchScreen extends StatefulWidget {
   @override

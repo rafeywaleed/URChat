@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'package:urchat_back_testing/model/dto.dart';
+import 'package:urchat/model/dto.dart';
 
 class ChatRoom {
   final String chatId;

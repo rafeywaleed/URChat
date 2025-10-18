@@ -1,9 +1,9 @@
 // local_cache_service.dart
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:urchat_back_testing/model/chat_room.dart';
+import 'package:urchat/model/chat_room.dart';
 
-import 'package:urchat_back_testing/model/message.dart';
+import 'package:urchat/model/message.dart';
 
 class LocalCacheService {
   static final LocalCacheService _instance = LocalCacheService._internal();

@@ -1,9 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:nes_ui/nes_ui.dart';
-import 'package:urchat_back_testing/model/dto.dart';
-import 'package:urchat_back_testing/service/api_service.dart';
-import 'package:urchat_back_testing/service/storage_service.dart';
+import 'package:urchat/model/dto.dart';
+import 'package:urchat/service/api_service.dart';
+import 'package:urchat/service/storage_service.dart';
 
 class OtpVerificationDialog extends StatefulWidget {
   final RegisterRequest registerRequest;

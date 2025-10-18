@@ -4,8 +4,8 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:stomp_dart_client/stomp_dart_client.dart';
-import 'package:urchat_back_testing/model/message.dart';
-import 'package:urchat_back_testing/service/api_service.dart';
+import 'package:urchat/model/message.dart';
+import 'package:urchat/service/api_service.dart';
 import '../model/chat_room.dart';
 
 class WebSocketService {

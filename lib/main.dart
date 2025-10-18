@@ -1,17 +1,17 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:nes_ui/nes_ui.dart';
-import 'package:urchat_back_testing/firebase_options.dart';
-import 'package:urchat_back_testing/model/user.dart';
-import 'package:urchat_back_testing/screens/auth/auth_screen.dart';
-import 'package:urchat_back_testing/screens/home_screen.dart';
-import 'package:urchat_back_testing/service/api_service.dart';
-import 'package:urchat_back_testing/service/local_cache_service.dart';
+import 'package:urchat/firebase_options.dart';
+import 'package:urchat/model/user.dart';
+import 'package:urchat/screens/auth/auth_screen.dart';
+import 'package:urchat/screens/home_screen.dart';
+import 'package:urchat/service/api_service.dart';
+import 'package:urchat/service/local_cache_service.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:async';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:urchat_back_testing/service/notification_service.dart';
+import 'package:urchat/service/notification_service.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 

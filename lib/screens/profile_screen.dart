@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:nes_ui/nes_ui.dart';
 import 'package:animated_emoji/animated_emoji.dart';
-import 'package:urchat_back_testing/service/api_service.dart';
-import 'package:urchat_back_testing/utils/animated_emoji_mapper.dart';
-import 'package:urchat_back_testing/widgets/pfp_selector.dart';
+import 'package:urchat/service/api_service.dart';
+import 'package:urchat/utils/animated_emoji_mapper.dart';
+import 'package:urchat/widgets/pfp_selector.dart';
 
 class ProfileScreen extends StatefulWidget {
   @override

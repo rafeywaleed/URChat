@@ -1,8 +1,8 @@
 // import 'dart:convert';
 
 // import 'package:http/http.dart' as http;
-// import 'package:urchat_back_testing/model/user.dart';
-// import 'package:urchat_back_testing/service/api_service.dart';
+// import 'package:urchat/model/user.dart';
+// import 'package:urchat/service/api_service.dart';
 
 // extension ApiServiceExtension on ApiService {
 //   static Future<User> getUserProfile(String username) async {

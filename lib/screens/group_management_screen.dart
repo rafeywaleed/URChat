@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:urchat_back_testing/model/dto.dart';
-import 'package:urchat_back_testing/screens/group_pfp_dialog.dart';
-import 'package:urchat_back_testing/screens/user_profile.dart';
-import 'package:urchat_back_testing/service/api_service.dart';
+import 'package:urchat/model/dto.dart';
+import 'package:urchat/screens/group_pfp_dialog.dart';
+import 'package:urchat/screens/user_profile.dart';
+import 'package:urchat/service/api_service.dart';
 
 import '../model/chat_room.dart';
 

@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:urchat_back_testing/model/message.dart';
+import 'package:urchat/model/message.dart';
 
 class ChatCacheService {
   static const String _themePrefix = 'chat_theme_';
