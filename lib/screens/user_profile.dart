@@ -577,7 +577,7 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen> {
                 ? SizedBox(
                     width: 20,
                     height: 20,
-                    child: NesHourglassLoadingIndicator())
+                    child: Center(child: NesHourglassLoadingIndicator()))
                 : Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [

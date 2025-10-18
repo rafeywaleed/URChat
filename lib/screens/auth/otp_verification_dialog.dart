@@ -101,7 +101,7 @@ class _OtpVerificationDialogState extends State<OtpVerificationDialog> {
       );
 
       widget.onVerificationSuccess?.call();
-      Navigator.of(context).pop(true);
+      // Navigator.of(context).pop(true);
     } catch (e) {
       NesSnackbar.show(
         context,

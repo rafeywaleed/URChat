@@ -44,8 +44,11 @@ class _SearchScreenState extends State<SearchScreen> {
 
     try {
       final results = await ApiService.searchUsers(query);
+      final filteredResults = results
+          .where((user) => user.username != ApiService.currentUsername)
+          .toList();
       setState(() {
-        _searchResults = results.cast<User>();
+        _searchResults = filteredResults.cast<User>();
         _isSearching = false;
       });
     } catch (e) {
@@ -271,7 +274,6 @@ class _SearchScreenState extends State<SearchScreen> {
           padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
           child: Row(
             children: [
-              // Profile Avatar
               GestureDetector(
                 onTap: () => _viewProfile(user),
                 child: Container(

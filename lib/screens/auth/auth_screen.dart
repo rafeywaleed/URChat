@@ -61,6 +61,7 @@ class _AuthScreenState extends State<AuthScreen> {
               _emailController.clear();
               _fullNameController.clear();
 
+              Navigator.of(context).pop();
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(builder: (context) => Homescreen()),
@@ -115,7 +116,6 @@ class _AuthScreenState extends State<AuthScreen> {
     );
   }
 
-  // Password validation method
   String? _validatePassword(String? value) {
     if (value == null || value.isEmpty) {
       return 'Please enter password';
@@ -190,38 +190,40 @@ class _AuthScreenState extends State<AuthScreen> {
                                 decoration:
                                     _inputStyle("Password", isPassword: true),
                                 obscureText: _obscurePassword,
-                                validator:
-                                    _validatePassword, // Use the validation method
+                                validator: _validatePassword,
                               ),
-                              _isLogin
-                                  ? TextButton(
-                                      onPressed: () async {
-                                        final email = await showDialog<String>(
-                                          context: context,
-                                          builder: (context) =>
-                                              EmailInputDialog(),
-                                        );
+                              const SizedBox(height: 8),
+                              if (_isLogin)
+                                Align(
+                                  alignment: Alignment.centerRight,
+                                  child: TextButton(
+                                    onPressed: () async {
+                                      final email = await showDialog<String>(
+                                        context: context,
+                                        builder: (context) =>
+                                            EmailInputDialog(),
+                                      );
 
-                                        if (email != null && email.isNotEmpty) {
-                                          Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (context) =>
-                                                  PasswordResetScreen(
-                                                      email: email),
-                                            ),
-                                          );
-                                        }
-                                      },
-                                      child: Text(
-                                        'Forgot Password?',
-                                        style: TextStyle(
-                                          color: _brown,
-                                          fontSize: 14,
-                                        ),
+                                      if (email != null && email.isNotEmpty) {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) =>
+                                                PasswordResetScreen(
+                                                    email: email),
+                                          ),
+                                        );
+                                      }
+                                    },
+                                    child: Text(
+                                      'Forgot Password?',
+                                      style: TextStyle(
+                                        color: _brown,
+                                        fontSize: 14,
                                       ),
-                                    )
-                                  : SizedBox.shrink(),
+                                    ),
+                                  ),
+                                ),
                             ],
                           )
                         : Column(

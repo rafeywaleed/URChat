@@ -106,6 +106,10 @@ class _HomescreenState extends State<Homescreen>
       }
     });
 
+    _timer = Timer.periodic(const Duration(seconds: 10), (timer) {
+      _switchRunningText();
+    });
+
     _focusNode = FocusNode();
     _connectionTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
       if (!_webSocketService.isConnected) {
@@ -313,6 +317,7 @@ class _HomescreenState extends State<Homescreen>
         setState(() {
           _isLoading = false;
           _errorMessage = 'Failed to load data: $e';
+          _isInternetConnected = false;
         });
       }
     }
@@ -2064,7 +2069,6 @@ class _HomescreenState extends State<Homescreen>
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // New Chat Option
                 NesButton(
                   type: NesButtonType.primary,
                   child: Row(
@@ -2079,7 +2083,7 @@ class _HomescreenState extends State<Homescreen>
                     ],
                   ),
                   onPressed: () {
-                    Navigator.pop(context); // Close the menu
+                    Navigator.pop(context);
                     Navigator.push(
                       context,
                       MaterialPageRoute(builder: (context) => SearchScreen()),
@@ -2090,24 +2094,26 @@ class _HomescreenState extends State<Homescreen>
                 ),
                 const SizedBox(height: 12),
 
-                // Create Group Option
-                NesButton(
-                  type: NesButtonType.warning,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.group_add_outlined, size: 18),
-                      const SizedBox(width: 12),
-                      Text(
-                        "Create Group",
-                        style: GoogleFonts.pressStart2p(fontSize: 10),
-                      ),
-                    ],
+                Hero(
+                  tag: "create_group",
+                  child: NesButton(
+                    type: NesButtonType.warning,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.group_add_outlined, size: 18),
+                        const SizedBox(width: 12),
+                        Text(
+                          "Create Group",
+                          style: GoogleFonts.pressStart2p(fontSize: 10),
+                        ),
+                      ],
+                    ),
+                    onPressed: () {
+                      Navigator.pop(context); // Close the menu
+                      _showCreateGroupDialog();
+                    },
                   ),
-                  onPressed: () {
-                    Navigator.pop(context); // Close the menu
-                    _showCreateGroupDialog();
-                  },
                 ),
                 const SizedBox(height: 8),
 

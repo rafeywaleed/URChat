@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:stomp_dart_client/stomp_dart_client.dart';
 import 'package:urchat_back_testing/model/message.dart';
 import 'package:urchat_back_testing/service/api_service.dart';
@@ -59,30 +60,31 @@ class WebSocketService {
     _isConnecting = true;
     _cancelPendingReconnect(); // NEW: Cancel any pending reconnects
 
+    String webSocketURL = "${dotenv.env['BASE_URL'] ?? ""}/ws";
+
     try {
       _stompClient = StompClient(
         config: StompConfig(
-          url: 'http://192.168.0.102:8081/ws',
+          url: webSocketURL,
           onConnect: _onConnect,
           onWebSocketError: (dynamic error) {
             print('❌ WebSocket error: $error');
             _isConnected = false;
             _isConnecting = false;
 
-            // FIXED: Use our controlled reconnect instead of immediate retry
             _scheduleReconnect();
           },
           onStompError: (dynamic error) {
             print('❌ STOMP error: $error');
             _isConnected = false;
             _isConnecting = false;
-            _scheduleReconnect(); // FIXED: Use controlled reconnect
+            _scheduleReconnect();
           },
           onDisconnect: (frame) {
             print('🔌 WebSocket disconnected');
             _isConnected = false;
             _isConnecting = false;
-            _scheduleReconnect(); // FIXED: Use controlled reconnect
+            _scheduleReconnect();
           },
           stompConnectHeaders: {
             'Authorization': 'Bearer $token',
