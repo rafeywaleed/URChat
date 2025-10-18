@@ -1,4 +1,4 @@
-package com.example.urchat_back_testing
+package com.exotech.urchat
 
 import io.flutter.embedding.android.FlutterActivity
 

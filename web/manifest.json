@@ -1,18 +1,39 @@
 {
-    "name": "UR Chat",
-    "short_name": "UR Chat",
-    "description": "Real-time chat application",
-    "start_url": "/",
-    "display": "standalone",
-    "background_color": "#F5F5DC",
-    "theme_color": "#5C4033",
-    "orientation": "portrait-primary",
-    "icons": [
-        { "src": "/favicon.ico", "type": "image/x-icon", "sizes": "16x16 32x32" },
-        { "src": "/icon-192.png", "type": "image/png", "sizes": "192x192" },
-        { "src": "/icon-512.png", "type": "image/png", "sizes": "512x512" },
-        { "src": "/icon-192-maskable.png", "type": "image/png", "sizes": "192x192", "purpose": "maskable" },
-        { "src": "/icon-512-maskable.png", "type": "image/png", "sizes": "512x512", "purpose": "maskable" }
-    ]
-
+     "name": "URChat",
+     "short_name": "URChat",
+     "description": "Real-time chat application",
+     "start_url": "/",
+     "display": "standalone",
+     "background_color": "#F5F5DC",
+     "theme_color": "#5C4033",
+     "orientation": "portrait-primary",
+     "icons": [
+          {
+               "src": "/favicon.ico",
+               "type": "image/x-icon",
+               "sizes": "16x16 32x32"
+          },
+          {
+               "src": "/icon-192.png",
+               "type": "image/png",
+               "sizes": "192x192"
+          },
+          {
+               "src": "/icon-512.png",
+               "type": "image/png",
+               "sizes": "512x512"
+          },
+          {
+               "src": "/icon-192-maskable.png",
+               "type": "image/png",
+               "sizes": "192x192",
+               "purpose": "maskable"
+          },
+          {
+               "src": "/icon-512-maskable.png",
+               "type": "image/png",
+               "sizes": "512x512",
+               "purpose": "maskable"
+          }
+     ]
 }
