@@ -1558,9 +1558,13 @@ class _HomescreenState extends State<Homescreen>
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
       leading: Padding(
-          padding: const EdgeInsets.all(8.0),
-          // child: NesIcon(iconData: NesIcons.musicNote),
-          child: Image.asset("assets/urchat_logo.png")),
+        padding: const EdgeInsets.all(8.0),
+        // child: NesIcon(iconData: NesIcons.musicNote),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12), // Adjust radius as needed
+          child: Image.asset("assets/urchat_logo.png"),
+        ),
+      ),
       title: Text('URChat', style: GoogleFonts.pressStart2p(fontSize: 14)),
       actions: [
         // Notification icon - only shown when notifications are disabled

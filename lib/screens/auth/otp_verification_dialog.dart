@@ -8,11 +8,13 @@ import 'package:urchat/service/storage_service.dart';
 class OtpVerificationDialog extends StatefulWidget {
   final RegisterRequest registerRequest;
   final VoidCallback? onVerificationSuccess;
+  final VoidCallback? onClose;
 
   const OtpVerificationDialog({
     Key? key,
     required this.registerRequest,
     this.onVerificationSuccess,
+    this.onClose,
   }) : super(key: key);
 
   @override
@@ -101,7 +103,7 @@ class _OtpVerificationDialogState extends State<OtpVerificationDialog> {
       );
 
       widget.onVerificationSuccess?.call();
-      // Navigator.of(context).pop(true);
+      Navigator.of(context).pop(true);
     } catch (e) {
       NesSnackbar.show(
         context,
@@ -153,6 +155,11 @@ class _OtpVerificationDialogState extends State<OtpVerificationDialog> {
     ApiService.currentUsername = authResponse.username;
   }
 
+  void _closeDialog() {
+    widget.onClose?.call();
+    Navigator.of(context).pop(false);
+  }
+
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(builder: (context, constraints) {
@@ -168,18 +175,7 @@ class _OtpVerificationDialogState extends State<OtpVerificationDialog> {
       final baseFontSize = isMobile ? 13.0 : 15.0;
       final otpBoxSize = isMobile ? 48.0 : 56.0;
 
-      return
-          // WillPopScope(
-          //   onWillPop: () async {
-          //     NesSnackbar.show(
-          //       context,
-          //       text: 'Please complete OTP verification to continue',
-          //       type: NesSnackbarType.warning,
-          //     );
-          //     return false;
-          //   },
-          //   child:
-          Dialog(
+      return Dialog(
         insetPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 24),
         backgroundColor: Colors.transparent,
         child: Center(
@@ -195,13 +191,30 @@ class _OtpVerificationDialogState extends State<OtpVerificationDialog> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    'VERIFY YOUR EMAIL',
-                    style: TextStyle(
-                      fontSize: baseFontSize + 3,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    textAlign: TextAlign.center,
+                  // Header with close button
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'VERIFY YOUR EMAIL',
+                          style: TextStyle(
+                            fontSize: baseFontSize + 3,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, size: 20),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(
+                          minWidth: 32,
+                          minHeight: 32,
+                        ),
+                        onPressed: _closeDialog,
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 12),
                   Text(
@@ -229,14 +242,21 @@ class _OtpVerificationDialogState extends State<OtpVerificationDialog> {
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 20),
-                  Wrap(
-                    alignment: WrapAlignment.center,
-                    spacing: 10,
-                    runSpacing: 10,
+                  // OTP Input Fields with custom rectangular borders
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: List.generate(4, (index) {
-                      return SizedBox(
+                      return Container(
                         width: otpBoxSize,
                         height: otpBoxSize,
+                        margin: EdgeInsets.symmetric(horizontal: 6),
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: Colors.black,
+                            width: 2.0,
+                          ),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
                         child: TextField(
                           controller: _otpControllers[index],
                           focusNode: _focusNodes[index],
@@ -249,7 +269,8 @@ class _OtpVerificationDialogState extends State<OtpVerificationDialog> {
                           ),
                           decoration: const InputDecoration(
                             counterText: "",
-                            border: OutlineInputBorder(),
+                            border: InputBorder.none,
+                            contentPadding: EdgeInsets.zero,
                           ),
                           onChanged: (value) => _onOtpChanged(value, index),
                         ),
@@ -287,7 +308,6 @@ class _OtpVerificationDialogState extends State<OtpVerificationDialog> {
             ),
           ),
         ),
-        // ),
       );
     });
   }

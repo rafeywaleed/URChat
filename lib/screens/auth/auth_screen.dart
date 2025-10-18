@@ -20,7 +20,6 @@ class _AuthScreenState extends State<AuthScreen> {
   final _fullNameController = TextEditingController();
   bool _isLogin = true;
   bool _isLoading = false;
-  bool _obscurePassword = true;
 
   final Color _beige = const Color(0xFFF5F5DC);
   final Color _brown = const Color(0xFF5C4033);
@@ -84,7 +83,179 @@ class _AuthScreenState extends State<AuthScreen> {
     }
   }
 
-  InputDecoration _inputStyle(String label, {bool isPassword = false}) {
+  // Comprehensive validation methods
+  String? _validateFullName(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Full name is required';
+    }
+    if (value.length < 2) {
+      return 'Full name must be at least 2 characters';
+    }
+    // if (value.length > 50) {
+    //   return 'Full name cannot exceed 50 characters';
+    // }
+    // Allow letters, spaces, hyphens, and apostrophes
+    final nameRegex = RegExp(r"^[a-zA-Zà-ÿÀ-Ÿ '\-]+$");
+    if (!nameRegex.hasMatch(value)) {
+      return 'Full name can only contain letters, spaces, hyphens, and apostrophes';
+    }
+    return null;
+  }
+
+  String? _validateEmail(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Email is required';
+    }
+
+    // Check for spaces
+    if (value.contains(' ')) {
+      return 'Email cannot contain spaces';
+    }
+
+    // Basic email format validation
+    final emailRegex =
+        RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
+    if (!emailRegex.hasMatch(value)) {
+      return 'Please enter a valid email address';
+    }
+
+    // Check for consecutive dots
+    if (value.contains('..')) {
+      return 'Email cannot contain consecutive dots';
+    }
+
+    // Check for special characters at the beginning or end
+    if (value.startsWith('.') ||
+        value.endsWith('.') ||
+        value.startsWith('@') ||
+        value.endsWith('@')) {
+      return 'Email cannot start or end with special characters';
+    }
+
+    return null;
+  }
+
+  String? _validateUsername(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Username is required';
+    }
+    if (value.length < 3) {
+      return 'Username must be at least 3 characters';
+    }
+    if (value.length > 20) {
+      return 'Username cannot exceed 20 characters';
+    }
+    if (value.contains(' ')) {
+      return 'Username cannot contain spaces';
+    }
+    // Check for uppercase letters
+    if (value.contains(RegExp(r'[A-Z]'))) {
+      return 'Username cannot contain uppercase letters';
+    }
+    // Allow lowercase letters, numbers, underscores, hyphens, and dots
+    final usernameRegex = RegExp(r'^[a-z0-9_.-]+$');
+    if (!usernameRegex.hasMatch(value)) {
+      return 'Username can only contain lowercase letters, numbers, underscores, hyphens, and dots';
+    }
+    // Cannot start or end with special characters
+    if (value.startsWith('_') ||
+        value.endsWith('_') ||
+        value.startsWith('-') ||
+        value.endsWith('-') ||
+        value.startsWith('.') ||
+        value.endsWith('.')) {
+      return 'Username cannot start or end with underscores, hyphens, or dots';
+    }
+
+    if (value.contains('__') ||
+        value.contains('--') ||
+        value.contains('..') ||
+        value.contains('_-') ||
+        value.contains('_.') ||
+        value.contains('-.') ||
+        value.contains('-_') ||
+        value.contains('.-') ||
+        value.contains('. _') ||
+        value.contains('._')) {
+      return 'Username cannot contain consecutive special characters';
+    }
+    return null;
+  }
+
+  String? _validatePassword(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Password is required';
+    }
+    if (value.length < 5) {
+      return 'Password must be at least 5 characters';
+    }
+    if (value.length > 128) {
+      return 'Password cannot exceed 128 characters';
+    }
+    if (value.contains(' ')) {
+      return 'Password cannot contain spaces';
+    }
+
+    // Check for at least one uppercase letter
+    // if (!value.contains(RegExp(r'[A-Z]'))) {
+    //   return 'Password must contain at least one uppercase letter';
+    // }
+
+    // Check for at least one lowercase letter
+    // if (!value.contains(RegExp(r'[a-z]'))) {
+    //   return 'Password must contain at least one lowercase letter';
+    // }
+
+    // Check for at least one number
+    // if (!value.contains(RegExp(r'[0-9]'))) {
+    //   return 'Password must contain at least one number';
+    // }
+
+    // Check for at least one special character
+    // if (!value.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))) {
+    //   return 'Password must contain at least one special character';
+    // }
+
+    // Check for common insecure patterns
+    // if (RegExp(r'(.)\1{2,}').hasMatch(value)) {
+    //   return 'Password cannot contain 3 or more identical characters in a row';
+    // }
+
+    // Check for sequential characters
+    // if (_hasSequentialCharacters(value)) {
+    //   return 'Password cannot contain sequential characters (e.g., abc, 123)';
+    // }
+
+    return null;
+  }
+
+  String? _validateLoginPassword(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Password is required';
+    }
+    return null;
+  }
+
+  // Helper method to check for sequential characters
+  // bool _hasSequentialCharacters(String input) {
+  //   for (int i = 0; i < input.length - 2; i++) {
+  //     int char1 = input.codeUnitAt(i);
+  //     int char2 = input.codeUnitAt(i + 1);
+  //     int char3 = input.codeUnitAt(i + 2);
+
+  //     // Check for ascending sequence (abc, 123)
+  //     if (char2 == char1 + 1 && char3 == char2 + 1) {
+  //       return true;
+  //     }
+  //     // Check for descending sequence (cba, 321)
+  //     if (char2 == char1 - 1 && char3 == char2 - 1) {
+  //       return true;
+  //     }
+  //   }
+  //   return false;
+  // }
+
+  InputDecoration _inputStyle(String label) {
     return InputDecoration(
       labelText: label,
       labelStyle: TextStyle(color: _brown, fontWeight: FontWeight.w500),
@@ -99,31 +270,7 @@ class _AuthScreenState extends State<AuthScreen> {
         borderRadius: BorderRadius.circular(14),
       ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      // Add suffix icon for password fields
-      suffixIcon: isPassword
-          ? IconButton(
-              icon: Icon(
-                _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                color: _brown.withOpacity(0.6),
-              ),
-              onPressed: () {
-                setState(() {
-                  _obscurePassword = !_obscurePassword;
-                });
-              },
-            )
-          : null,
     );
-  }
-
-  String? _validatePassword(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Please enter password';
-    }
-    if (value.length < 6) {
-      return '6 characters';
-    }
-    return null;
   }
 
   @override
@@ -181,49 +328,44 @@ class _AuthScreenState extends State<AuthScreen> {
                               TextFormField(
                                 controller: _usernameController,
                                 decoration: _inputStyle("Username"),
-                                validator: (value) =>
-                                    value!.isEmpty ? "Enter username" : null,
+                                validator: _validateUsername,
                               ),
                               const SizedBox(height: 16),
                               TextFormField(
+                                key: ValueKey("login_password"),
                                 controller: _passwordController,
-                                decoration:
-                                    _inputStyle("Password", isPassword: true),
-                                obscureText: _obscurePassword,
-                                // validator: _validatePassword,
+                                decoration: _inputStyle("Password"),
+                                validator: _validateLoginPassword,
                               ),
                               const SizedBox(height: 8),
-                              if (_isLogin)
-                                Align(
-                                  alignment: Alignment.centerRight,
-                                  child: TextButton(
-                                    onPressed: () async {
-                                      final email = await showDialog<String>(
-                                        context: context,
-                                        builder: (context) =>
-                                            EmailInputDialog(),
-                                      );
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: TextButton(
+                                  onPressed: () async {
+                                    final email = await showDialog<String>(
+                                      context: context,
+                                      builder: (context) => EmailInputDialog(),
+                                    );
 
-                                      if (email != null && email.isNotEmpty) {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) =>
-                                                PasswordResetScreen(
-                                                    email: email),
-                                          ),
-                                        );
-                                      }
-                                    },
-                                    child: Text(
-                                      'Forgot Password?',
-                                      style: TextStyle(
-                                        color: _brown,
-                                        fontSize: 14,
-                                      ),
+                                    if (email != null && email.isNotEmpty) {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              PasswordResetScreen(email: email),
+                                        ),
+                                      );
+                                    }
+                                  },
+                                  child: Text(
+                                    'Forgot Password?',
+                                    style: TextStyle(
+                                      color: _brown,
+                                      fontSize: 14,
                                     ),
                                   ),
                                 ),
+                              ),
                             ],
                           )
                         : Column(
@@ -232,40 +374,27 @@ class _AuthScreenState extends State<AuthScreen> {
                               TextFormField(
                                 controller: _fullNameController,
                                 decoration: _inputStyle("Full Name"),
-                                validator: (value) =>
-                                    value!.isEmpty ? "Enter full name" : null,
+                                validator: _validateFullName,
                               ),
                               const SizedBox(height: 16),
                               TextFormField(
                                 controller: _emailController,
                                 keyboardType: TextInputType.emailAddress,
                                 decoration: _inputStyle("Email"),
-                                validator: (value) {
-                                  if (value!.isEmpty) {
-                                    return 'Enter email';
-                                  }
-                                  // Basic email validation
-                                  if (!value.contains('@')) {
-                                    return 'Enter a valid email';
-                                  }
-                                  return null;
-                                },
+                                validator: _validateEmail,
                               ),
                               const SizedBox(height: 16),
                               TextFormField(
                                 controller: _usernameController,
                                 decoration: _inputStyle("Username"),
-                                validator: (value) =>
-                                    value!.isEmpty ? "Enter username" : null,
+                                validator: _validateUsername,
                               ),
                               const SizedBox(height: 16),
                               TextFormField(
+                                key: ValueKey("register_password"),
                                 controller: _passwordController,
-                                decoration:
-                                    _inputStyle("Password", isPassword: true),
-                                obscureText: _obscurePassword,
-                                // validator:
-                                //     _validatePassword, // Use the validation method
+                                decoration: _inputStyle("Password"),
+                                validator: _validatePassword,
                               ),
                             ],
                           ),
@@ -296,7 +425,6 @@ class _AuthScreenState extends State<AuthScreen> {
                     onPressed: () {
                       setState(() {
                         _isLogin = !_isLogin;
-                        // Clear form when switching modes
                         if (_isLogin) {
                           _emailController.clear();
                           _fullNameController.clear();
