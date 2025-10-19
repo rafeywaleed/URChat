@@ -5,6 +5,7 @@ import 'package:urchat/firebase_options.dart';
 import 'package:urchat/model/user.dart';
 import 'package:urchat/screens/auth/auth_screen.dart';
 import 'package:urchat/screens/home_screen.dart';
+import 'package:urchat/screens/splash_screen.dart';
 import 'package:urchat/service/api_service.dart';
 import 'package:urchat/service/local_cache_service.dart';
 import 'package:http/http.dart' as http;
@@ -97,16 +98,7 @@ class _MyAppState extends State<MyApp> {
       title: 'URChat',
       theme: _getScaledNesTheme(),
       navigatorKey: navigatorKey,
-      home: FutureBuilder(
-        future: Future.delayed(Duration(milliseconds: 500)),
-        builder: (context, snapshot) {
-          if (ApiService.hasStoredAuth && ApiService.isAuthenticated) {
-            return Homescreen();
-          } else {
-            return AuthScreen();
-          }
-        },
-      ),
+      home: const SplashScreen(),
     );
   }
 

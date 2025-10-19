@@ -19,6 +19,7 @@ import 'package:urchat/screens/new_group.dart';
 import 'package:urchat/screens/offline_screen.dart';
 import 'package:urchat/screens/profile_screen.dart';
 import 'package:urchat/screens/search_delegate.dart';
+import 'package:urchat/screens/splash_screen.dart';
 import 'package:urchat/screens/user_profile.dart';
 import 'package:urchat/service/api_service.dart';
 import 'package:urchat/service/local_cache_service.dart';
@@ -1684,15 +1685,21 @@ class _HomescreenState extends State<Homescreen>
     return AppBar(
       leading: Padding(
         padding: const EdgeInsets.all(8.0),
-        // child: NesIcon(iconData: NesIcons.musicNote),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(12), // Adjust radius as needed
-          child: Image.asset("assets/urchat_logo.png"),
+        child: Hero(
+          tag: "app_logo",
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Image.asset("assets/urchat_logo.png"),
+          ),
         ),
       ),
       title: Text('URChat', style: GoogleFonts.pressStart2p(fontSize: 14)),
       actions: [
-        // Notification icon - only shown when notifications are disabled
+        // ElevatedButton(
+        //     onPressed: () => Navigator.push(context,
+        //         MaterialPageRoute(builder: (context) => SplashScreen())),
+        //     child: Text("Splash")),
+
         if (kIsWeb)
           FutureBuilder<bool>(
             future: NotificationService().hasNotificationPermission(),

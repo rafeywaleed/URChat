@@ -136,7 +136,6 @@ class NotificationService {
   //   }
   // }
 
-  // Your existing methods continue below...
   Future<void> initialize() async {
     if (_isInitialized || _isInitializing) return;
 
@@ -148,7 +147,6 @@ class NotificationService {
       await _setupLocalNotifications();
       _setupMessageHandling();
 
-      // For web, we'll request permissions when user interacts
       if (!kIsWeb) {
         await _requestPermissions();
         await _getTokenAndSendToServer();
@@ -177,7 +175,6 @@ class NotificationService {
     }
   }
 
-  // Add this method to the NotificationService class
   Future<void> requestPermissions() async {
     try {
       print('📝 Requesting notification permissions...');
@@ -195,7 +192,6 @@ class NotificationService {
 
       print('📱 Notification permission: ${settings.authorizationStatus}');
 
-      // If permission granted, get token and send to server
       if (settings.authorizationStatus == AuthorizationStatus.authorized) {
         await _getTokenAndSendToServer();
       }
@@ -306,25 +302,30 @@ class NotificationService {
     print('🎯 Setting up message handlers...');
 
     // Handle messages when app is in foreground
-    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      print('📱 Foreground message received:');
-      print('   Title: ${message.notification?.title}');
-      print('   Body: ${message.notification?.body}');
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
+      print('📱 Foreground message received: ${message.notification?.title}');
       print('   Data: ${message.data}');
 
+      // Detect app state
+      final isInForeground =
+          WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed;
+
       if (kIsWeb) {
-        // For web, show custom in-app notification
+        // ✅ Web: Always show your in-app custom popup
         _showWebInAppNotification(message);
       } else {
-        // For mobile, show local notification
-        _showLocalNotification(message);
+        // ✅ Android: Show local/system notification only if NOT in foreground
+        if (!isInForeground) {
+          _showLocalNotification(message);
+        } else {
+          print('🚫 Skipping notification (app is in foreground on Android)');
+        }
       }
     });
 
     // Handle notification tap when app is in background/terminated
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-      print('👆 Notification TAPPED - Navigating to chat:');
-      print('   Data: ${message.data}');
+      print('👆 Notification tapped: ${message.data}');
       _handleNotificationData(message.data);
     });
 
@@ -334,7 +335,7 @@ class NotificationService {
         .then((RemoteMessage? message) {
       if (message != null) {
         print('🚀 Initial message from terminated state: ${message.data}');
-        Future.delayed(Duration(seconds: 3), () {
+        Future.delayed(const Duration(seconds: 3), () {
           _handleNotificationData(message.data);
         });
       }

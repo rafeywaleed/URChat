@@ -144,9 +144,9 @@ class _AuthScreenState extends State<AuthScreen> {
     if (value.length > 20) {
       return 'Username cannot exceed 20 characters';
     }
-    // if (value.contains(' ')) {
-    //   return 'Username cannot contain spaces';
-    // }
+    if (value.contains(' ')) {
+      return 'Username cannot contain spaces';
+    }
     // Check for uppercase letters
     if (value.contains(RegExp(r'[A-Z]'))) {
       return 'Username cannot contain uppercase letters';
@@ -309,11 +309,14 @@ class _AuthScreenState extends State<AuthScreen> {
                   Container(
                     width: minSide * 0.3,
                     height: minSide * 0.3,
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: Image.asset(
-                        "assets/urchat_logo.png",
-                        fit: BoxFit.contain,
+                    child: Hero(
+                      tag: "app_logo",
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.asset(
+                          "assets/urchat_logo.png",
+                          fit: BoxFit.contain,
+                        ),
                       ),
                     ),
                   ),

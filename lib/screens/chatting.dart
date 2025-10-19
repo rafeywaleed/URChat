@@ -2971,7 +2971,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     );
   }
 
-// Helper method to cache user from profile data
   void _cacheUserFromProfile(
       String username, Map<String, dynamic> profile) async {
     try {
