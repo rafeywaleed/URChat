@@ -10,6 +10,7 @@ import 'package:urchat/model/chat_room.dart';
 import 'package:urchat/model/dto.dart';
 import 'package:urchat/model/message.dart';
 import 'package:urchat/screens/group_management_screen.dart';
+import 'package:urchat/screens/inapp_notifications.dart';
 import 'package:urchat/screens/user_profile.dart';
 import 'package:urchat/service/api_service.dart';
 import 'package:urchat/service/chat_cache_service.dart';
@@ -55,6 +56,9 @@ class _URChatAppState extends State<URChatApp> {
   @override
   void initState() {
     super.initState();
+
+    InAppNotifications.instance.setCurrentChat(widget.chatRoom.chatId);
+
     _selectedTheme = widget.chatRoom.themeIndex ?? 0;
     _isDarkMode = widget.chatRoom.isDark ?? true;
     _themeMode = _isDarkMode ? ThemeMode.dark : ThemeMode.light;
@@ -544,27 +548,63 @@ class _URChatAppState extends State<URChatApp> {
     ));
   }
 
+  bool get _isMobileScreen {
+    final mediaQuery = MediaQuery.of(context);
+    return mediaQuery.size.width < 768;
+  }
+
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'URChat',
-      debugShowCheckedModeBanner: false,
-      theme: _lightThemes[_selectedTheme],
-      darkTheme: _darkThemes[_selectedTheme],
-      themeMode: _themeMode,
-      home: ChatScreen(
-        chatRoom: widget.chatRoom,
-        webSocketService: widget.webSocketService,
-        onBack: widget.onBack,
-        onThemeModeChanged: _changeThemeMode,
-        onThemeChanged: _changeTheme,
-        onThemeSave: _commitThemeChanges,
-        onThemeCancel: _revertThemeChanges,
-        isDarkMode: _isDarkMode,
-        selectedTheme: _selectedTheme,
-        themeNames: _themeNames,
-      ),
-    );
+    InAppNotifications.instance.setCurrentChat(widget.chatRoom.chatId);
+    return _isMobileScreen
+        ? Stack(children: [
+            MaterialApp(
+              title: 'URChat',
+              debugShowCheckedModeBanner: false,
+              theme: _lightThemes[_selectedTheme],
+              darkTheme: _darkThemes[_selectedTheme],
+              themeMode: _themeMode,
+              home: ChatScreen(
+                chatRoom: widget.chatRoom,
+                webSocketService: widget.webSocketService,
+                onBack: widget.onBack,
+                onThemeModeChanged: _changeThemeMode,
+                onThemeChanged: _changeTheme,
+                onThemeSave: _commitThemeChanges,
+                onThemeCancel: _revertThemeChanges,
+                isDarkMode: _isDarkMode,
+                selectedTheme: _selectedTheme,
+                themeNames: _themeNames,
+              ),
+            ),
+            InAppNotifications.instance.buildNotifications(context, () {
+              if (mounted) setState(() {});
+            }),
+          ])
+        : MaterialApp(
+            debugShowCheckedModeBanner: false,
+            theme: _lightThemes[_selectedTheme],
+            darkTheme: _darkThemes[_selectedTheme],
+            themeMode: _themeMode,
+            home: ChatScreen(
+              chatRoom: widget.chatRoom,
+              webSocketService: widget.webSocketService,
+              onBack: widget.onBack,
+              onThemeModeChanged: _changeThemeMode,
+              onThemeChanged: _changeTheme,
+              onThemeSave: _commitThemeChanges,
+              onThemeCancel: _revertThemeChanges,
+              isDarkMode: _isDarkMode,
+              selectedTheme: _selectedTheme,
+              themeNames: _themeNames,
+            ),
+          );
+  }
+
+  @override
+  void dispose() {
+    InAppNotifications.instance.setCurrentChat(null);
+    super.dispose();
   }
 }
 
@@ -2285,7 +2325,9 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                             ),
                           )
                         : Text(
-                            widget.chatRoom.isGroup ? 'Group' : 'Online',
+                            widget.chatRoom.isGroup
+                                ? 'Group'
+                                : _getOtherUserName(),
                             style: ChatFonts.getTextStyle(
                               _selectedFont,
                               baseStyle: const TextStyle(

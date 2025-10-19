@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:urchat/model/chat_room.dart';
-
 import 'package:urchat/service/api_service.dart';
 import 'package:nes_ui/nes_ui.dart';
 import 'package:animated_emoji/animated_emoji.dart';
@@ -75,9 +74,10 @@ class _GroupPfpDialogState extends State<GroupPfpDialog> {
   }
 
   void _showEmojiPicker() {
-    final screenSize = MediaQuery.of(context).size;
-    final isSmallScreen = screenSize.width < 600;
-    final isTablet = screenSize.width >= 600 && screenSize.width < 1200;
+    final isSmallScreen = MediaQuery.of(context).size.width < 600;
+    final isTablet = MediaQuery.of(context).size.width >= 600 &&
+        MediaQuery.of(context).size.width < 1200;
+    final colorScheme = Theme.of(context).colorScheme;
 
     showDialog(
       context: context,
@@ -85,27 +85,27 @@ class _GroupPfpDialogState extends State<GroupPfpDialog> {
         backgroundColor: Colors.transparent,
         child: Container(
           width: isSmallScreen
-              ? screenSize.width * 0.9
+              ? MediaQuery.of(context).size.width * 0.95
               : isTablet
                   ? 500
                   : 600,
           height: isSmallScreen
-              ? screenSize.height * 0.7
+              ? MediaQuery.of(context).size.height * 0.7
               : isTablet
                   ? 550
                   : 650,
           decoration: BoxDecoration(
-            color: Theme.of(context).cardColor,
+            color: colorScheme.surface,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: Theme.of(context).dividerColor,
+              color: colorScheme.outline.withOpacity(0.3),
               width: 2,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.3),
-                blurRadius: 20,
-                offset: const Offset(0, 10),
+                color: Colors.black.withOpacity(0.2),
+                blurRadius: 15,
+                offset: const Offset(0, 8),
               ),
             ],
           ),
@@ -113,52 +113,54 @@ class _GroupPfpDialogState extends State<GroupPfpDialog> {
             children: [
               // Header
               Container(
-                padding: const EdgeInsets.all(16),
+                padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).primaryColor,
+                  color: colorScheme.primary,
                   borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(16),
                     topRight: Radius.circular(16),
                   ),
                 ),
-                child: Center(
-                  child: Text(
-                    'Select Group Emoji',
-                    style: TextStyle(
-                      fontSize: isSmallScreen ? 18 : 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                child: Row(
+                  children: [
+                    Icon(Icons.emoji_emotions,
+                        color: colorScheme.onPrimary,
+                        size: isSmallScreen ? 20 : 24),
+                    SizedBox(width: isSmallScreen ? 12 : 16),
+                    Expanded(
+                      child: Text(
+                        'Select Group Emoji',
+                        style: TextStyle(
+                          fontSize: isSmallScreen ? 18 : 22,
+                          fontWeight: FontWeight.bold,
+                          color: colorScheme.onPrimary,
+                        ),
+                      ),
                     ),
-                  ),
+                    IconButton(
+                      icon: Icon(Icons.close,
+                          color: colorScheme.onPrimary,
+                          size: isSmallScreen ? 20 : 24),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 16),
 
-              // Search Bar (optional - you can add this later)
-              // Padding(
-              //   padding: const EdgeInsets.symmetric(horizontal: 16),
-              //   child: TextField(
-              //     decoration: InputDecoration(
-              //       hintText: 'Search emojis...',
-              //       prefixIcon: Icon(Icons.search),
-              //       border: OutlineInputBorder(
-              //         borderRadius: BorderRadius.circular(12),
-              //       ),
-              //     ),
-              //   ),
-              // ),
-              // const SizedBox(height: 16),
+              const SizedBox(height: 16),
 
               // Emoji Grid
               Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  padding:
+                      EdgeInsets.symmetric(horizontal: isSmallScreen ? 8 : 12),
                   child: GridView.builder(
-                    padding: const EdgeInsets.all(4),
+                    padding: EdgeInsets.all(isSmallScreen ? 4 : 8),
                     gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: _getCrossAxisCount(screenSize),
-                      crossAxisSpacing: isSmallScreen ? 6 : 8,
-                      mainAxisSpacing: isSmallScreen ? 6 : 8,
+                      crossAxisCount:
+                          _getCrossAxisCount(MediaQuery.of(context).size),
+                      crossAxisSpacing: isSmallScreen ? 6 : 10,
+                      mainAxisSpacing: isSmallScreen ? 6 : 10,
                       childAspectRatio: 1.0,
                     ),
                     itemCount: _emojiOptions.length,
@@ -174,40 +176,27 @@ class _GroupPfpDialogState extends State<GroupPfpDialog> {
                             Navigator.pop(context);
                           },
                           borderRadius: BorderRadius.circular(12),
-                          splashColor:
-                              Theme.of(context).primaryColor.withOpacity(0.3),
+                          splashColor: colorScheme.primary.withOpacity(0.2),
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 200),
                             decoration: BoxDecoration(
                               border: Border.all(
                                 color: _selectedPfpIndex == emoji
-                                    ? Theme.of(context).primaryColor
+                                    ? colorScheme.primary
                                     : Colors.transparent,
                                 width: _selectedPfpIndex == emoji ? 3 : 0,
                               ),
                               borderRadius: BorderRadius.circular(12),
                               color: _selectedPfpIndex == emoji
-                                  ? Theme.of(context)
-                                      .primaryColor
-                                      .withOpacity(0.1)
-                                  : Theme.of(context).hoverColor,
-                              boxShadow: _selectedPfpIndex == emoji
-                                  ? [
-                                      BoxShadow(
-                                        color: Theme.of(context)
-                                            .primaryColor
-                                            .withOpacity(0.3),
-                                        blurRadius: 8,
-                                        offset: const Offset(0, 2),
-                                      ),
-                                    ]
-                                  : [],
+                                  ? colorScheme.primary.withOpacity(0.1)
+                                  : colorScheme.surfaceVariant.withOpacity(0.5),
                             ),
                             child: Center(
                               child: Text(
                                 emoji,
                                 style: TextStyle(
-                                  fontSize: _getEmojiSize(screenSize),
+                                  fontSize: _getEmojiSize(
+                                      MediaQuery.of(context).size),
                                 ),
                               ),
                             ),
@@ -218,19 +207,21 @@ class _GroupPfpDialogState extends State<GroupPfpDialog> {
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
+
+              SizedBox(height: isSmallScreen ? 12 : 16),
 
               // Close Button
               Padding(
-                padding: const EdgeInsets.all(16),
+                padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
                 child: SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: () => Navigator.pop(context),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Theme.of(context).primaryColor,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      backgroundColor: colorScheme.primary,
+                      foregroundColor: colorScheme.onPrimary,
+                      padding: EdgeInsets.symmetric(
+                          vertical: isSmallScreen ? 14 : 16),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -255,383 +246,374 @@ class _GroupPfpDialogState extends State<GroupPfpDialog> {
 
   void _showColorPicker() {
     final isSmallScreen = MediaQuery.of(context).size.width < 600;
+    final colorScheme = Theme.of(context).colorScheme;
 
     showDialog(
       context: context,
-      builder: (context) => Dialog(
-        backgroundColor: Colors.transparent,
-        child: Container(
-          width: isSmallScreen ? 340 : 400,
-          decoration: BoxDecoration(
-            color: Theme.of(context).cardColor,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.3),
-                blurRadius: 25,
-                offset: const Offset(0, 10),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return Dialog(
+            backgroundColor: Colors.transparent,
+            child: Container(
+              width: isSmallScreen
+                  ? MediaQuery.of(context).size.width * 0.95
+                  : 450,
+              decoration: BoxDecoration(
+                color: colorScheme.surface,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.2),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
               ),
-            ],
-          ),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Header
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).primaryColor,
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(20),
-                      topRight: Radius.circular(20),
-                    ),
-                  ),
-                  child: Center(
-                    child: Text(
-                      'Select Background Color',
-                      style: TextStyle(
-                        fontSize: isSmallScreen ? 18 : 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ),
-
-                Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Current Selection Preview
-                      Container(
-                        width: 120,
-                        height: 120,
-                        decoration: BoxDecoration(
-                          color: _selectedPfpBg,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: Colors.white,
-                            width: 4,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.3),
-                              blurRadius: 15,
-                              offset: const Offset(0, 5),
-                            ),
-                          ],
-                        ),
-                        child: Center(
-                          child: AnimatedEmojiMapper.hasAnimatedVersion(
-                                  _selectedPfpIndex)
-                              ? AnimatedEmojiMapper.getAnimatedEmojiWidget(
-                                    _selectedPfpIndex,
-                                    size: 50,
-                                  ) ??
-                                  Text(
-                                    _selectedPfpIndex,
-                                    style: const TextStyle(fontSize: 50),
-                                  )
-                              : Text(
-                                  _selectedPfpIndex,
-                                  style: const TextStyle(fontSize: 50),
-                                ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Header
+                    Container(
+                      padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
+                      decoration: BoxDecoration(
+                        color: colorScheme.primary,
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(20),
+                          topRight: Radius.circular(20),
                         ),
                       ),
-                      const SizedBox(height: 24),
-
-                      // Custom Color Picker Section
-                      Container(
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).hoverColor,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: Theme.of(context).dividerColor,
-                          ),
-                        ),
-                        child: Column(
-                          children: [
-                            Text(
-                              'Custom Color',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w600,
-                                color: Theme.of(context)
-                                    .textTheme
-                                    .titleLarge
-                                    ?.color,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-
-                            // Color Preview
-                            Container(
-                              height: 60,
-                              decoration: BoxDecoration(
-                                color: _selectedPfpBg,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: Colors.white,
-                                  width: 2,
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.2),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: Center(
-                                child: Text(
-                                  _colorToHex(_selectedPfpBg),
-                                  style: TextStyle(
-                                    color: _getContrastColor(_selectedPfpBg),
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-
-                            // Custom Color Picker Button
-                            ElevatedButton.icon(
-                              onPressed: _showCustomColorPicker,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Theme.of(context).primaryColor,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 20, vertical: 16),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                elevation: 3,
-                              ),
-                              icon: const Icon(Icons.colorize, size: 20),
-                              label: const Text(
-                                'Pick Custom Color',
-                                style: TextStyle(fontSize: 16),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      const SizedBox(height: 20),
-
-                      // Default Colors Section
-                      Container(
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).hoverColor,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: Theme.of(context).dividerColor,
-                          ),
-                        ),
-                        child: Column(
-                          children: [
-                            Text(
-                              'Default Colors',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w600,
-                                color: Theme.of(context)
-                                    .textTheme
-                                    .titleLarge
-                                    ?.color,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            SizedBox(
-                              height: 160,
-                              child: GridView.builder(
-                                physics: const NeverScrollableScrollPhysics(),
-                                gridDelegate:
-                                    SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: isSmallScreen ? 6 : 8,
-                                  crossAxisSpacing: 10,
-                                  mainAxisSpacing: 10,
-                                ),
-                                itemCount: _colorOptions.length,
-                                itemBuilder: (context, index) {
-                                  final color =
-                                      _parseColor(_colorOptions[index]);
-                                  return GestureDetector(
-                                    onTap: () {
-                                      setState(() {
-                                        _selectedPfpBg = color;
-                                      });
-                                      Navigator.pop(context);
-                                    },
-                                    child: AnimatedContainer(
-                                      duration:
-                                          const Duration(milliseconds: 200),
-                                      decoration: BoxDecoration(
-                                        color: color,
-                                        border: Border.all(
-                                          color: _selectedPfpBg.value ==
-                                                  color.value
-                                              ? Colors.white
-                                              : Colors.transparent,
-                                          width: _selectedPfpBg.value ==
-                                                  color.value
-                                              ? 4
-                                              : 0,
-                                        ),
-                                        borderRadius: BorderRadius.circular(10),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color:
-                                                Colors.black.withOpacity(0.3),
-                                            blurRadius: 6,
-                                            offset: const Offset(0, 3),
-                                          ),
-                                        ],
-                                      ),
-                                      child: _selectedPfpBg.value == color.value
-                                          ? Icon(
-                                              Icons.check,
-                                              color: _getContrastColor(color),
-                                              size: 24,
-                                            )
-                                          : null,
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      const SizedBox(height: 24),
-
-                      // Action Buttons
-                      Row(
+                      child: Row(
                         children: [
+                          Icon(Icons.palette,
+                              color: colorScheme.onPrimary,
+                              size: isSmallScreen ? 20 : 24),
+                          SizedBox(width: isSmallScreen ? 12 : 16),
                           Expanded(
-                            child: ElevatedButton(
-                              onPressed: () => Navigator.pop(context),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Theme.of(context).primaryColor,
-                                foregroundColor: Colors.white,
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 16),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                elevation: 3,
-                              ),
-                              child: const Text(
-                                'Apply Color',
-                                style: TextStyle(fontSize: 16),
+                            child: Text(
+                              'Select Background Color',
+                              style: TextStyle(
+                                fontSize: isSmallScreen ? 18 : 22,
+                                fontWeight: FontWeight.bold,
+                                color: colorScheme.onPrimary,
                               ),
                             ),
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: ElevatedButton(
-                              onPressed: () => Navigator.pop(context),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor:
-                                    Theme.of(context).scaffoldBackgroundColor,
-                                foregroundColor: Theme.of(context)
-                                    .textTheme
-                                    .bodyLarge
-                                    ?.color,
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 16),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  side: BorderSide(
-                                    color: Theme.of(context).dividerColor,
-                                  ),
-                                ),
-                              ),
-                              child: const Text(
-                                'Close',
-                                style: TextStyle(fontSize: 16),
-                              ),
-                            ),
+                          IconButton(
+                            icon: Icon(Icons.close,
+                                color: colorScheme.onPrimary,
+                                size: isSmallScreen ? 20 : 24),
+                            onPressed: () => Navigator.pop(context),
                           ),
                         ],
                       ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+                    ),
 
-  void _showCustomColorPicker() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Theme.of(context).cardColor,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(
-          'Custom Color Picker',
-          style: TextStyle(
-            color: Theme.of(context).textTheme.titleLarge?.color,
-          ),
-        ),
-        content: SingleChildScrollView(
-          child: SizedBox(
-            width: 400,
-            child: _buildCustomColorPicker(),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              'Cancel',
-              style: TextStyle(
-                color: Theme.of(context).textTheme.bodyLarge?.color,
+                    Padding(
+                      padding: EdgeInsets.all(isSmallScreen ? 16 : 24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Current Selection Preview
+                          Container(
+                            width: isSmallScreen ? 100 : 120,
+                            height: isSmallScreen ? 100 : 120,
+                            decoration: BoxDecoration(
+                              color: _selectedPfpBg,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: Colors.white,
+                                width: 4,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.2),
+                                  blurRadius: 12,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: Center(
+                              child: AnimatedEmojiMapper.hasAnimatedVersion(
+                                      _selectedPfpIndex)
+                                  ? AnimatedEmojiMapper.getAnimatedEmojiWidget(
+                                        _selectedPfpIndex,
+                                        size: isSmallScreen ? 40 : 48,
+                                      ) ??
+                                      Text(
+                                        _selectedPfpIndex,
+                                        style: TextStyle(
+                                            fontSize: isSmallScreen ? 40 : 48),
+                                      )
+                                  : Text(
+                                      _selectedPfpIndex,
+                                      style: TextStyle(
+                                          fontSize: isSmallScreen ? 40 : 48),
+                                    ),
+                            ),
+                          ),
+                          SizedBox(height: isSmallScreen ? 20 : 24),
+
+                          // Color Options Section
+                          Container(
+                            padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
+                            decoration: BoxDecoration(
+                              color:
+                                  colorScheme.surfaceVariant.withOpacity(0.3),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: colorScheme.outline.withOpacity(0.2),
+                              ),
+                            ),
+                            child: Column(
+                              children: [
+                                Text(
+                                  'Color Options',
+                                  style: TextStyle(
+                                    fontSize: isSmallScreen ? 18 : 20,
+                                    fontWeight: FontWeight.w600,
+                                    color: colorScheme.onSurface,
+                                  ),
+                                ),
+                                SizedBox(height: isSmallScreen ? 16 : 20),
+
+                                // Default Colors Grid
+                                SizedBox(
+                                  height: isSmallScreen ? 120 : 140,
+                                  child: GridView.builder(
+                                    // physics:
+                                    // const NeverScrollableScrollPhysics(),
+                                    gridDelegate:
+                                        SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: isSmallScreen ? 7 : 8,
+                                      crossAxisSpacing: isSmallScreen ? 8 : 10,
+                                      mainAxisSpacing: isSmallScreen ? 8 : 10,
+                                    ),
+                                    itemCount: _colorOptions.length,
+                                    itemBuilder: (context, index) {
+                                      final color =
+                                          _parseColor(_colorOptions[index]);
+                                      return GestureDetector(
+                                        onTap: () {
+                                          setState(() {
+                                            _selectedPfpBg = color;
+                                          });
+                                          setDialogState(() {});
+                                        },
+                                        child: AnimatedContainer(
+                                          duration:
+                                              const Duration(milliseconds: 200),
+                                          decoration: BoxDecoration(
+                                            color: color,
+                                            border: Border.all(
+                                              color: _selectedPfpBg.value ==
+                                                      color.value
+                                                  ? Colors.white
+                                                  : Colors.transparent,
+                                              width: _selectedPfpBg.value ==
+                                                      color.value
+                                                  ? 3
+                                                  : 0,
+                                            ),
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: Colors.black
+                                                    .withOpacity(0.2),
+                                                blurRadius: 4,
+                                                offset: const Offset(0, 2),
+                                              ),
+                                            ],
+                                          ),
+                                          child: _selectedPfpBg.value ==
+                                                  color.value
+                                              ? Icon(
+                                                  Icons.check,
+                                                  color:
+                                                      _getContrastColor(color),
+                                                  size: isSmallScreen ? 16 : 20,
+                                                )
+                                              : null,
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+
+                                SizedBox(height: isSmallScreen ? 16 : 20),
+
+                                // Custom Color Picker Button
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: ElevatedButton.icon(
+                                    onPressed: () =>
+                                        _showCustomColorPicker(setDialogState),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: colorScheme.primary,
+                                      foregroundColor: colorScheme.onPrimary,
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: isSmallScreen ? 16 : 20,
+                                        vertical: isSmallScreen ? 14 : 16,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      elevation: 2,
+                                    ),
+                                    icon: Icon(Icons.colorize,
+                                        size: isSmallScreen ? 18 : 20),
+                                    label: Text(
+                                      'Custom Color',
+                                      style: TextStyle(
+                                          fontSize: isSmallScreen ? 16 : 18),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          SizedBox(height: isSmallScreen ? 20 : 24),
+
+                          // Action Buttons
+                          Row(
+                            children: [
+                              Expanded(
+                                child: ElevatedButton(
+                                  onPressed: () => Navigator.pop(context),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: colorScheme.primary,
+                                    foregroundColor: colorScheme.onPrimary,
+                                    padding: EdgeInsets.symmetric(
+                                        vertical: isSmallScreen ? 14 : 16),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    elevation: 2,
+                                  ),
+                                  child: Text(
+                                    'Apply',
+                                    style: TextStyle(
+                                        fontSize: isSmallScreen ? 16 : 18),
+                                  ),
+                                ),
+                              ),
+                              SizedBox(width: isSmallScreen ? 12 : 16),
+                              Expanded(
+                                child: OutlinedButton(
+                                  onPressed: () => Navigator.pop(context),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: colorScheme.onSurface,
+                                    padding: EdgeInsets.symmetric(
+                                        vertical: isSmallScreen ? 14 : 16),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    side:
+                                        BorderSide(color: colorScheme.outline),
+                                  ),
+                                  child: Text(
+                                    'Cancel',
+                                    style: TextStyle(
+                                        fontSize: isSmallScreen ? 16 : 18),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Theme.of(context).primaryColor,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('OK'),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
 
-  Widget _buildCustomColorPicker() {
+  void _showCustomColorPicker(StateSetter setDialogState) {
+    final isSmallScreen = MediaQuery.of(context).size.width < 600;
+    final colorScheme = Theme.of(context).colorScheme;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setPickerState) {
+          return AlertDialog(
+            backgroundColor: colorScheme.surface,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: Text(
+              'Custom Color Picker',
+              style: TextStyle(
+                color: colorScheme.onSurface,
+                fontSize: isSmallScreen ? 20 : 22,
+              ),
+            ),
+            content: SingleChildScrollView(
+              child: SizedBox(
+                width: isSmallScreen
+                    ? MediaQuery.of(context).size.width * 0.8
+                    : 400,
+                child: _buildCustomColorPicker(
+                    setPickerState, setDialogState, isSmallScreen),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(
+                  'Cancel',
+                  style: TextStyle(
+                    color: colorScheme.onSurface.withOpacity(0.7),
+                    fontSize: isSmallScreen ? 16 : 18,
+                  ),
+                ),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: colorScheme.primary,
+                  foregroundColor: colorScheme.onPrimary,
+                ),
+                child: Text(
+                  'OK',
+                  style: TextStyle(fontSize: isSmallScreen ? 16 : 18),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildCustomColorPicker(StateSetter setPickerState,
+      StateSetter setDialogState, bool isSmallScreen) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         // Color preview
         Container(
-          width: 120,
-          height: 120,
+          width: isSmallScreen ? 100 : 120,
+          height: isSmallScreen ? 100 : 120,
           decoration: BoxDecoration(
             color: _selectedPfpBg,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(color: Colors.white, width: 4),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.3),
-                blurRadius: 15,
-                offset: const Offset(0, 5),
+                color: Colors.black.withOpacity(0.2),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
               ),
             ],
           ),
@@ -641,16 +623,16 @@ class _GroupPfpDialogState extends State<GroupPfpDialog> {
               style: TextStyle(
                 color: _getContrastColor(_selectedPfpBg),
                 fontWeight: FontWeight.bold,
-                fontSize: 16,
+                fontSize: isSmallScreen ? 14 : 16,
               ),
             ),
           ),
         ),
-        const SizedBox(height: 24),
+        SizedBox(height: isSmallScreen ? 20 : 24),
 
         // RGB sliders
         _buildColorSlider('Red', _selectedPfpBg.red, (value) {
-          setState(() {
+          setPickerState(() {
             _selectedPfpBg = Color.fromARGB(
               255,
               value.toInt(),
@@ -658,10 +640,11 @@ class _GroupPfpDialogState extends State<GroupPfpDialog> {
               _selectedPfpBg.blue,
             );
           });
-        }),
-        const SizedBox(height: 16),
+          setDialogState(() {});
+        }, isSmallScreen),
+        SizedBox(height: isSmallScreen ? 12 : 16),
         _buildColorSlider('Green', _selectedPfpBg.green, (value) {
-          setState(() {
+          setPickerState(() {
             _selectedPfpBg = Color.fromARGB(
               255,
               _selectedPfpBg.red,
@@ -669,10 +652,11 @@ class _GroupPfpDialogState extends State<GroupPfpDialog> {
               _selectedPfpBg.blue,
             );
           });
-        }),
-        const SizedBox(height: 16),
+          setDialogState(() {});
+        }, isSmallScreen),
+        SizedBox(height: isSmallScreen ? 12 : 16),
         _buildColorSlider('Blue', _selectedPfpBg.blue, (value) {
-          setState(() {
+          setPickerState(() {
             _selectedPfpBg = Color.fromARGB(
               255,
               _selectedPfpBg.red,
@@ -680,36 +664,38 @@ class _GroupPfpDialogState extends State<GroupPfpDialog> {
               value.toInt(),
             );
           });
-        }),
+          setDialogState(() {});
+        }, isSmallScreen),
 
-        const SizedBox(height: 24),
+        SizedBox(height: isSmallScreen ? 20 : 24),
 
         // Quick color grid
         Text(
           'Quick Colors',
           style: TextStyle(
             fontWeight: FontWeight.bold,
-            fontSize: 16,
-            color: Theme.of(context).textTheme.titleLarge?.color,
+            fontSize: isSmallScreen ? 16 : 18,
+            color: colorScheme.onSurface,
           ),
         ),
-        const SizedBox(height: 16),
+        SizedBox(height: isSmallScreen ? 12 : 16),
         GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 6,
-            crossAxisSpacing: 8,
-            mainAxisSpacing: 8,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: isSmallScreen ? 6 : 8,
+            crossAxisSpacing: isSmallScreen ? 6 : 8,
+            mainAxisSpacing: isSmallScreen ? 6 : 8,
           ),
           itemCount: _colorOptions.length,
           itemBuilder: (context, index) {
             final color = _parseColor(_colorOptions[index]);
             return GestureDetector(
               onTap: () {
-                setState(() {
+                setPickerState(() {
                   _selectedPfpBg = color;
                 });
+                setDialogState(() {});
               },
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
@@ -734,7 +720,7 @@ class _GroupPfpDialogState extends State<GroupPfpDialog> {
                     ? Icon(
                         Icons.check,
                         color: _getContrastColor(color),
-                        size: 18,
+                        size: isSmallScreen ? 16 : 18,
                       )
                     : null,
               ),
@@ -745,8 +731,9 @@ class _GroupPfpDialogState extends State<GroupPfpDialog> {
     );
   }
 
-  Widget _buildColorSlider(
-      String label, int value, ValueChanged<double> onChanged) {
+  Widget _buildColorSlider(String label, int value,
+      ValueChanged<double> onChanged, bool isSmallScreen) {
+    final colorScheme = Theme.of(context).colorScheme;
     Color sliderColor;
     switch (label) {
       case 'Red':
@@ -759,7 +746,7 @@ class _GroupPfpDialogState extends State<GroupPfpDialog> {
         sliderColor = Colors.blue;
         break;
       default:
-        sliderColor = Theme.of(context).primaryColor;
+        sliderColor = colorScheme.primary;
     }
 
     return Column(
@@ -772,22 +759,24 @@ class _GroupPfpDialogState extends State<GroupPfpDialog> {
               label,
               style: TextStyle(
                 fontWeight: FontWeight.w600,
-                color: Theme.of(context).textTheme.bodyLarge?.color,
+                color: colorScheme.onSurface,
+                fontSize: isSmallScreen ? 14 : 16,
               ),
             ),
             Text(
               value.toString(),
               style: TextStyle(
-                color: Theme.of(context).textTheme.bodyLarge?.color,
+                color: colorScheme.onSurface,
                 fontWeight: FontWeight.bold,
+                fontSize: isSmallScreen ? 14 : 16,
               ),
             ),
           ],
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: isSmallScreen ? 8 : 12),
         Slider(
           activeColor: sliderColor,
-          inactiveColor: Colors.grey.shade400,
+          inactiveColor: colorScheme.outline.withOpacity(0.3),
           thumbColor: Colors.white,
           value: value.toDouble(),
           min: 0,
@@ -820,24 +809,23 @@ class _GroupPfpDialogState extends State<GroupPfpDialog> {
     return 40;
   }
 
-  // Keep your existing _emojiOptions and _colorOptions lists...
-
   @override
   Widget build(BuildContext context) {
     final isSmallScreen = MediaQuery.of(context).size.width < 600;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       backgroundColor: Colors.transparent,
       child: Container(
         decoration: BoxDecoration(
-          color: Theme.of(context).cardColor,
+          color: colorScheme.surface,
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.3),
-              blurRadius: 25,
-              offset: const Offset(0, 10),
+              color: Colors.black.withOpacity(0.2),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
             ),
           ],
         ),
@@ -848,9 +836,9 @@ class _GroupPfpDialogState extends State<GroupPfpDialog> {
             children: [
               // Header
               Container(
-                padding: const EdgeInsets.all(20),
+                padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).primaryColor,
+                  color: colorScheme.primary,
                   borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(20),
                     topRight: Radius.circular(20),
@@ -858,35 +846,42 @@ class _GroupPfpDialogState extends State<GroupPfpDialog> {
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.photo_camera, color: Colors.white),
-                    const SizedBox(width: 12),
-                    Text(
-                      'Group Profile Picture',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: isSmallScreen ? 18 : 20,
-                        fontWeight: FontWeight.bold,
+                    Icon(Icons.photo_camera,
+                        color: colorScheme.onPrimary,
+                        size: isSmallScreen ? 20 : 24),
+                    SizedBox(width: isSmallScreen ? 12 : 16),
+                    Expanded(
+                      child: Text(
+                        'Group Profile Picture',
+                        style: TextStyle(
+                          color: colorScheme.onPrimary,
+                          fontSize: isSmallScreen ? 18 : 22,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
-                    const Spacer(),
                     if (_isUpdating)
-                      const SizedBox(
-                        width: 24,
-                        height: 24,
+                      SizedBox(
+                        width: isSmallScreen ? 20 : 24,
+                        height: isSmallScreen ? 20 : 24,
                         child: CircularProgressIndicator(
                           strokeWidth: 3,
-                          valueColor:
-                              AlwaysStoppedAnimation<Color>(Colors.white),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                              colorScheme.onPrimary),
                         ),
                       )
                     else
                       IconButton(
-                        icon: const Icon(Icons.check, color: Colors.white),
+                        icon: Icon(Icons.check,
+                            color: colorScheme.onPrimary,
+                            size: isSmallScreen ? 20 : 24),
                         onPressed: _updateGroupPfp,
                         tooltip: 'Save',
                       ),
                     IconButton(
-                      icon: const Icon(Icons.close, color: Colors.white),
+                      icon: Icon(Icons.close,
+                          color: colorScheme.onPrimary,
+                          size: isSmallScreen ? 20 : 24),
                       onPressed: () => Navigator.of(context).pop(),
                       tooltip: 'Cancel',
                     ),
@@ -896,7 +891,7 @@ class _GroupPfpDialogState extends State<GroupPfpDialog> {
 
               // Current Selection Preview
               Padding(
-                padding: const EdgeInsets.all(32),
+                padding: EdgeInsets.all(isSmallScreen ? 24 : 32),
                 child: Container(
                   width: isSmallScreen ? 80 : 100,
                   height: isSmallScreen ? 80 : 100,
@@ -909,9 +904,9 @@ class _GroupPfpDialogState extends State<GroupPfpDialog> {
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.3),
-                        blurRadius: 15,
-                        offset: const Offset(0, 5),
+                        color: Colors.black.withOpacity(0.2),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
                       ),
                     ],
                   ),
@@ -937,21 +932,22 @@ class _GroupPfpDialogState extends State<GroupPfpDialog> {
 
               // Selection Buttons
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
+                padding:
+                    EdgeInsets.symmetric(horizontal: isSmallScreen ? 16 : 20),
                 child: Row(
                   children: [
                     Expanded(
                       child: ElevatedButton.icon(
                         onPressed: _showEmojiPicker,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Theme.of(context).primaryColor,
-                          foregroundColor: Colors.white,
+                          backgroundColor: colorScheme.primary,
+                          foregroundColor: colorScheme.onPrimary,
                           padding: EdgeInsets.symmetric(
-                              vertical: isSmallScreen ? 16 : 18),
+                              vertical: isSmallScreen ? 14 : 16),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          elevation: 3,
+                          elevation: 2,
                         ),
                         icon: Icon(Icons.emoji_emotions,
                             size: isSmallScreen ? 18 : 20),
@@ -961,7 +957,7 @@ class _GroupPfpDialogState extends State<GroupPfpDialog> {
                         ),
                       ),
                     ),
-                    const SizedBox(width: 16),
+                    SizedBox(width: isSmallScreen ? 12 : 16),
                     Expanded(
                       child: ElevatedButton.icon(
                         onPressed: _showColorPicker,
@@ -969,11 +965,11 @@ class _GroupPfpDialogState extends State<GroupPfpDialog> {
                           backgroundColor: Colors.orange.shade400,
                           foregroundColor: Colors.white,
                           padding: EdgeInsets.symmetric(
-                              vertical: isSmallScreen ? 16 : 18),
+                              vertical: isSmallScreen ? 14 : 16),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          elevation: 3,
+                          elevation: 2,
                         ),
                         icon:
                             Icon(Icons.palette, size: isSmallScreen ? 18 : 20),
@@ -987,7 +983,7 @@ class _GroupPfpDialogState extends State<GroupPfpDialog> {
                 ),
               ),
 
-              const SizedBox(height: 32),
+              SizedBox(height: isSmallScreen ? 24 : 32),
             ],
           ),
         ),
@@ -995,7 +991,7 @@ class _GroupPfpDialogState extends State<GroupPfpDialog> {
     );
   }
 
-  // Keep your existing _emojiOptions and _colorOptions lists here...
+  // Emoji and color options
   final List<String> _emojiOptions = [
     '👥',
     '👪',
@@ -1104,204 +1100,6 @@ class _GroupPfpDialogState extends State<GroupPfpDialog> {
     '📆',
     '🗒️',
     '🗓️',
-    '📇',
-    '📈',
-    '📉',
-    '📊',
-    '📋',
-    '🖇️',
-    '🗃️',
-    '🗄️',
-    '🗑️',
-    '🔒',
-    '🔓',
-    '🔏',
-    '🔐',
-    '🔨',
-    '🪓',
-    '⛏️',
-    '⚒️',
-    '🛠️',
-    '🗡️',
-    '⚔️',
-    '🔫',
-    '🏹',
-    '🛡️',
-    '🔧',
-    '🔩',
-    '⚙️',
-    '🗜️',
-    '⚖️',
-    '🔗',
-    '⛓️',
-    '⚗️',
-    '🔬',
-    '🔭',
-    '📡',
-    '🩸',
-    '🚪',
-    '🛏️',
-    '🛋️',
-    '🪑',
-    '🚽',
-    '🪠',
-    '🧷',
-    '🧹',
-    '🧺',
-    '🧯',
-    '🛒',
-    '🚬',
-    '⚰️',
-    '⚱️',
-    '🗿',
-    '🪦',
-    '💐',
-    '🌸',
-    '💮',
-    '🏵️',
-    '🌹',
-    '🥀',
-    '🌺',
-    '🌻',
-    '🌼',
-    '🌷',
-    '🌱',
-    '🪴',
-    '🌲',
-    '🌳',
-    '🌴',
-    '🌵',
-    '🌾',
-    '🌿',
-    '☘️',
-    '🍀',
-    '🍁',
-    '🍂',
-    '🍃',
-    '🍇',
-    '🍈',
-    '🍉',
-    '🍊',
-    '🍋',
-    '🍌',
-    '🍍',
-    '🥭',
-    '🍎',
-    '🍏',
-    '🍐',
-    '🍑',
-    '🍒',
-    '🍓',
-    '🫐',
-    '🥝',
-    '🍅',
-    '🫒',
-    '🥥',
-    '🥑',
-    '🍆',
-    '🥔',
-    '🥕',
-    '🌽',
-    '🌶️',
-    '🫑',
-    '🥒',
-    '🥬',
-    '🥦',
-    '🧄',
-    '🧅',
-    '🍄',
-    '🥜',
-    '🫘',
-    '🌰',
-    '🍞',
-    '🥐',
-    '🥖',
-    '🫓',
-    '🥨',
-    '🥯',
-    '🥞',
-    '🧇',
-    '🧀',
-    '🍖',
-    '🍗',
-    '🥩',
-    '🥓',
-    '🍔',
-    '🍟',
-    '🍕',
-    '🌭',
-    '🥪',
-    '🌮',
-    '🌯',
-    '🫔',
-    '🥙',
-    '🧆',
-    '🥚',
-    '🍳',
-    '🥘',
-    '🍲',
-    '🫕',
-    '🥣',
-    '🥗',
-    '🍿',
-    '🧈',
-    '🧂',
-    '🥫',
-    '🍱',
-    '🍘',
-    '🍙',
-    '🍚',
-    '🍛',
-    '🍜',
-    '🍝',
-    '🍠',
-    '🍢',
-    '🍣',
-    '🍤',
-    '🍥',
-    '🥮',
-    '🍡',
-    '🥟',
-    '🥠',
-    '🥡',
-    '🦀',
-    '🦞',
-    '🦐',
-    '🦑',
-    '🦪',
-    '🍦',
-    '🍧',
-    '🍨',
-    '🍩',
-    '🍪',
-    '🎂',
-    '🍰',
-    '🧁',
-    '🥧',
-    '🍫',
-    '🍬',
-    '🍭',
-    '🍮',
-    '🍯',
-    '🍼',
-    '🥛',
-    '☕',
-    '🫖',
-    '🍵',
-    '🍶',
-    '🍾',
-    '🍷',
-    '🍸',
-    '🍹',
-    '🍺',
-    '🍻',
-    '🥂',
-    '🥃',
-    '🥤',
-    '🧋',
-    '🧃',
-    '🧉',
-    '🧊'
   ];
 
   final List<String> _colorOptions = [

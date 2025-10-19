@@ -239,9 +239,8 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen> {
             ],
           ),
           child: Hero(
-            tag: widget.fromChat
-                ? "user_avatar_${widget.username}"
-                : "chat_avatar_${widget.username}",
+            tag: "user_avatar_${widget.username}",
+            // : "chat_avatar_${widget.username}",
             child: CircleAvatar(
               backgroundColor: bgColor,
               radius: isSmallScreen ? 48 : 56,
