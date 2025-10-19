@@ -17,7 +17,7 @@ class NavigationHelper {
         (route) => false,
       );
     } catch (e) {
-      print('❌ Navigation error: $e');
+      //print('❌ Navigation error: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Failed to start chat: $e'),

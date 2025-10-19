@@ -151,24 +151,24 @@ class _HomescreenState extends State<Homescreen>
   }
 
   void _setupNotificationCallback() {
-    print('🔗 Setting up notification callback');
+    //print('🔗 Setting up notification callback');
     InAppNotifications.instance.setOnOpenChatCallback((String chatId) {
-      print('🎯 Notification callback received for chat: $chatId');
+      //print('🎯 Notification callback received for chat: $chatId');
       _openChatFromNotification(chatId);
     });
   }
 
   void _openChatFromNotification(String chatId) {
-    print('🚀 Opening chat from notification callback: $chatId');
+    //print('🚀 Opening chat from notification callback: $chatId');
 
     // Try to find the chat in existing chats
     try {
       final chat = _chats.firstWhere((chat) => chat.chatId == chatId);
-      print('✅ Chat found: ${chat.chatName}');
+      //print('✅ Chat found: ${chat.chatName}');
 
       // NEW: Check if we're currently in mobile view with a chat open
       if (_isMobileScreen && _selectedChatId != null) {
-        print('📱 Mobile: Replacing current chat with notification chat');
+        //print('📱 Mobile: Replacing current chat with notification chat');
 
         // First deselect the current chat (this will pop the chat screen)
         _deselectChat();
@@ -184,14 +184,14 @@ class _HomescreenState extends State<Homescreen>
         _selectChat(chat);
       }
     } catch (e) {
-      print('❌ Chat not found in current list, refreshing...');
+      //print('❌ Chat not found in current list, refreshing...');
       // Chat might not be loaded yet, refresh and try again
       _loadFreshChats().then((_) {
         if (!mounted) return;
         try {
           final refreshedChat =
               _chats.firstWhere((chat) => chat.chatId == chatId);
-          print('✅ Chat found after refresh: ${refreshedChat.chatName}');
+          //print('✅ Chat found after refresh: ${refreshedChat.chatName}');
 
           // Apply the same mobile navigation logic
           if (_isMobileScreen && _selectedChatId != null) {
@@ -205,7 +205,7 @@ class _HomescreenState extends State<Homescreen>
             _selectChat(refreshedChat);
           }
         } catch (e) {
-          print('❌ Chat not found even after refresh: $chatId');
+          //print('❌ Chat not found even after refresh: $chatId');
           _showChatNotFoundError(chatId);
         }
       });
@@ -257,27 +257,27 @@ class _HomescreenState extends State<Homescreen>
   // }
 
   // void _verifyNotificationAdded() {
-  //   print('=== NOTIFICATION STATE CHECK ===');
-  //   print('📊 Total notifications: ${_messageNotifications.length}');
-  //   print('📱 Widget mounted: $mounted');
-  //   print('🔄 Last rebuild: ${DateTime.now()}');
+  //   //print('=== NOTIFICATION STATE CHECK ===');
+  //   //print('📊 Total notifications: ${_messageNotifications.length}');
+  //   //print('📱 Widget mounted: $mounted');
+  //   //print('🔄 Last rebuild: ${DateTime.now()}');
   //   _messageNotifications.forEach((n) {
-  //     print('  - ${n['chatName']}: ${n['message']}');
+  //     //print('  - ${n['chatName']}: ${n['message']}');
   //   });
-  //   print('================================');
+  //   //print('================================');
   // }
 
   void _initializeWebSocket() {
-    print('🔌 Initializing WebSocket...');
+    //print('🔌 Initializing WebSocket...');
 
     _webSocketService = WebSocketService(
       onMessageReceived: _handleNewMessage,
       onChatListUpdated: _handleChatListUpdate,
       onTyping: (data) {
-        print('⌨️ Typing: $data');
+        //print('⌨️ Typing: $data');
       },
       onReadReceipt: (data) {
-        print('👀 Read receipt: $data');
+        //print('👀 Read receipt: $data');
       },
       onMessageDeleted: _handleMessageDeleted,
       onChatDeleted: _handleChatDeleted,
@@ -285,7 +285,7 @@ class _HomescreenState extends State<Homescreen>
 
     Timer.periodic(Duration(seconds: 2), (timer) {
       if (!_webSocketService.isConnected) {
-        print('🔄 WebSocket not connected, reconnecting...');
+        //print('🔄 WebSocket not connected, reconnecting...');
         _webSocketService.connect();
       }
     });
@@ -296,7 +296,7 @@ class _HomescreenState extends State<Homescreen>
 
   // NEW: Handle message deletion from WebSocket
   void _handleMessageDeleted(Map<String, dynamic> deletionData) {
-    print('🗑️ Message deletion received: $deletionData');
+    //print('🗑️ Message deletion received: $deletionData');
 
     final deletedMessageId = deletionData['messageId'];
     final chatId = deletionData['chatId'];
@@ -304,7 +304,7 @@ class _HomescreenState extends State<Homescreen>
     // If we're currently viewing the chat where message was deleted, update UI
     if (_selectedChatId == chatId) {
       // This will be handled by the ChatScreen via its own listener
-      print('🗑️ Message $deletedMessageId deleted from current chat');
+      //print('🗑️ Message $deletedMessageId deleted from current chat');
     }
 
     // Show notification for message deletion
@@ -313,7 +313,7 @@ class _HomescreenState extends State<Homescreen>
 
   // NEW: Handle chat deletion from WebSocket
   void _handleChatDeleted(String chatId) {
-    print('🗑️ Chat deletion received for: $chatId');
+    //print('🗑️ Chat deletion received for: $chatId');
 
     if (mounted) {
       setState(() {
@@ -395,7 +395,7 @@ class _HomescreenState extends State<Homescreen>
 
       _debugSubscriptions();
     } catch (e) {
-      print('❌ Error loading initial data: $e');
+      //print('❌ Error loading initial data: $e');
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -411,7 +411,7 @@ class _HomescreenState extends State<Homescreen>
     if (widget.openChatOnStart == true &&
         widget.initialChatId != null &&
         mounted) {
-      print('🚀 Opening initial chat: ${widget.initialChatId}');
+      //print('🚀 Opening initial chat: ${widget.initialChatId}');
 
       // Add a small delay to ensure the UI is built
       Future.delayed(Duration(milliseconds: 500), () {
@@ -427,8 +427,7 @@ class _HomescreenState extends State<Homescreen>
           _selectChat(existingChat);
         } catch (e) {
           // If chat not found, refresh and try again
-          print(
-              '⚠️ Chat not found, refreshing and retrying: ${widget.initialChatId}');
+          //print('⚠️ Chat not found, refreshing and retrying: ${widget.initialChatId}');
           _loadFreshChats().then((_) {
             if (!mounted) return;
             try {
@@ -437,8 +436,7 @@ class _HomescreenState extends State<Homescreen>
               );
               _selectChat(refreshedChat);
             } catch (e) {
-              print(
-                  '❌ Chat not found even after refresh: ${widget.initialChatId}');
+              //print('❌ Chat not found even after refresh: ${widget.initialChatId}');
             }
           });
         }
@@ -463,7 +461,7 @@ class _HomescreenState extends State<Homescreen>
         // Refresh chat list to include the new chat
         _loadFreshChats();
       } catch (createError) {
-        print('❌ Error creating chat with user: $createError');
+        //print('❌ Error creating chat with user: $createError');
         NesSnackbar.show(context,
             text: 'Failed to create chat: $createError',
             type: NesSnackbarType.error);
@@ -493,7 +491,7 @@ class _HomescreenState extends State<Homescreen>
       final cachedChats = await LocalCacheService.getCachedChats();
 
       if (cachedChats != null && cachedChats.isNotEmpty) {
-        print('📦 Loading chats from cache');
+        //print('📦 Loading chats from cache');
         // FIX: Use the helper method for proper type conversion
         List<ChatRoom> convertedChats = _convertToChatRoomList(cachedChats);
 
@@ -507,7 +505,7 @@ class _HomescreenState extends State<Homescreen>
       }
       await _loadFreshChats();
     } catch (e) {
-      print('❌ Error loading initial chats: $e');
+      //print('❌ Error loading initial chats: $e');
       if (mounted) {
         setState(() {
           _errorMessage = 'Failed to load chats: $e';
@@ -523,7 +521,7 @@ class _HomescreenState extends State<Homescreen>
   }
 
   Future<void> _loadFreshChats() async {
-    print('🔄 Fetching fresh chats from API...');
+    //print('🔄 Fetching fresh chats from API...');
     try {
       final chats = await ApiService.getUserChats();
 
@@ -541,7 +539,7 @@ class _HomescreenState extends State<Homescreen>
         });
       }
     } catch (e) {
-      print('❌ Error loading fresh chats: $e');
+      //print('❌ Error loading fresh chats: $e');
       // Don't show error if we have cached chats
       if (_chats.isEmpty && mounted) {
         setState(() {
@@ -571,7 +569,7 @@ class _HomescreenState extends State<Homescreen>
         });
       }
     } catch (e) {
-      print('❌ Error loading group invitations: $e');
+      //print('❌ Error loading group invitations: $e');
       if (mounted) {
         setState(() {
           _isLoadingInvitations = false;
@@ -599,17 +597,17 @@ class _HomescreenState extends State<Homescreen>
           } else if (item is ChatRoomDTO) {
             result.add(ChatRoom.convertChatDTOToChatRoom(item));
           } else {
-            print('⚠️ Skipping unknown chat data type: ${item.runtimeType}');
+            //print('⚠️ Skipping unknown chat data type: ${item.runtimeType}');
             continue;
           }
         }
         return result;
       }
 
-      print('⚠️ Unexpected data type for chat list: ${data.runtimeType}');
+      //print('⚠️ Unexpected data type for chat list: ${data.runtimeType}');
       return [];
     } catch (e) {
-      print('❌ Error converting chat list: $e');
+      //print('❌ Error converting chat list: $e');
       return [];
     }
   }
@@ -629,7 +627,7 @@ class _HomescreenState extends State<Homescreen>
   }
 
   void _loadChatsFromApi() async {
-    print('🔄 Reloading chats from API...');
+    //print('🔄 Reloading chats from API...');
     await _loadFreshChats();
   }
 
@@ -638,7 +636,7 @@ class _HomescreenState extends State<Homescreen>
     final bool shouldShowNotification =
         _selectedChatId != message.chatId || !_showChatScreen;
 
-    print('🔔 Should show notification: $shouldShowNotification');
+    //print('🔔 Should show notification: $shouldShowNotification');
 
     if (shouldShowNotification) {
       // Find the chat for this message
@@ -653,10 +651,10 @@ class _HomescreenState extends State<Homescreen>
 
         InAppNotifications.instance.addNotification(notification);
       } catch (e) {
-        print('❌ Chat not found for notification: ${message.chatId}');
+        //print('❌ Chat not found for notification: ${message.chatId}');
       }
     } else {
-      print('🔕 Skipping notification - currently viewing this chat');
+      //print('🔕 Skipping notification - currently viewing this chat');
     }
 
     _refreshChatListForMessage(message);
@@ -674,8 +672,7 @@ class _HomescreenState extends State<Homescreen>
   }
 
   void _handleChatListUpdate(List<ChatRoom> updatedChats) {
-    print(
-        '🔄 Real-time chat list update received: ${updatedChats.length} chats');
+    //print('🔄 Real-time chat list update received: ${updatedChats.length} chats');
 
     if (mounted) {
       setState(() {
@@ -687,7 +684,7 @@ class _HomescreenState extends State<Homescreen>
           try {
             _chats.firstWhere((chat) => chat.chatId == _selectedChatId);
           } catch (e) {
-            print('⚠️ Selected chat no longer exists: $_selectedChatId');
+            //print('⚠️ Selected chat no longer exists: $_selectedChatId');
             _selectedChatId = null;
             _showChatScreen = false;
           }
@@ -713,7 +710,7 @@ class _HomescreenState extends State<Homescreen>
   // void _showInAppNotification(InAppNotification notify) {
   //   // Double-check we're not currently viewing this chat
   //   if (_selectedChatId == notify.chatId && _showChatScreen) {
-  //     print('🔕 Skipping notification - currently viewing this chat');
+  //     //print('🔕 Skipping notification - currently viewing this chat');
   //     return;
   //   }
 
@@ -739,14 +736,14 @@ class _HomescreenState extends State<Homescreen>
   //       'chatId': notify.chatId,
   //     };
 
-  //     print(
+  //     //print(
   //         '🔔 Creating notification: ${notify.chatId} - ${notify.lastMessage}');
 
   //     WidgetsBinding.instance.addPostFrameCallback((_) {
   //       if (mounted) {
   //         setState(() {
   //           _messageNotifications.add(notification);
-  //           print(
+  //           //print(
   //               '✅ Notification added! Total count: ${_messageNotifications.length}');
   //         });
   //       }
@@ -757,13 +754,13 @@ class _HomescreenState extends State<Homescreen>
   //         setState(() {
   //           _messageNotifications
   //               .removeWhere((n) => n['id'] == notification['id']);
-  //           print(
+  //           //print(
   //               '🗑️ Removed notification, count: ${_messageNotifications.length}');
   //         });
   //       }
   //     });
   //   } catch (e) {
-  //     print('❌ Error showing notification: $e');
+  //     //print('❌ Error showing notification: $e');
   //   }
   // }
 
@@ -824,12 +821,11 @@ class _HomescreenState extends State<Homescreen>
   }
 
   void _debugSubscriptions() {
-    print(
-        '🔍 CURRENT SUBSCRIPTIONS: ${_webSocketService.getSubscribedChats()}');
+    //print('🔍 CURRENT SUBSCRIPTIONS: ${_webSocketService.getSubscribedChats()}');
   }
 
   void _deselectChat() {
-    print('👈 Deselecting chat and navigating back');
+    //print('👈 Deselecting chat and navigating back');
     if (mounted) {
       setState(() {
         _selectedChatId = null;
@@ -966,7 +962,7 @@ class _HomescreenState extends State<Homescreen>
         );
       }
     } catch (e) {
-      print('❌ Error accepting group invitation: $e');
+      //print('❌ Error accepting group invitation: $e');
       if (mounted) {
         NesSnackbar.show(context,
             text: 'Failed to join group: $e', type: NesSnackbarType.error);
@@ -997,7 +993,7 @@ class _HomescreenState extends State<Homescreen>
         );
       }
     } catch (e) {
-      print('❌ Error declining group invitation: $e');
+      //print('❌ Error declining group invitation: $e');
       if (mounted) {
         NesSnackbar.show(
           text: 'Failed to decline invitation: $e',
@@ -1109,7 +1105,7 @@ class _HomescreenState extends State<Homescreen>
   // void _showMessageNotification(Message message) {
   //   // Double-check we're not currently viewing this chat
   //   if (_selectedChatId == message.chatId && _showChatScreen) {
-  //     print('🔕 Skipping notification - currently viewing this chat');
+  //     //print('🔕 Skipping notification - currently viewing this chat');
   //     return;
   //   }
 
@@ -1139,7 +1135,7 @@ class _HomescreenState extends State<Homescreen>
   //       'type': 'message',
   //     };
 
-  //     print(
+  //     //print(
   //         '🔔 Creating notification: ${notification['chatName']} - ${notification['message']}');
 
   //     // CRITICAL FIX: Use post frame callback to ensure setState happens after current build
@@ -1147,7 +1143,7 @@ class _HomescreenState extends State<Homescreen>
   //       if (mounted) {
   //         setState(() {
   //           _messageNotifications.add(notification);
-  //           print(
+  //           //print(
   //               '✅ Notification added! Total count: ${_messageNotifications.length}');
   //         });
   //       }
@@ -1159,33 +1155,33 @@ class _HomescreenState extends State<Homescreen>
   //         setState(() {
   //           _messageNotifications
   //               .removeWhere((n) => n['id'] == notification['id']);
-  //           print(
+  //           //print(
   //               '🗑️ Removed notification, count: ${_messageNotifications.length}');
   //         });
   //       }
   //     });
   //   } catch (e) {
-  //     print('❌ Error showing notification: $e');
+  //     //print('❌ Error showing notification: $e');
   //   }
   // }
 
   // void _debugNotificationState(Message message) {
-  //   print('=== NOTIFICATION DEBUG ===');
-  //   print('📱 Mounted: $mounted');
-  //   print('💬 Message received: ${message.content}');
-  //   print('🏠 Selected chat ID: $_selectedChatId');
-  //   print('💻 Show chat screen: $_showChatScreen');
-  //   print('🔔 Current notifications: ${_messageNotifications.length}');
-  //   print('📡 WebSocket connected: ${_webSocketService.isConnected}');
-  //   print('==========================');
+  //   //print('=== NOTIFICATION DEBUG ===');
+  //   //print('📱 Mounted: $mounted');
+  //   //print('💬 Message received: ${message.content}');
+  //   //print('🏠 Selected chat ID: $_selectedChatId');
+  //   //print('💻 Show chat screen: $_showChatScreen');
+  //   //print('🔔 Current notifications: ${_messageNotifications.length}');
+  //   //print('📡 WebSocket connected: ${_webSocketService.isConnected}');
+  //   //print('==========================');
   // }
 
   // Widget _buildMessageNotifications() {
-  //   print(
+  //   //print(
   //       '🎨 Building notifications widget. Count: ${_messageNotifications.length}');
 
   //   if (_messageNotifications.isEmpty) {
-  //     print('⚠️ No notifications to display');
+  //     //print('⚠️ No notifications to display');
   //     return const SizedBox.shrink();
   //   }
 
@@ -1786,7 +1782,7 @@ class _HomescreenState extends State<Homescreen>
   }
 
   // void _testNotification() {
-  //   print('🧪 Testing notification system...');
+  //   //print('🧪 Testing notification system...');
 
   //   final testMessage = Message(
   //       id: 999,
@@ -2077,21 +2073,21 @@ class _HomescreenState extends State<Homescreen>
   }
 
   void _verifyNotificationSystem() {
-    print('=== NOTIFICATION SYSTEM VERIFICATION ===');
-    print('📱 App mounted: $mounted');
-    // print('🔔 Notifications in list: ${inApp.messageNotifications.length}');
-    print('💬 Chats loaded: ${_chats.length}');
-    print('📡 WebSocket connected: ${_webSocketService.isConnected}');
-    print('🎯 Subscribed chats: ${_webSocketService.getSubscribedChats()}');
-    print('🔄 Build method called at: ${DateTime.now()}');
-    print('========================================');
+    //print('=== NOTIFICATION SYSTEM VERIFICATION ===');
+    //print('📱 App mounted: $mounted');
+    // //print('🔔 Notifications in list: ${inApp.messageNotifications.length}');
+    //print('💬 Chats loaded: ${_chats.length}');
+    //print('📡 WebSocket connected: ${_webSocketService.isConnected}');
+    //print('🎯 Subscribed chats: ${_webSocketService.getSubscribedChats()}');
+    //print('🔄 Build method called at: ${DateTime.now()}');
+    //print('========================================');
   }
 
   Color _parseColor(String colorString) {
     try {
       return Color(int.parse(colorString.replaceAll('#', '0xFF')));
     } catch (e) {
-      print('⚠️ Error parsing color: $colorString, using default');
+      //print('⚠️ Error parsing color: $colorString, using default');
       return const Color(0xFF4CAF50);
     }
   }
@@ -2153,7 +2149,7 @@ class _HomescreenState extends State<Homescreen>
 
                 // Global notifications overlay
                 InAppNotifications.instance.buildNotifications(context, () {
-                  print('ℹ️ Legacy notification callback - not used');
+                  //print('ℹ️ Legacy notification callback - not used');
                 }),
               ],
             ),
@@ -2376,15 +2372,15 @@ class _HomescreenState extends State<Homescreen>
   }
 
   void _testWebSocketConnection() {
-    print('🔍 === WEB SOCKET CONNECTION TEST ===');
-    print('   ✅ WebSocketService created: ${_webSocketService != null}');
-    print('   ✅ Connected: ${_webSocketService.isConnected}');
+    //print('🔍 === WEB SOCKET CONNECTION TEST ===');
+    //print('   ✅ WebSocketService created: ${_webSocketService != null}');
+    //print('   ✅ Connected: ${_webSocketService.isConnected}');
 
     Future.delayed(const Duration(seconds: 3), () {
       if (_webSocketService.isConnected) {
-        print('🎉 WebSocket is connected and ready!');
+        //print('🎉 WebSocket is connected and ready!');
       } else {
-        print('❌ WebSocket failed to connect');
+        //print('❌ WebSocket failed to connect');
       }
     });
   }
@@ -2394,7 +2390,7 @@ class _HomescreenState extends State<Homescreen>
       final result = await _connectivity.checkConnectivity();
       _updateConnectionStatus(result);
     } catch (e) {
-      print('❌ Error checking connectivity: $e');
+      //print('❌ Error checking connectivity: $e');
       if (mounted) {
         setState(() {
           _isInternetConnected = false;
@@ -2422,6 +2418,6 @@ class _HomescreenState extends State<Homescreen>
       });
     }
 
-    print('🌐 Connectivity changed: $results → Connected: $isConnected');
+    //print('🌐 Connectivity changed: $results → Connected: $isConnected');
   }
 }

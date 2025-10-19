@@ -26,9 +26,9 @@ class UserCacheService {
       // Update the list of all cached usernames
       await _updateCachedUsersList(user.username, prefs);
 
-      print('✅ User ${user.username} saved to cache');
+      //print('✅ User ${user.username} saved to cache');
     } catch (e) {
-      print('❌ Failed to save user ${user.username} to cache: $e');
+      //print('❌ Failed to save user ${user.username} to cache: $e');
     }
   }
 
@@ -49,9 +49,9 @@ class UserCacheService {
         await _updateCachedUsersList(user.username, prefs);
       }
 
-      print('✅ ${users.length} users saved to cache');
+      //print('✅ ${users.length} users saved to cache');
     } catch (e) {
-      print('❌ Failed to save users to cache: $e');
+      //print('❌ Failed to save users to cache: $e');
     }
   }
 
@@ -66,7 +66,7 @@ class UserCacheService {
         return UserDTO.fromJson(userData);
       }
     } catch (e) {
-      print('❌ Failed to get user $username from cache: $e');
+      //print('❌ Failed to get user $username from cache: $e');
     }
     return null;
   }
@@ -85,7 +85,7 @@ class UserCacheService {
         };
       }
     } catch (e) {
-      print('❌ Failed to get user profile for $username: $e');
+      //print('❌ Failed to get user profile for $username: $e');
     }
     return null;
   }
@@ -125,10 +125,10 @@ class UserCacheService {
         );
 
         await saveUser(updatedUser);
-        print('✅ User $username updated in cache');
+        //print('✅ User $username updated in cache');
       }
     } catch (e) {
-      print('❌ Failed to update user $username in cache: $e');
+      //print('❌ Failed to update user $username in cache: $e');
     }
   }
 
@@ -156,7 +156,7 @@ class UserCacheService {
         }
       }
     } catch (e) {
-      print('❌ Failed to check if user $username exists in cache: $e');
+      //print('❌ Failed to check if user $username exists in cache: $e');
     }
     return false;
   }
@@ -169,9 +169,9 @@ class UserCacheService {
       await prefs.remove('$_cacheTimestampPrefix$username');
       await _removeFromCachedUsersList(username, prefs);
 
-      print('✅ User $username removed from cache');
+      //print('✅ User $username removed from cache');
     } catch (e) {
-      print('❌ Failed to remove user $username from cache: $e');
+      //print('❌ Failed to remove user $username from cache: $e');
     }
   }
 
@@ -187,9 +187,9 @@ class UserCacheService {
       }
 
       await prefs.remove(_allUsersKey);
-      print('✅ All users cleared from cache');
+      //print('✅ All users cleared from cache');
     } catch (e) {
-      print('❌ Failed to clear all users from cache: $e');
+      //print('❌ Failed to clear all users from cache: $e');
     }
   }
 
@@ -204,7 +204,7 @@ class UserCacheService {
         return usernamesList.cast<String>();
       }
     } catch (e) {
-      print('❌ Failed to get all cached usernames: $e');
+      //print('❌ Failed to get all cached usernames: $e');
     }
     return [];
   }
@@ -231,7 +231,7 @@ class UserCacheService {
         }
       }
     } catch (e) {
-      print('❌ Failed to get cache info for user $username: $e');
+      //print('❌ Failed to get cache info for user $username: $e');
     }
 
     return {'exists': false};
@@ -262,7 +262,7 @@ class UserCacheService {
         'cacheSize': allUsernames.length,
       };
     } catch (e) {
-      print('❌ Failed to get cache stats: $e');
+      //print('❌ Failed to get cache stats: $e');
       return {};
     }
   }
@@ -277,7 +277,7 @@ class UserCacheService {
         await prefs.setString(_allUsersKey, json.encode(currentList));
       }
     } catch (e) {
-      print('❌ Failed to update cached users list: $e');
+      //print('❌ Failed to update cached users list: $e');
     }
   }
 
@@ -289,7 +289,7 @@ class UserCacheService {
       currentList.remove(username);
       await prefs.setString(_allUsersKey, json.encode(currentList));
     } catch (e) {
-      print('❌ Failed to remove from cached users list: $e');
+      //print('❌ Failed to remove from cached users list: $e');
     }
   }
 
@@ -307,9 +307,9 @@ class UserCacheService {
         }
       }
 
-      print('✅ Cleaned up $removedCount expired user cache entries');
+      //print('✅ Cleaned up $removedCount expired user cache entries');
     } catch (e) {
-      print('❌ Failed to cleanup expired cache: $e');
+      //print('❌ Failed to cleanup expired cache: $e');
     }
   }
 }

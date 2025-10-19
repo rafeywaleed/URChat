@@ -52,7 +52,7 @@ class _SearchScreenState extends State<SearchScreen> {
         _isSearching = false;
       });
     } catch (e) {
-      print("❌ Search error: $e");
+      //print("❌ Search error: $e");
       setState(() {
         _isSearching = false;
       });

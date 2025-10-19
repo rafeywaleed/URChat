@@ -332,8 +332,6 @@ class _AuthScreenState extends State<AuthScreen> {
                     ),
                   ),
                   const SizedBox(height: 30),
-
-                  // Animated Switch
                   AnimatedSwitcher(
                     switchInCurve: Curves.easeIn,
                     duration: const Duration(milliseconds: 500),
@@ -416,7 +414,6 @@ class _AuthScreenState extends State<AuthScreen> {
                           ),
                   ),
                   const SizedBox(height: 28),
-
                   _isLoading
                       ? const NesHourglassLoadingIndicator()
                       : ElevatedButton(

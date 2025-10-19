@@ -29,7 +29,7 @@ Future<void> main() async {
     await ApiService.init();
     await NotificationService().initialize();
   } catch (e) {
-    print("❌ Error during app initialization: $e");
+    //print("❌ Error during app initialization: $e");
   }
 
   runApp(MyApp());
@@ -54,7 +54,7 @@ class _MyAppState extends State<MyApp> {
       final type = data['type'];
       final chatId = data['chatId'];
       if (type == 'NEW_MESSAGE' && chatId != null) {
-        print('📱 Notification received for chat: $chatId');
+        //print('📱 Notification received for chat: $chatId');
       }
     });
   }

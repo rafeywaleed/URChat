@@ -52,7 +52,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _isLoading = false;
       });
     } catch (e) {
-      print('Error loading user data: $e');
+      //print('Error loading user data: $e');
       setState(() {
         _isLoading = false;
       });
@@ -109,7 +109,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           context,
           type: NesSnackbarType.success);
     } catch (e) {
-      print('Error updating profile: $e');
+      //print('Error updating profile: $e');
       NesSnackbar.show(
           text: 'Failed to update profile',
           context,

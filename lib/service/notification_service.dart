@@ -38,7 +38,7 @@ class NotificationService {
 
       final granted =
           settings.authorizationStatus == AuthorizationStatus.authorized;
-      print('🔔 Notification permission granted: $granted');
+      //print('🔔 Notification permission granted: $granted');
 
       if (granted) {
         await _getTokenAndSendToServer();
@@ -46,7 +46,7 @@ class NotificationService {
 
       return granted;
     } catch (e) {
-      print('❌ Error enabling notifications: $e');
+      //print('❌ Error enabling notifications: $e');
       return false;
     }
   }
@@ -57,7 +57,7 @@ class NotificationService {
           await _firebaseMessaging.getNotificationSettings();
       return settings.authorizationStatus == AuthorizationStatus.authorized;
     } catch (e) {
-      print('❌ Error checking notification permission: $e');
+      //print('❌ Error checking notification permission: $e');
       return false;
     }
   }
@@ -70,7 +70,7 @@ class NotificationService {
   //     }
   //     return false;
   //   } catch (e) {
-  //     print('❌ Error showing browser permission dialog: $e');
+  //     //print('❌ Error showing browser permission dialog: $e');
   //     return false;
   //   }
   // }
@@ -88,7 +88,7 @@ class NotificationService {
   //     // Convert the promise to a Future
   //     return await promiseToFuture(promise);
   //   } catch (e) {
-  //     print('❌ Error requesting browser permission: $e');
+  //     //print('❌ Error requesting browser permission: $e');
   //     return 'denied';
   //   }
   // }
@@ -131,7 +131,7 @@ class NotificationService {
   //     final permission = await promiseToFuture(result);
   //     return permission == 'granted';
   //   } catch (e) {
-  //     print('❌ Error in simple permission request: $e');
+  //     //print('❌ Error in simple permission request: $e');
   //     return false;
   //   }
   // }
@@ -140,7 +140,7 @@ class NotificationService {
     if (_isInitialized || _isInitializing) return;
 
     _isInitializing = true;
-    print('🔄 Starting notification service initialization...');
+    //print('🔄 Starting notification service initialization...');
 
     try {
       await _setupFirebase();
@@ -153,10 +153,10 @@ class NotificationService {
       }
 
       _isInitialized = true;
-      print('✅ Notification service initialized successfully');
+      //print('✅ Notification service initialized successfully');
     } catch (e, stackTrace) {
-      print('❌ Error initializing notification service: $e');
-      print('Stack trace: $stackTrace');
+      //print('❌ Error initializing notification service: $e');
+      //print('Stack trace: $stackTrace');
     } finally {
       _isInitializing = false;
     }
@@ -164,20 +164,20 @@ class NotificationService {
 
   Future<void> _setupFirebase() async {
     try {
-      print('🔥 Initializing Firebase...');
+      //print('🔥 Initializing Firebase...');
       await Firebase.initializeApp(
         options: DefaultFirebaseOptions.currentPlatform,
       );
-      print('✅ Firebase initialized successfully');
+      //print('✅ Firebase initialized successfully');
     } catch (e) {
-      print('❌ Firebase initialization failed: $e');
+      //print('❌ Firebase initialization failed: $e');
       rethrow;
     }
   }
 
   Future<void> requestPermissions() async {
     try {
-      print('📝 Requesting notification permissions...');
+      //print('📝 Requesting notification permissions...');
 
       NotificationSettings settings =
           await _firebaseMessaging.requestPermission(
@@ -190,7 +190,7 @@ class NotificationService {
         sound: true,
       );
 
-      print('📱 Notification permission: ${settings.authorizationStatus}');
+      //print('📱 Notification permission: ${settings.authorizationStatus}');
 
       if (settings.authorizationStatus == AuthorizationStatus.authorized) {
         await _getTokenAndSendToServer();
@@ -198,19 +198,19 @@ class NotificationService {
 
       return;
     } catch (e) {
-      print('⚠️ Permission request failed: $e');
+      //print('⚠️ Permission request failed: $e');
       rethrow;
     }
   }
 
   Future<void> _setupLocalNotifications() async {
     if (kIsWeb) {
-      print('🌐 Skipping local notifications setup for web');
+      //print('🌐 Skipping local notifications setup for web');
       return;
     }
 
     try {
-      print('🔔 Setting up local notifications...');
+      //print('🔔 Setting up local notifications...');
       const AndroidInitializationSettings androidSettings =
           AndroidInitializationSettings('@mipmap/ic_launcher');
 
@@ -230,20 +230,20 @@ class NotificationService {
       await _flutterLocalNotificationsPlugin.initialize(
         initializationSettings,
         onDidReceiveNotificationResponse: (NotificationResponse response) {
-          print('👆 Local notification tapped: ${response.payload}');
+          //print('👆 Local notification tapped: ${response.payload}');
           _handleNotificationTap(response.payload);
         },
       );
 
-      print('✅ Local notifications setup complete');
+      //print('✅ Local notifications setup complete');
     } catch (e) {
-      print('❌ Local notifications setup failed: $e');
+      //print('❌ Local notifications setup failed: $e');
     }
   }
 
   Future<void> _requestPermissions() async {
     try {
-      print('📝 Requesting notification permissions...');
+      //print('📝 Requesting notification permissions...');
 
       NotificationSettings settings =
           await _firebaseMessaging.requestPermission(
@@ -256,55 +256,55 @@ class NotificationService {
         sound: true,
       );
 
-      print('📱 Notification permission: ${settings.authorizationStatus}');
+      //print('📱 Notification permission: ${settings.authorizationStatus}');
     } catch (e) {
-      print('⚠️ Permission request failed: $e');
+      //print('⚠️ Permission request failed: $e');
     }
   }
 
   Future<void> _getTokenAndSendToServer() async {
     try {
-      print('🔑 Getting FCM token...');
+      //print('🔑 Getting FCM token...');
       String? token = await _firebaseMessaging.getToken();
-      print('📱 FCM Token: ${token ?? "NULL"}');
+      //print('📱 FCM Token: ${token ?? "NULL"}');
 
       if (token != null && ApiService.isAuthenticated) {
         await _sendTokenToServer(token);
       } else if (token == null) {
-        print('⚠️ FCM token is null - notifications may not work');
+        //print('⚠️ FCM token is null - notifications may not work');
       } else {
-        print('⚠️ User not authenticated, skipping token save');
+        //print('⚠️ User not authenticated, skipping token save');
       }
 
       // Listen for token refresh
       _firebaseMessaging.onTokenRefresh.listen((newToken) {
-        print('🔄 FCM token refreshed: $newToken');
+        //print('🔄 FCM token refreshed: $newToken');
         if (ApiService.isAuthenticated) {
           _sendTokenToServer(newToken);
         }
       });
     } catch (e) {
-      print('❌ Error getting FCM token: $e');
+      //print('❌ Error getting FCM token: $e');
     }
   }
 
   Future<void> _sendTokenToServer(String token) async {
     try {
-      print('📤 Sending FCM token to server...');
+      //print('📤 Sending FCM token to server...');
       await ApiService.saveFcmToken(token);
-      print('✅ FCM token sent to server successfully');
+      //print('✅ FCM token sent to server successfully');
     } catch (e) {
-      print('❌ Error sending FCM token to server: $e');
+      //print('❌ Error sending FCM token to server: $e');
     }
   }
 
   void _setupMessageHandling() {
-    print('🎯 Setting up message handlers...');
+    //print('🎯 Setting up message handlers...');
 
     // Handle messages when app is in foreground
     FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
-      print('📱 Foreground message received: ${message.notification?.title}');
-      print('   Data: ${message.data}');
+      //print('📱 Foreground message received: ${message.notification?.title}');
+      //print('   Data: ${message.data}');
 
       // Detect app state
       final isInForeground =
@@ -318,14 +318,14 @@ class NotificationService {
         if (!isInForeground) {
           _showLocalNotification(message);
         } else {
-          print('🚫 Skipping notification (app is in foreground on Android)');
+          //print('🚫 Skipping notification (app is in foreground on Android)');
         }
       }
     });
 
     // Handle notification tap when app is in background/terminated
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-      print('👆 Notification tapped: ${message.data}');
+      //print('👆 Notification tapped: ${message.data}');
       _handleNotificationData(message.data);
     });
 
@@ -334,14 +334,14 @@ class NotificationService {
         .getInitialMessage()
         .then((RemoteMessage? message) {
       if (message != null) {
-        print('🚀 Initial message from terminated state: ${message.data}');
+        //print('🚀 Initial message from terminated state: ${message.data}');
         Future.delayed(const Duration(seconds: 3), () {
           _handleNotificationData(message.data);
         });
       }
     });
 
-    print('✅ Message handlers setup complete');
+    //print('✅ Message handlers setup complete');
   }
 
   void _showWebInAppNotification(RemoteMessage message) {
@@ -388,9 +388,9 @@ class NotificationService {
         payload: jsonEncode(message.data),
       );
 
-      print('📨 Local notification shown');
+      //print('📨 Local notification shown');
     } catch (e) {
-      print('❌ Error showing local notification: $e');
+      //print('❌ Error showing local notification: $e');
     }
   }
 
@@ -398,26 +398,26 @@ class NotificationService {
     if (payload != null) {
       try {
         Map<String, dynamic> data = jsonDecode(payload);
-        print('👆 Local notification TAPPED - Navigating to chat: $data');
+        //print('👆 Local notification TAPPED - Navigating to chat: $data');
         _handleNotificationData(data);
       } catch (e) {
-        print('❌ Error parsing notification payload: $e');
+        //print('❌ Error parsing notification payload: $e');
       }
     }
   }
 
   void _handleNotificationData(Map<String, dynamic> data) {
-    print('🎯 Handling notification data: $data');
+    //print('🎯 Handling notification data: $data');
 
     final type = data['type'];
     final chatId = data['chatId'];
 
     if (type == 'NEW_MESSAGE' && chatId != null) {
-      print('💬 Notification tapped for chat: $chatId - Navigating...');
+      //print('💬 Notification tapped for chat: $chatId - Navigating...');
       _navigateToChat(chatId);
     } else if (type == 'GROUP_INVITATION') {
       final groupName = data['groupName'];
-      print('👥 Group invitation notification for: $groupName');
+      //print('👥 Group invitation notification for: $groupName');
       _handleGroupInvitation(groupName);
     }
   }
@@ -441,15 +441,15 @@ class NotificationService {
   }
 
   void _handleGroupInvitation(String groupName) {
-    print('🎯 Group invitation received: $groupName');
+    //print('🎯 Group invitation received: $groupName');
   }
 
   Future<void> removeFcmToken() async {
     try {
       await ApiService.removeFcmToken();
-      print('✅ FCM token removed from server');
+      //print('✅ FCM token removed from server');
     } catch (e) {
-      print('❌ Error removing FCM token: $e');
+      //print('❌ Error removing FCM token: $e');
     }
   }
 

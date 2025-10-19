@@ -45,7 +45,7 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen> {
         _isLoading = false;
       });
     } catch (e) {
-      print('Error loading user profile: $e');
+      //print('Error loading user profile: $e');
       setState(() {
         _isLoading = false;
       });
@@ -105,11 +105,11 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen> {
     });
 
     try {
-      print('🎯 Creating chat with ${widget.username}');
+      //print('🎯 Creating chat with ${widget.username}');
       final chat = await ApiService.createIndividualChat(widget.username);
       NavigationHelper.navigateToChat(context, widget.username);
     } catch (e) {
-      print('❌ Error creating chat: $e');
+      //print('❌ Error creating chat: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Failed to create chat: $e'),

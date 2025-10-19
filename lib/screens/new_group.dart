@@ -56,7 +56,7 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
         _isSearching = false;
       });
     } catch (e) {
-      print('❌ Error searching users: $e');
+      //print('❌ Error searching users: $e');
       setState(() {
         _isSearching = false;
         _searchResults = [];
@@ -117,7 +117,7 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
           context,
           type: NesSnackbarType.success);
     } catch (e) {
-      print('❌ Error creating group: $e');
+      //print('❌ Error creating group: $e');
       NesSnackbar.show(
           text: 'Failed to create group: $e',
           context,

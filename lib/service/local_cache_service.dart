@@ -53,7 +53,7 @@ class LocalCacheService {
       final List<dynamic> data = json.decode(chatsJson);
       return data.map((json) => ChatRoom.fromJson(json)).toList();
     } catch (e) {
-      print('Error parsing cached chats: $e');
+      //print('Error parsing cached chats: $e');
       return null;
     }
   }
@@ -84,7 +84,7 @@ class LocalCacheService {
       final List<dynamic> data = json.decode(messagesJson);
       return data.map((json) => Message.fromJson(json)).toList();
     } catch (e) {
-      print('Error parsing cached messages: $e');
+      //print('Error parsing cached messages: $e');
       return null;
     }
   }
