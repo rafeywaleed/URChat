@@ -7,6 +7,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:urchat/model/dto.dart';
 import 'package:urchat/model/message.dart';
@@ -2343,23 +2344,118 @@ class _HomescreenState extends State<Homescreen>
   // }
 
   void _logout() async {
+    if (!_isInternetConnected) {
+      if (mounted) {
+        NesSnackbar.show(
+          context,
+          text:
+              'Cannot logout while offline. Please check your internet connection.',
+          type: NesSnackbarType.error,
+        );
+      }
+      return;
+    }
+
+    bool serverReachable = await ApiService.isServerReachable();
+    if (!serverReachable) {
+      if (mounted) {
+        NesSnackbar.show(
+          context,
+          text: 'Cannot connect to server. Please try again when connected.',
+          type: NesSnackbarType.error,
+        );
+      }
+      return;
+    }
+
     final result = await NesDialog.show<bool>(
       context: context,
       builder: (context) => const NesConfirmDialog(
         cancelLabel: 'Cancel',
         confirmLabel: 'Logout',
-        message: 'Are you sure you want to logout?',
+        message:
+            'Are you sure you want to logout? This will remove your device from receiving notifications.',
       ),
     );
 
     if (result == true && mounted) {
-      _webSocketService.disconnect();
-      await ApiService.logout();
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => AuthScreen()),
-      );
+      await _performSecureLogout();
     }
+  }
+
+  Future<void> _performSecureLogout() async {
+    try {
+      // Show loading indicator
+      if (mounted) {
+        NesSnackbar.show(
+          context,
+          text: 'Securely logging out...',
+          type: NesSnackbarType.warning,
+        );
+      }
+
+      _webSocketService.disconnect();
+
+      bool serverLogoutSuccess = await ApiService.logout();
+
+      await _clearAllLocalData();
+
+      _cancelAllTimers();
+
+      if (mounted) {
+        if (serverLogoutSuccess) {
+          NesSnackbar.show(
+            context,
+            text: 'Logged out successfully. Notifications disabled.',
+            type: NesSnackbarType.success,
+          );
+        } else {
+          NesSnackbar.show(
+            context,
+            text:
+                'Local logout complete. Notifications may still work until next login.',
+            type: NesSnackbarType.warning,
+          );
+        }
+
+        Future.delayed(const Duration(milliseconds: 1500), () {
+          if (mounted) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => AuthScreen()),
+            );
+          }
+        });
+      }
+    } catch (e) {
+      print('❌ Secure logout failed: $e');
+      if (mounted) {
+        NesSnackbar.show(
+          context,
+          text: 'Logout failed. Please try again.',
+          type: NesSnackbarType.error,
+        );
+      }
+    }
+  }
+
+  Future<void> _clearAllLocalData() async {
+    try {
+      await LocalCacheService.clearAllCache();
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.clear();
+
+      print('✅ All local data cleared securely');
+    } catch (e) {
+      print('❌ Error clearing local data: $e');
+    }
+  }
+
+  void _cancelAllTimers() {
+    _connectionTimer.cancel();
+    _debugTimer.cancel();
+    _timer.cancel();
   }
 
   @override

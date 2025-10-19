@@ -85,19 +85,29 @@ class ApiService {
     }
   }
 
-  static Future<void> logout() async {
+  static Future<bool> logout() async {
     try {
-      await http.post(
+      await removeFcmToken();
+
+      // Then call the server logout endpoint
+      final response = await http.post(
         Uri.parse('$baseUrl/auth/logout'),
         headers: headers,
       );
-    } catch (e) {
-      print('Logout API error: $e');
-    } finally {
+
       await _storage.clearAuthData();
       accessToken = null;
       refreshToken = null;
       currentUsername = null;
+
+      return response.statusCode == 200;
+    } catch (e) {
+      print('Logout API error: $e');
+      await _storage.clearAuthData();
+      accessToken = null;
+      refreshToken = null;
+      currentUsername = null;
+      return false;
     }
   }
 
@@ -690,5 +700,32 @@ class ApiService {
 
   static void setWebSocketService(WebSocketService webSocketService) {
     _webSocketService = webSocketService;
+  }
+
+  static Future<void> verifyConnection() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/admin/health'),
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception('Server not available');
+      }
+    } catch (e) {
+      throw Exception('Cannot connect to server: $e');
+    }
+  }
+
+  static Future<bool> isServerReachable() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/admin/health'),
+        headers: headers,
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      print('❌ Server not reachable: $e');
+      return false;
+    }
   }
 }
