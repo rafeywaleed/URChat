@@ -103,11 +103,17 @@ class _HomescreenState extends State<Homescreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    _loadInitialData().then((_) {
-      if (widget.openChatOnStart == true && widget.initialChatId != null) {
-        _openInitialChat();
-      }
-    });
+
+    if (widget.openChatOnStart == true && widget.initialChatId != null) {
+      _openInitialChat();
+    }
+
+    _loadInitialData();
+    // .then((_) {
+    //   if (widget.openChatOnStart == true && widget.initialChatId != null) {
+    //     _openInitialChat();
+    //   }
+    // });
 
     _timer = Timer.periodic(const Duration(seconds: 10), (timer) {
       _switchRunningText();
@@ -138,6 +144,78 @@ class _HomescreenState extends State<Homescreen>
     // });
 
     _setupNotificationListener();
+
+    _setupNotificationCallback();
+  }
+
+  void _setupNotificationCallback() {
+    print('🔗 Setting up notification callback');
+    InAppNotifications.instance.setOnOpenChatCallback((String chatId) {
+      print('🎯 Notification callback received for chat: $chatId');
+      _openChatFromNotification(chatId);
+    });
+  }
+
+  void _openChatFromNotification(String chatId) {
+    print('🚀 Opening chat from notification callback: $chatId');
+
+    // Try to find the chat in existing chats
+    try {
+      final chat = _chats.firstWhere((chat) => chat.chatId == chatId);
+      print('✅ Chat found: ${chat.chatName}');
+
+      // NEW: Check if we're currently in mobile view with a chat open
+      if (_isMobileScreen && _selectedChatId != null) {
+        print('📱 Mobile: Replacing current chat with notification chat');
+
+        // First deselect the current chat (this will pop the chat screen)
+        _deselectChat();
+
+        // Wait a tiny bit for the navigation to complete, then select the new chat
+        Future.delayed(const Duration(milliseconds: 100), () {
+          if (mounted) {
+            _selectChat(chat);
+          }
+        });
+      } else {
+        // For desktop or when no chat is selected, just select normally
+        _selectChat(chat);
+      }
+    } catch (e) {
+      print('❌ Chat not found in current list, refreshing...');
+      // Chat might not be loaded yet, refresh and try again
+      _loadFreshChats().then((_) {
+        if (!mounted) return;
+        try {
+          final refreshedChat =
+              _chats.firstWhere((chat) => chat.chatId == chatId);
+          print('✅ Chat found after refresh: ${refreshedChat.chatName}');
+
+          // Apply the same mobile navigation logic
+          if (_isMobileScreen && _selectedChatId != null) {
+            _deselectChat();
+            Future.delayed(const Duration(milliseconds: 100), () {
+              if (mounted) {
+                _selectChat(refreshedChat);
+              }
+            });
+          } else {
+            _selectChat(refreshedChat);
+          }
+        } catch (e) {
+          print('❌ Chat not found even after refresh: $chatId');
+          _showChatNotFoundError(chatId);
+        }
+      });
+    }
+  }
+
+  void _showChatNotFoundError(String chatId) {
+    NesSnackbar.show(
+      context,
+      text: 'Chat not found or you no longer have access',
+      type: NesSnackbarType.error,
+    );
   }
 
   void _setupNotificationListener() {
@@ -709,7 +787,8 @@ class _HomescreenState extends State<Homescreen>
     // For mobile, navigate to chat screen
     if (_isMobileScreen) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        Navigator.of(context).push(
+        Navigator.of(context)
+            .push(
           PageRouteBuilder(
             pageBuilder: (context, animation, secondaryAnimation) => URChatApp(
               chatRoom: chat,
@@ -732,7 +811,10 @@ class _HomescreenState extends State<Homescreen>
             },
             transitionDuration: const Duration(milliseconds: 350),
           ),
-        );
+        )
+            .then((_) {
+          _deselectChat();
+        });
       });
     }
 
@@ -2063,9 +2145,7 @@ class _HomescreenState extends State<Homescreen>
 
                 // Global notifications overlay
                 InAppNotifications.instance.buildNotifications(context, () {
-                  // This callback is called when a notification is tapped
-                  // You can add logic here if needed, or leave empty
-                  if (mounted) setState(() {});
+                  print('ℹ️ Legacy notification callback - not used');
                 }),
               ],
             ),
@@ -2296,6 +2376,7 @@ class _HomescreenState extends State<Homescreen>
     _timer.cancel();
     _webSocketService.disconnect();
     _focusNode.dispose();
+    InAppNotifications.instance.setOnOpenChatCallback((_) {});
     super.dispose();
   }
 

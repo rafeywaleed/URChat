@@ -2263,195 +2263,204 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        leading: widget.onBack != null
-            ? IconButton(
-                icon: const Icon(Icons.arrow_back),
-                onPressed: widget.onBack,
-              )
-            : null,
-        title: GestureDetector(
-          onTap: () => widget.chatRoom.isGroup
-              ? Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => GroupManagementScreen(
-                      group: widget.chatRoom,
-                    ),
-                  ),
+    return WillPopScope(
+      onWillPop: () async {
+        // if (widget.onBack != null) {
+        //   widget.onBack!();
+        //   return false;
+        // }
+        return true;
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          leading: widget.onBack != null
+              ? IconButton(
+                  icon: const Icon(Icons.arrow_back),
+                  onPressed: widget.onBack,
                 )
-              : Navigator.of(context).push(
-                  MaterialPageRoute(
-                      builder: (context) => OtherUserProfileScreen(
-                            username: widget.chatRoom.chatName,
-                            fromChat: true,
-                          )),
-                ),
-          child: Row(
-            children: [
-              Hero(
-                tag: widget.chatRoom.isGroup
-                    ? "chat_avatar_${widget.chatRoom.chatId}"
-                    : "user_avatar_${widget.chatRoom.chatName}",
-                child: CircleAvatar(
-                  backgroundColor: _parseColor(widget.chatRoom.pfpBg),
-                  child: Text(
-                    widget.chatRoom.pfpIndex,
-                    style: const TextStyle(color: Colors.white),
+              : null,
+          title: GestureDetector(
+            onTap: () => widget.chatRoom.isGroup
+                ? Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => GroupManagementScreen(
+                        group: widget.chatRoom,
+                      ),
+                    ),
+                  )
+                : Navigator.of(context).push(
+                    MaterialPageRoute(
+                        builder: (context) => OtherUserProfileScreen(
+                              username: widget.chatRoom.chatName,
+                              fromChat: true,
+                            )),
                   ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    widget.chatRoom.chatName,
-                    style: ChatFonts.getTextStyle(
-                      _selectedFont,
-                      baseStyle: const TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.bold),
+            child: Row(
+              children: [
+                Hero(
+                  tag: widget.chatRoom.isGroup
+                      ? "chat_avatar_${widget.chatRoom.chatId}"
+                      : "user_avatar_${widget.chatRoom.chatName}",
+                  child: CircleAvatar(
+                    backgroundColor: _parseColor(widget.chatRoom.pfpBg),
+                    child: Text(
+                      widget.chatRoom.pfpIndex,
+                      style: const TextStyle(color: Colors.white),
                     ),
                   ),
-                  AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 300),
-                    child: _typingUser.isNotEmpty
-                        ? Text(
-                            '$_typingUser is typing...',
-                            style: ChatFonts.getTextStyle(
-                              _selectedFont,
-                              baseStyle: const TextStyle(
-                                  fontSize: 12, color: Colors.white70),
-                            ),
-                          )
-                        : Text(
-                            widget.chatRoom.isGroup
-                                ? 'Group'
-                                : _getOtherUserName(),
-                            style: ChatFonts.getTextStyle(
-                              _selectedFont,
-                              baseStyle: const TextStyle(
-                                  fontSize: 12, color: Colors.white70),
-                            ),
-                          ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.tune),
-            onPressed: _showThemeMenu,
-          ),
-        ],
-      ),
-      body: Stack(
-        children: [
-          _background(widget.selectedTheme),
-          Column(
-            children: [
-              Expanded(
-                child: _buildMessageList(),
-              ),
-              _buildInlineEmojiPicker(),
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
+                ),
+                const SizedBox(width: 12),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    IconButton(
-                      onPressed: () {
-                        setState(() {
-                          _showInlineEmojiPicker = !_showInlineEmojiPicker;
-                        });
-                      },
-                      icon: Icon(
-                        _showInlineEmojiPicker
-                            ? Icons.keyboard
-                            : Icons.emoji_emotions_outlined,
-                      ),
-                      tooltip: 'Emojis',
-                    ),
-                    const SizedBox(width: 4),
-
-                    // Message Text Field
-                    Expanded(
-                      child: TextField(
-                        style: ChatFonts.getTextStyle(_selectedFont),
-                        autofocus: true,
-                        controller: _messageController,
-                        decoration: InputDecoration(
-                          hintText: 'Type a message...',
-                          hintStyle: ChatFonts.getTextStyle(
-                            _selectedFont,
-                            baseStyle: TextStyle(),
-                          ),
-                          labelStyle: ChatFonts.getTextStyle(
-                            _selectedFont,
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(24),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 12),
-                          suffixIcon: _isSending
-                              ? const Padding(
-                                  padding: EdgeInsets.all(12),
-                                  child: SizedBox(
-                                    width: 16,
-                                    height: 16,
-                                    child: CircularProgressIndicator(
-                                        strokeWidth: 2),
-                                  ),
-                                )
-                              : null,
-                        ),
-                        onChanged: (text) {
-                          if (text.isNotEmpty) {
-                            _startTyping();
-                          } else {
-                            _stopTyping();
-                          }
-                        },
-                        onSubmitted: (_) => _sendMessage(),
+                    Text(
+                      widget.chatRoom.chatName,
+                      style: ChatFonts.getTextStyle(
+                        _selectedFont,
+                        baseStyle: const TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.bold),
                       ),
                     ),
-                    const SizedBox(width: 8),
-
-                    // Send Button
-                    FloatingActionButton(
-                      onPressed: _isSending ? null : _sendMessage,
-                      child: _isSending
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor:
-                                    AlwaysStoppedAnimation(Colors.white),
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 300),
+                      child: _typingUser.isNotEmpty
+                          ? Text(
+                              '$_typingUser is typing...',
+                              style: ChatFonts.getTextStyle(
+                                _selectedFont,
+                                baseStyle: const TextStyle(
+                                    fontSize: 12, color: Colors.white70),
                               ),
                             )
-                          : const Icon(Icons.send),
+                          : Text(
+                              widget.chatRoom.isGroup
+                                  ? 'Group'
+                                  : _getOtherUserName(),
+                              style: ChatFonts.getTextStyle(
+                                _selectedFont,
+                                baseStyle: const TextStyle(
+                                    fontSize: 12, color: Colors.white70),
+                              ),
+                            ),
                     ),
                   ],
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-          if (_showScrollToBottom)
-            Positioned(
-              bottom: 80,
-              right: 16,
-              child: ScaleTransition(
-                scale: _scrollButtonAnimation,
-                child: FloatingActionButton.small(
-                  onPressed: _scrollToBottom,
-                  child: const Icon(Icons.arrow_downward),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.tune),
+              onPressed: _showThemeMenu,
+            ),
+          ],
+        ),
+        body: Stack(
+          children: [
+            _background(widget.selectedTheme),
+            Column(
+              children: [
+                Expanded(
+                  child: _buildMessageList(),
+                ),
+                _buildInlineEmojiPicker(),
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        onPressed: () {
+                          setState(() {
+                            _showInlineEmojiPicker = !_showInlineEmojiPicker;
+                          });
+                        },
+                        icon: Icon(
+                          _showInlineEmojiPicker
+                              ? Icons.keyboard
+                              : Icons.emoji_emotions_outlined,
+                        ),
+                        tooltip: 'Emojis',
+                      ),
+                      const SizedBox(width: 4),
+
+                      // Message Text Field
+                      Expanded(
+                        child: TextField(
+                          style: ChatFonts.getTextStyle(_selectedFont),
+                          // autofocus: true,
+                          controller: _messageController,
+                          decoration: InputDecoration(
+                            hintText: 'Type a message...',
+                            hintStyle: ChatFonts.getTextStyle(
+                              _selectedFont,
+                              baseStyle: TextStyle(),
+                            ),
+                            labelStyle: ChatFonts.getTextStyle(
+                              _selectedFont,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(24),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 12),
+                            suffixIcon: _isSending
+                                ? const Padding(
+                                    padding: EdgeInsets.all(12),
+                                    child: SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2),
+                                    ),
+                                  )
+                                : null,
+                          ),
+                          onChanged: (text) {
+                            if (text.isNotEmpty) {
+                              _startTyping();
+                            } else {
+                              _stopTyping();
+                            }
+                          },
+                          onSubmitted: (_) => _sendMessage(),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+
+                      // Send Button
+                      FloatingActionButton(
+                        onPressed: _isSending ? null : _sendMessage,
+                        child: _isSending
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor:
+                                      AlwaysStoppedAnimation(Colors.white),
+                                ),
+                              )
+                            : const Icon(Icons.send),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            if (_showScrollToBottom)
+              Positioned(
+                bottom: 80,
+                right: 16,
+                child: ScaleTransition(
+                  scale: _scrollButtonAnimation,
+                  child: FloatingActionButton.small(
+                    onPressed: _scrollToBottom,
+                    child: const Icon(Icons.arrow_downward),
+                  ),
                 ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }

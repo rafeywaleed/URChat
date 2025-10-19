@@ -1,5 +1,3 @@
-// lib/service/notification_service.dart
-
 import 'dart:async';
 import 'dart:convert';
 import 'package:firebase_core/firebase_core.dart';

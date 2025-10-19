@@ -480,27 +480,6 @@ class _GroupPfpDialogState extends State<GroupPfpDialog> {
                           Row(
                             children: [
                               Expanded(
-                                child: ElevatedButton(
-                                  onPressed: () => Navigator.pop(context),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: colorScheme.primary,
-                                    foregroundColor: colorScheme.onPrimary,
-                                    padding: EdgeInsets.symmetric(
-                                        vertical: isSmallScreen ? 14 : 16),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    elevation: 2,
-                                  ),
-                                  child: Text(
-                                    'Apply',
-                                    style: TextStyle(
-                                        fontSize: isSmallScreen ? 16 : 18),
-                                  ),
-                                ),
-                              ),
-                              SizedBox(width: isSmallScreen ? 12 : 16),
-                              Expanded(
                                 child: OutlinedButton(
                                   onPressed: () => Navigator.pop(context),
                                   style: OutlinedButton.styleFrom(
@@ -515,6 +494,27 @@ class _GroupPfpDialogState extends State<GroupPfpDialog> {
                                   ),
                                   child: Text(
                                     'Cancel',
+                                    style: TextStyle(
+                                        fontSize: isSmallScreen ? 16 : 18),
+                                  ),
+                                ),
+                              ),
+                              SizedBox(width: isSmallScreen ? 12 : 16),
+                              Expanded(
+                                child: ElevatedButton(
+                                  onPressed: () => Navigator.pop(context),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: colorScheme.primary,
+                                    foregroundColor: colorScheme.onPrimary,
+                                    padding: EdgeInsets.symmetric(
+                                        vertical: isSmallScreen ? 14 : 16),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    elevation: 2,
+                                  ),
+                                  child: Text(
+                                    'Apply',
                                     style: TextStyle(
                                         fontSize: isSmallScreen ? 16 : 18),
                                   ),
@@ -949,8 +949,6 @@ class _GroupPfpDialogState extends State<GroupPfpDialog> {
                           ),
                           elevation: 2,
                         ),
-                        icon: Icon(Icons.emoji_emotions,
-                            size: isSmallScreen ? 18 : 20),
                         label: Text(
                           'Change Emoji',
                           style: TextStyle(fontSize: isSmallScreen ? 16 : 18),
@@ -962,8 +960,8 @@ class _GroupPfpDialogState extends State<GroupPfpDialog> {
                       child: ElevatedButton.icon(
                         onPressed: _showColorPicker,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.orange.shade400,
-                          foregroundColor: Colors.white,
+                          backgroundColor: colorScheme.primary,
+                          foregroundColor: colorScheme.onPrimary,
                           padding: EdgeInsets.symmetric(
                               vertical: isSmallScreen ? 14 : 16),
                           shape: RoundedRectangleBorder(
@@ -971,8 +969,6 @@ class _GroupPfpDialogState extends State<GroupPfpDialog> {
                           ),
                           elevation: 2,
                         ),
-                        icon:
-                            Icon(Icons.palette, size: isSmallScreen ? 18 : 20),
                         label: Text(
                           'Change Color',
                           style: TextStyle(fontSize: isSmallScreen ? 16 : 18),

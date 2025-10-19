@@ -19,6 +19,8 @@ class InAppNotifications {
   List<ChatRoom> chats = [];
   String? currentChatId;
 
+  Function(String chatId)? onOpenChat;
+
   bool get isInChat => currentChatId != null;
 
   void addNotification(Map<String, dynamic> notification) {
@@ -29,7 +31,6 @@ class InAppNotifications {
       notification,
     ];
 
-    // Auto-remove after a short delay
     Future.delayed(const Duration(seconds: 3), () {
       messageNotifications.value =
           messageNotifications.value.where((n) => n != notification).toList();
@@ -47,6 +48,10 @@ class InAppNotifications {
 
   void setCurrentChat(String? chatId) {
     currentChatId = chatId;
+  }
+
+  void setOnOpenChatCallback(Function(String chatId) callback) {
+    onOpenChat = callback;
   }
 
   Widget buildNotifications(BuildContext context, VoidCallback onSelectChat) {
@@ -104,14 +109,15 @@ class InAppNotifications {
           : () {
               setCurrentChat(chat.chatId);
               removeNotification(notification);
-              Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => Homescreen(
-                      initialChatId: chat.chatId,
-                      openChatOnStart: true,
-                    ),
-                  ));
+
+              // NEW: Use callback if available, otherwise fallback to navigation
+              if (onOpenChat != null) {
+                print('🎯 Using callback to open chat: ${chat.chatId}');
+                onOpenChat!(chat.chatId);
+              } else {
+                print('🔄 Callback not available, using fallback navigation');
+                _fallbackNavigation(context, chat.chatId);
+              }
             },
       child: NesContainer(
         padding: const EdgeInsets.all(12),
@@ -157,6 +163,18 @@ class InAppNotifications {
       )
           .animate()
           .slideX(begin: -1, end: 0, curve: Curves.easeOut, duration: 300.ms),
+    );
+  }
+
+  void _fallbackNavigation(BuildContext context, String chatId) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => Homescreen(
+          initialChatId: chatId,
+          openChatOnStart: true,
+        ),
+      ),
     );
   }
 
