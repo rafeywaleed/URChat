@@ -28,6 +28,7 @@ import 'package:urchat/service/websocket_service.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:urchat/widgets/deletion_dialog.dart';
 import 'package:urchat/widgets/pixle_circle.dart';
+import 'package:urchat/widgets/scrolled_text.dart';
 
 import '../model/chat_room.dart';
 
@@ -116,9 +117,9 @@ class _HomescreenState extends State<Homescreen>
     //   }
     // });
 
-    _timer = Timer.periodic(const Duration(seconds: 10), (timer) {
-      _switchRunningText();
-    });
+    // _timer = Timer.periodic(const Duration(seconds: 6), (timer) {
+    //   _switchRunningText();
+    // });
 
     _focusNode = FocusNode();
     _connectionTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
@@ -1632,7 +1633,7 @@ class _HomescreenState extends State<Homescreen>
         backgroundColor: _bgLight,
         child: Column(
           children: [
-            _isMobileScreen ? _buildRunningTextBanner() : SizedBox.shrink(),
+            if (_isMobileScreen) _buildRunningTextBanner(),
             // Connection status bar
             Container(
               padding: const EdgeInsets.all(12),
@@ -2299,60 +2300,47 @@ class _HomescreenState extends State<Homescreen>
     );
   }
 
-  Widget _buildRunningTextBanner() {
-    return SizedBox(
-      height: 40,
-      child: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 500),
-        child: _currentTextIndex == 0
-            ? _buildRunningTextItem(
-                key: ValueKey('text0'),
-                text: "Welcome to URChat",
-                fontSize: _isLargeScreen ? 14 : 12,
-                onComplete: () => _switchRunningText(),
-              )
-            : _buildRunningTextItem(
-                key: ValueKey('text1'),
-                text: "Messages will be automatically\ndeleted after 7 days",
-                fontSize: _isLargeScreen ? 12 : 10,
-                onComplete: () => _switchRunningText(),
-              ),
-      ),
-    );
-  }
+  Widget _buildRunningTextBanner() => const RunningTextBanner();
 
-  Widget _buildRunningTextItem({
-    required Key key,
-    required String text,
-    required double fontSize,
-    required VoidCallback onComplete,
-  }) {
-    return KeyedSubtree(
-      key: key,
-      child: NesRunningText(
-        onEnd: onComplete,
-        text: text,
-        textStyle: TextStyle(fontSize: fontSize),
-      ),
-    );
-  }
+  // Widget _buildRunningTextBanner() {
+  //   return Container(
+  //     height: 40,
+  //     width: double.infinity,
+  //     child: Center(
+  //       child: AnimatedSwitcher(
+  //         duration: const Duration(milliseconds: 500),
+  //         child: _buildCurrentTextItem(),
+  //       ),
+  //     ),
+  //   );
+  // }
 
-  void _switchRunningText() {
-    Future.delayed(const Duration(seconds: 1), () {
-      if (!mounted) return;
-      setState(() {
-        _showRunningText = false;
-      });
+  // Widget _buildCurrentTextItem() {
+  //   final texts = [
+  //     "Welcome to URChat",
+  //     "Messages will be automatically deleted after 7 days"
+  //   ];
 
-      Future.delayed(const Duration(milliseconds: 500), () {
-        if (!mounted) return;
-        setState(() {
-          _currentTextIndex = (_currentTextIndex + 1) % 2;
-          _showRunningText = true;
-        });
-      });
-    });
-  }
+  //   return Container(
+  //     key: ValueKey(_currentTextIndex),
+  //     padding: const EdgeInsets.symmetric(horizontal: 16),
+  //     child: NesRunningText(
+  //       text: texts[_currentTextIndex],
+  //       textStyle: GoogleFonts.pressStart2p(
+  //         fontSize: _isLargeScreen ? 12 : 10,
+  //         color: _brown,
+  //       ),
+  //     ),
+  //   );
+  // }
+
+  // void _switchRunningText() {
+  //   if (!mounted) return;
+
+  //   setState(() {
+  //     _currentTextIndex = (_currentTextIndex + 1) % 2;
+  //   });
+  // }
 
   void _logout() async {
     final result = await NesDialog.show<bool>(
