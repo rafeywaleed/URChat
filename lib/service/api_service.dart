@@ -9,7 +9,8 @@ import 'package:urchat/service/websocket_service.dart';
 import 'storage_service.dart';
 
 class ApiService {
-  static final String baseUrl = dotenv.env['BASE_URL'] ?? "";
+  // static final String baseUrl = dotenv.env['BASE_URL'] ?? "";
+  static final String baseUrl = "https://urchat-backend.onrender.com/api/v1";
   static final StorageService _storage = StorageService();
 
   static String? accessToken;

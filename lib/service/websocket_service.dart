@@ -34,6 +34,8 @@ class WebSocketService {
   static const int _maxReconnectAttempts = 10; // Increased limit
   static const Duration _initialReconnectDelay = Duration(seconds: 3);
 
+  String webSocketURL = "https://urchat-backend.onrender.com/api/v1/ws";
+
   WebSocketService({
     required this.onMessageReceived,
     required this.onChatListUpdated,
@@ -59,8 +61,6 @@ class WebSocketService {
     print('🔌 Connecting to WebSocket...');
     _isConnecting = true;
     _cancelPendingReconnect(); // NEW: Cancel any pending reconnects
-
-    String webSocketURL = "${dotenv.env['BASE_URL'] ?? ""}/ws";
 
     try {
       _stompClient = StompClient(

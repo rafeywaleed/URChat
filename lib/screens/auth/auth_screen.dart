@@ -70,12 +70,11 @@ class _AuthScreenState extends State<AuthScreen> {
         );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: $e'),
-          backgroundColor: _brown,
-        ),
-      );
+      // ScaffoldMessenger.of(context).showSnackBar(
+      NesSnackbar.show(context, text: 'Error: $e', type: NesSnackbarType.error
+          // backgroundColor: _brown,
+          );
+      // );
     } finally {
       setState(() {
         _isLoading = false;
@@ -145,9 +144,9 @@ class _AuthScreenState extends State<AuthScreen> {
     if (value.length > 20) {
       return 'Username cannot exceed 20 characters';
     }
-    if (value.contains(' ')) {
-      return 'Username cannot contain spaces';
-    }
+    // if (value.contains(' ')) {
+    //   return 'Username cannot contain spaces';
+    // }
     // Check for uppercase letters
     if (value.contains(RegExp(r'[A-Z]'))) {
       return 'Username cannot contain uppercase letters';
@@ -275,7 +274,12 @@ class _AuthScreenState extends State<AuthScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isWide = MediaQuery.of(context).size.width > 600;
+    final screenSize = MediaQuery.of(context).size;
+    final isWide = screenSize.width > 600;
+    final minSide = screenSize.height > screenSize.width
+        ? screenSize.width
+        : screenSize.height;
+    // final isWide = MediaQuery.of(context).size.width > 600;
 
     return Scaffold(
       backgroundColor: _beige,
@@ -302,8 +306,17 @@ class _AuthScreenState extends State<AuthScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.chat_bubble_rounded,
-                      size: 60, color: _brown.withOpacity(0.9)),
+                  Container(
+                    width: minSide * 0.3,
+                    height: minSide * 0.3,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.asset(
+                        "assets/urchat_logo.png",
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                  ),
                   const SizedBox(height: 10),
                   NesRunningText(
                     speed: 0.3,

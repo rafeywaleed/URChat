@@ -16,14 +16,12 @@ import 'package:urchat/service/chat_cache_service.dart';
 import 'package:urchat/service/font_prefrences.dart';
 import 'package:urchat/service/user_cache_service.dart';
 import 'package:urchat/service/websocket_service.dart';
-import 'package:iconsax/iconsax.dart';
 import 'package:urchat/themes/butter/bfdemo.dart';
 import 'package:urchat/themes/grid.dart';
 import 'package:urchat/themes/meteor.dart';
 import 'package:urchat/utils/animated_emoji_mapper.dart';
 import 'package:urchat/utils/font_options.dart';
 import 'package:urchat/widgets/animated_emoji_picker.dart';
-import 'package:urchat/widgets/deletion_dialog.dart';
 
 class URChatApp extends StatefulWidget {
   final ChatRoom chatRoom;

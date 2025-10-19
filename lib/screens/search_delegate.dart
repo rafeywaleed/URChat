@@ -65,12 +65,10 @@ class _SearchScreenState extends State<SearchScreen> {
 
       NavigationHelper.navigateToChat(context, user.username);
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Failed to start chat: $e"),
-          backgroundColor: Colors.red,
-        ),
-      );
+      NesSnackbar.show(
+          text: "Failed to start chat: $e",
+          context,
+          type: NesSnackbarType.error);
     }
   }
 
@@ -112,16 +110,16 @@ class _SearchScreenState extends State<SearchScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 8),
           child: Row(
             children: [
-              Icon(
+              const Icon(
                 Icons.search,
-                color: const Color.fromARGB(255, 0, 0, 0),
+                color: Color.fromARGB(255, 0, 0, 0),
                 size: 20,
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: TextField(
                   autofocus: true,
-                  scrollPadding: EdgeInsets.all(2),
+                  scrollPadding: const EdgeInsets.all(2),
                   controller: _searchController,
                   style: const TextStyle(
                     color: Colors.black87,
@@ -138,14 +136,14 @@ class _SearchScreenState extends State<SearchScreen> {
               ),
               if (_searchController.text.isNotEmpty)
                 IconButton(
-                  icon: Icon(Icons.clear,
-                      size: 18, color: const Color.fromARGB(255, 0, 0, 0)),
+                  icon: const Icon(Icons.clear,
+                      size: 18, color: Color.fromARGB(255, 0, 0, 0)),
                   onPressed: () {
                     _searchController.clear();
                     _searchUsers("");
                   },
                   padding: EdgeInsets.zero,
-                  constraints: BoxConstraints.tight(Size(24, 24)),
+                  constraints: BoxConstraints.tight(const Size(24, 24)),
                 ),
             ],
           ),
@@ -162,7 +160,7 @@ class _SearchScreenState extends State<SearchScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            NesPixelRowLoadingIndicator(count: 5),
+            const NesPixelRowLoadingIndicator(count: 5),
             const SizedBox(height: 16),
             Text(
               "Searching...",
@@ -317,7 +315,7 @@ class _SearchScreenState extends State<SearchScreen> {
                           color: Colors.grey[800],
                         ),
                       ),
-                      SizedBox(height: 4),
+                      const SizedBox(height: 4),
                       Text(
                         "@${user.username}",
                         style: TextStyle(
@@ -366,8 +364,8 @@ class _SearchScreenState extends State<SearchScreen> {
                 size: isSmallScreen ? 14 : 16,
               ),
               if (!isSmallScreen) ...[
-                SizedBox(width: 6),
-                Text(
+                const SizedBox(width: 6),
+                const Text(
                   "Chat",
                   style: TextStyle(
                     fontSize: 14,
@@ -390,7 +388,7 @@ class _SearchScreenState extends State<SearchScreen> {
       }
       return Color(int.parse(hexColor, radix: 16));
     } catch (e) {
-      return Color(0xFF4CAF50); // Default fallback color
+      return const Color(0xFF4CAF50); // Default fallback color
     }
   }
 }

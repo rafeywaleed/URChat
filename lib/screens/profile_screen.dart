@@ -104,20 +104,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
       // Reload data to ensure we have the latest from server
       _loadUserData();
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Profile updated successfully!'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      NesSnackbar.show(
+          text: 'Profile updated successfully!',
+          context,
+          type: NesSnackbarType.success);
     } catch (e) {
       print('Error updating profile: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to update profile'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      NesSnackbar.show(
+          text: 'Failed to update profile',
+          context,
+          type: NesSnackbarType.error);
     } finally {
       setState(() {
         _isLoading = false;

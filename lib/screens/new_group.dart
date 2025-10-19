@@ -80,16 +80,18 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
 
   Future<void> _createGroup() async {
     if (_groupNameController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a group name')),
-      );
+      NesSnackbar.show(
+          text: 'Please enter a group name',
+          context,
+          type: NesSnackbarType.normal);
       return;
     }
 
     if (_selectedUsers.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select at least one member')),
-      );
+      NesSnackbar.show(
+          text: 'Please select at least one member',
+          context,
+          type: NesSnackbarType.normal);
       return;
     }
 
@@ -110,20 +112,16 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
 
       Navigator.of(context).pop(newGroup);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Group "${newGroup.chatName}" created successfully!'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      NesSnackbar.show(
+          text: 'Group "${newGroup.chatName}" created successfully!',
+          context,
+          type: NesSnackbarType.success);
     } catch (e) {
       print('❌ Error creating group: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to create group: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      NesSnackbar.show(
+          text: 'Failed to create group: $e',
+          context,
+          type: NesSnackbarType.error);
     } finally {
       setState(() {
         _isCreating = false;

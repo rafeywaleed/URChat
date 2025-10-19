@@ -242,13 +242,8 @@ class _HomescreenState extends State<Homescreen>
     }
 
     // Show notification
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Chat was deleted'),
-        backgroundColor: Colors.orange,
-        duration: Duration(seconds: 3),
-      ),
-    );
+    NesSnackbar.show(context,
+        text: 'Chat was deleted', type: NesSnackbarType.warning);
   }
 
   // NEW: Show deletion notification
@@ -381,12 +376,9 @@ class _HomescreenState extends State<Homescreen>
         _loadFreshChats();
       } catch (createError) {
         print('❌ Error creating chat with user: $createError');
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to create chat: $createError'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        NesSnackbar.show(context,
+            text: 'Failed to create chat: $createError',
+            type: NesSnackbarType.error);
       }
     }
   }
@@ -832,12 +824,8 @@ class _HomescreenState extends State<Homescreen>
     } catch (e) {
       print('❌ Error accepting group invitation: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to join group: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        NesSnackbar.show(context,
+            text: 'Failed to join group: $e', type: NesSnackbarType.error);
       }
     }
   }
@@ -867,11 +855,10 @@ class _HomescreenState extends State<Homescreen>
     } catch (e) {
       print('❌ Error declining group invitation: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to decline invitation: $e'),
-            backgroundColor: Colors.red,
-          ),
+        NesSnackbar.show(
+          text: 'Failed to decline invitation: $e',
+          type: NesSnackbarType.error,
+          context,
         );
       }
     }
@@ -883,20 +870,16 @@ class _HomescreenState extends State<Homescreen>
       final success = await NotificationService().enableWebNotifications();
 
       if (success && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Web notifications enabled! 🎉'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        NesSnackbar.show(
+            text: 'Web notifications enabled!',
+            type: NesSnackbarType.success,
+            context);
         setState(() {}); // Refresh to hide the icon
       } else if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to enable notifications'),
-            backgroundColor: Colors.orange,
-          ),
-        );
+        NesSnackbar.show(
+            text: 'Failed to enable notifications',
+            type: NesSnackbarType.error,
+            context);
       }
     } else {
       // For mobile - request permission
@@ -911,14 +894,14 @@ class _HomescreenState extends State<Homescreen>
             await NotificationService().hasNotificationPermission();
 
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(newPermission
-                  ? 'Notification permission granted! 🎉'
-                  : 'Notification permission denied'),
-              backgroundColor: newPermission ? Colors.green : Colors.orange,
-            ),
-          );
+          NesSnackbar.show(
+              text: newPermission
+                  ? 'Notification permission granted!'
+                  : 'Notification permission denied',
+              type: newPermission
+                  ? NesSnackbarType.success
+                  : NesSnackbarType.warning,
+              context);
 
           // Refresh UI to hide icon if permission was granted
           if (newPermission) {
@@ -928,12 +911,10 @@ class _HomescreenState extends State<Homescreen>
       } else {
         // Already have permission - show status
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Notifications are already enabled'),
-              backgroundColor: Colors.green,
-            ),
-          );
+          NesSnackbar.show(
+              text: 'Notifications are already enabled',
+              type: NesSnackbarType.success,
+              context);
         }
       }
     }
@@ -1587,20 +1568,17 @@ class _HomescreenState extends State<Homescreen>
                           final success = await NotificationService()
                               .enableWebNotifications();
                           if (success && mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Web notifications enabled! 🎉'),
-                                backgroundColor: Colors.green,
-                              ),
+                            NesSnackbar.show(
+                              context,
+                              text: 'Web notifications enabled!',
+                              type: NesSnackbarType.success,
                             );
-                            setState(() {}); // Refresh to hide the icon
+                            setState(() {});
                           } else if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Failed to enable notifications'),
-                                backgroundColor: Colors.orange,
-                              ),
-                            );
+                            NesSnackbar.show(
+                                text: 'Failed to enable notifications',
+                                type: NesSnackbarType.error,
+                                context);
                           }
                         },
                       ),

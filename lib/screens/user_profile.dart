@@ -9,13 +9,13 @@ import 'package:urchat/utils/chat_navigation_helper.dart';
 class OtherUserProfileScreen extends StatefulWidget {
   final String username;
   final bool fromChat;
-  final ThemeData? chatTheme; // Optional chat theme
+  final ThemeData? chatTheme;
 
   const OtherUserProfileScreen({
     Key? key,
     required this.username,
     required this.fromChat,
-    this.chatTheme, // Add optional chat theme parameter
+    this.chatTheme,
   }) : super(key: key);
 
   @override
@@ -50,7 +50,7 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen> {
         _isLoading = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+        const SnackBar(
           content: Text('Failed to load user profile'),
           backgroundColor: Colors.red,
         ),
@@ -66,7 +66,7 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen> {
       }
       return Color(int.parse(hexColor, radix: 16));
     } catch (e) {
-      return Color(0xFF4CAF50); // Default color if parsing fails
+      return const Color(0xFF4CAF50); // Default color if parsing fails
     }
   }
 
@@ -176,7 +176,7 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen> {
                 ),
               )
             : IconButton(
-                icon: Icon(Icons.arrow_back),
+                icon: const Icon(Icons.arrow_back),
                 onPressed: () => Navigator.pop(context),
               ),
       ),
@@ -187,7 +187,7 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen> {
                       valueColor:
                           AlwaysStoppedAnimation<Color>(colorScheme.primary),
                     )
-                  : NesPixelRowLoadingIndicator(count: 3),
+                  : const NesPixelRowLoadingIndicator(count: 3),
             )
           : SingleChildScrollView(
               padding: EdgeInsets.all(isSmallScreen ? 16 : 24),
@@ -234,7 +234,7 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen> {
               BoxShadow(
                 color: Colors.black.withOpacity(0.1),
                 blurRadius: 8,
-                offset: Offset(0, 4),
+                offset: const Offset(0, 4),
               ),
             ],
           ),
@@ -270,7 +270,7 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen> {
             color: Theme.of(context).colorScheme.onBackground,
           ),
         ),
-        SizedBox(height: 4),
+        const SizedBox(height: 4),
         Text(
           '@${_userData?['username'] ?? widget.username}',
           style: TextStyle(
@@ -297,7 +297,7 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen> {
             BoxShadow(
               color: Colors.black.withOpacity(0.1),
               blurRadius: 4,
-              offset: Offset(0, 2),
+              offset: const Offset(0, 2),
             ),
           ],
           border: Border.all(
@@ -368,7 +368,7 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen> {
             BoxShadow(
               color: Colors.black.withOpacity(0.1),
               blurRadius: 4,
-              offset: Offset(0, 2),
+              offset: const Offset(0, 2),
             ),
           ],
         ),
@@ -529,7 +529,7 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(Icons.chat, size: isSmallScreen ? 16 : 18),
-                        SizedBox(width: 8),
+                        const SizedBox(width: 8),
                         Text(
                           'Start Chat',
                           style: TextStyle(
@@ -574,7 +574,7 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen> {
             type: NesButtonType.primary,
             onPressed: _isAddingToChat ? null : _addToChat,
             child: _isAddingToChat
-                ? SizedBox(
+                ? const SizedBox(
                     width: 20,
                     height: 20,
                     child: Center(child: NesHourglassLoadingIndicator()))
@@ -582,7 +582,7 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(Icons.chat, size: isSmallScreen ? 16 : 18),
-                      SizedBox(width: 8),
+                      const SizedBox(width: 8),
                       Text(
                         'Start Chat',
                         style: TextStyle(
