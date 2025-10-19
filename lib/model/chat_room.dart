@@ -25,32 +25,115 @@ class ChatRoom {
   });
 
   factory ChatRoom.fromJson(Map<String, dynamic> json) {
-    print('🔍 Creating ChatRoom from JSON: $json');
+    if (kDebugMode) {
+      print('🔍 Creating ChatRoom from JSON: $json');
+    }
 
-    // Handle lastActivity - it might be a string or already a DateTime
-    DateTime lastActivity;
+    // Handle lastActivity - Spring Boot LocalDateTime format
+    DateTime parseSpringBootDateTime(dynamic dateData) {
+      if (dateData == null) return DateTime.now();
+
+      try {
+        if (dateData is DateTime) {
+          return dateData;
+        }
+
+        if (dateData is String) {
+          String dateString = dateData.trim();
+
+          // Spring Boot LocalDateTime formats:
+          // - "2025-10-19T06:37:14.950387"
+          // - "2025-10-19T06:37:14"
+          // - "2025-10-19T06:37:14.950387Z" (if already UTC)
+
+          // Handle the case where it's already UTC
+          if (dateString.endsWith('Z')) {
+            return DateTime.parse(dateString).toLocal();
+          }
+
+          // Handle LocalDateTime (no timezone) - assume UTC and convert to local
+          // First, ensure proper fractional seconds format
+          if (dateString.contains('.')) {
+            final parts = dateString.split('.');
+            if (parts.length == 2) {
+              String fractional = parts[1];
+              // Ensure fractional seconds are properly formatted (max 6 digits)
+              if (fractional.length > 6) {
+                fractional = fractional.substring(0, 6);
+              }
+              dateString = '${parts[0]}.${fractional}Z'; // Add Z for UTC
+            }
+          } else {
+            // No fractional seconds, just add Z
+            dateString = '${dateString}Z';
+          }
+
+          return DateTime.parse(dateString).toLocal();
+        }
+
+        // If it's a number (milliseconds since epoch)
+        if (dateData is int) {
+          return DateTime.fromMillisecondsSinceEpoch(dateData);
+        }
+
+        return DateTime.now();
+      } catch (e) {
+        if (kDebugMode) {
+          print('⚠️ Error parsing date "$dateData": $e');
+        }
+        return DateTime.now();
+      }
+    }
+
+    DateTime lastActivity = parseSpringBootDateTime(json['lastActivity']);
+
+    int themeIndex;
     try {
-      if (json['lastActivity'] is String) {
-        lastActivity = DateTime.parse(json['lastActivity']);
+      final themeIndexData = json['themeIndex'];
+      if (themeIndexData is int) {
+        themeIndex = themeIndexData;
+      } else if (themeIndexData is String) {
+        themeIndex = int.tryParse(themeIndexData) ?? 0;
       } else {
-        // If it's already a DateTime or other format, use current time as fallback
-        lastActivity = DateTime.now();
+        themeIndex = 0;
       }
     } catch (e) {
-      print('⚠️ Error parsing lastActivity, using current time: $e');
-      lastActivity = DateTime.now();
+      themeIndex = 0;
+    }
+
+    bool isDark;
+    try {
+      final isDarkData = json['isDark'];
+      if (isDarkData is bool) {
+        isDark = isDarkData;
+      } else if (isDarkData is String) {
+        isDark = isDarkData.toLowerCase() == 'true';
+      } else if (isDarkData is int) {
+        isDark = isDarkData == 1;
+      } else {
+        isDark = true;
+      }
+    } catch (e) {
+      isDark = true;
     }
 
     return ChatRoom(
-        chatId: json['chatId']?.toString() ?? 'unknown',
-        chatName: json['chatName']?.toString() ?? 'Unknown Chat',
-        isGroup: json['isGroup'] ?? false,
-        lastActivity: lastActivity,
-        lastMessage: json['lastMessage']?.toString() ?? 'No messages yet',
-        pfpIndex: json['pfpIndex']?.toString() ?? '😊',
-        pfpBg: json['pfpBg']?.toString() ?? '#4CAF50',
-        themeIndex: json['themeIndex'] ?? 0,
-        isDark: json['isDark'] ?? true);
+      chatId: _parseString(json['chatId'], 'unknown'),
+      chatName: _parseString(json['chatName'], 'Unknown Chat'),
+      isGroup: json['isGroup'] == true,
+      lastActivity: lastActivity,
+      lastMessage: _parseString(json['lastMessage'], 'No messages yet'),
+      pfpIndex: _parseString(json['pfpIndex'], '😊'),
+      pfpBg: _parseString(json['pfpBg'], '#4CAF50'),
+      themeIndex: themeIndex,
+      isDark: isDark,
+    );
+  }
+
+  static String _parseString(dynamic value, String defaultValue) {
+    if (value == null) return defaultValue;
+    if (value is String) return value;
+    return value.toString();
   }
 
   Map<String, dynamic> toJson() {
