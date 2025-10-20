@@ -136,6 +136,7 @@ class NotificationService {
   //   }
   // }
 
+  // Your existing methods continue below...
   Future<void> initialize() async {
     if (_isInitialized || _isInitializing) return;
 
@@ -147,6 +148,7 @@ class NotificationService {
       await _setupLocalNotifications();
       _setupMessageHandling();
 
+      // For web, we'll request permissions when user interacts
       if (!kIsWeb) {
         await _requestPermissions();
         await _getTokenAndSendToServer();
@@ -175,6 +177,7 @@ class NotificationService {
     }
   }
 
+  // Add this method to the NotificationService class
   Future<void> requestPermissions() async {
     try {
       print('📝 Requesting notification permissions...');
@@ -192,6 +195,7 @@ class NotificationService {
 
       print('📱 Notification permission: ${settings.authorizationStatus}');
 
+      // If permission granted, get token and send to server
       if (settings.authorizationStatus == AuthorizationStatus.authorized) {
         await _getTokenAndSendToServer();
       }
@@ -301,31 +305,39 @@ class NotificationService {
   void _setupMessageHandling() {
     print('🎯 Setting up message handlers...');
 
-    // Handle messages when app is in foreground
-    FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
-      print('📱 Foreground message received: ${message.notification?.title}');
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      print('📱 Foreground message received:');
+      print('   Title: ${message.notification?.title}');
+      print('   Body: ${message.notification?.body}');
       print('   Data: ${message.data}');
 
-      // Detect app state
-      final isInForeground =
+      // 👇 NEW CONDITION
+      // Skip showing system notifications when app is visible
+      final isAppInForeground =
           WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed;
 
       if (kIsWeb) {
-        // ✅ Web: Always show your in-app custom popup
-        _showWebInAppNotification(message);
+        // Web → show custom popup inside app
+        if (isAppInForeground) {
+          print('💬 Showing in-app notification on Web');
+          _showWebInAppNotification(message);
+        } else {
+          print('🌐 Skipping Web notification (handled by Service Worker)');
+        }
       } else {
-        // ✅ Android: Show local/system notification only if NOT in foreground
-        if (!isInForeground) {
+        // Android/iOS → only show local notification if NOT in foreground
+        if (!isAppInForeground) {
+          print('📲 App in background — showing system notification');
           _showLocalNotification(message);
         } else {
-          print('🚫 Skipping notification (app is in foreground on Android)');
+          print('🚫 Skipping local notification (app is open)');
         }
       }
     });
 
-    // Handle notification tap when app is in background/terminated
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-      print('👆 Notification tapped: ${message.data}');
+      print('👆 Notification TAPPED - Navigating to chat:');
+      print('   Data: ${message.data}');
       _handleNotificationData(message.data);
     });
 
@@ -335,7 +347,7 @@ class NotificationService {
         .then((RemoteMessage? message) {
       if (message != null) {
         print('🚀 Initial message from terminated state: ${message.data}');
-        Future.delayed(const Duration(seconds: 3), () {
+        Future.delayed(Duration(seconds: 3), () {
           _handleNotificationData(message.data);
         });
       }
@@ -363,7 +375,7 @@ class NotificationService {
   }
 
   Future<void> _showLocalNotification(RemoteMessage message) async {
-    if (kIsWeb) return; // Skip for web
+    if (kIsWeb) return;
 
     try {
       const AndroidNotificationDetails androidPlatformChannelSpecifics =

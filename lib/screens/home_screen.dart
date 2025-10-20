@@ -740,15 +740,13 @@ class _HomescreenState extends State<Homescreen>
   //       'chatId': notify.chatId,
   //     };
 
-  //     print(
-  //         '🔔 Creating notification: ${notify.chatId} - ${notify.lastMessage}');
+  //     print(  //         '🔔 Creating notification: ${notify.chatId} - ${notify.lastMessage}');
 
   //     WidgetsBinding.instance.addPostFrameCallback((_) {
   //       if (mounted) {
   //         setState(() {
   //           _messageNotifications.add(notification);
-  //           print(
-  //               '✅ Notification added! Total count: ${_messageNotifications.length}');
+  //           print(  //               '✅ Notification added! Total count: ${_messageNotifications.length}');
   //         });
   //       }
   //     });
@@ -758,8 +756,7 @@ class _HomescreenState extends State<Homescreen>
   //         setState(() {
   //           _messageNotifications
   //               .removeWhere((n) => n['id'] == notification['id']);
-  //           print(
-  //               '🗑️ Removed notification, count: ${_messageNotifications.length}');
+  //           print(  //               '🗑️ Removed notification, count: ${_messageNotifications.length}');
   //         });
   //       }
   //     });
@@ -1140,16 +1137,14 @@ class _HomescreenState extends State<Homescreen>
   //       'type': 'message',
   //     };
 
-  //     print(
-  //         '🔔 Creating notification: ${notification['chatName']} - ${notification['message']}');
+  //     print(  //         '🔔 Creating notification: ${notification['chatName']} - ${notification['message']}');
 
   //     // CRITICAL FIX: Use post frame callback to ensure setState happens after current build
   //     WidgetsBinding.instance.addPostFrameCallback((_) {
   //       if (mounted) {
   //         setState(() {
   //           _messageNotifications.add(notification);
-  //           print(
-  //               '✅ Notification added! Total count: ${_messageNotifications.length}');
+  //           print(  //               '✅ Notification added! Total count: ${_messageNotifications.length}');
   //         });
   //       }
   //     });
@@ -1160,8 +1155,7 @@ class _HomescreenState extends State<Homescreen>
   //         setState(() {
   //           _messageNotifications
   //               .removeWhere((n) => n['id'] == notification['id']);
-  //           print(
-  //               '🗑️ Removed notification, count: ${_messageNotifications.length}');
+  //           print(  //               '🗑️ Removed notification, count: ${_messageNotifications.length}');
   //         });
   //       }
   //     });
@@ -1182,8 +1176,7 @@ class _HomescreenState extends State<Homescreen>
   // }
 
   // Widget _buildMessageNotifications() {
-  //   print(
-  //       '🎨 Building notifications widget. Count: ${_messageNotifications.length}');
+  //   print(  //       '🎨 Building notifications widget. Count: ${_messageNotifications.length}');
 
   //   if (_messageNotifications.isEmpty) {
   //     print('⚠️ No notifications to display');
@@ -1697,11 +1690,10 @@ class _HomescreenState extends State<Homescreen>
       ),
       title: Text('URChat', style: GoogleFonts.pressStart2p(fontSize: 14)),
       actions: [
-        // ElevatedButton(
-        //     onPressed: () => Navigator.push(context,
-        //         MaterialPageRoute(builder: (context) => SplashScreen())),
-        //     child: Text("Splash")),
-
+        ElevatedButton(
+            onPressed: () => Navigator.push(context,
+                MaterialPageRoute(builder: (context) => SplashScreen())),
+            child: Text("Splash")),
         if (kIsWeb)
           FutureBuilder<bool>(
             future: NotificationService().hasNotificationPermission(),

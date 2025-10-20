@@ -485,98 +485,84 @@ class DeletionDialogs {
 
   static Future<void> showSuccessDialog(
       BuildContext context, String title, String message) {
-    final screenSize = MediaQuery.of(context).size;
-    final isSmallScreen = screenSize.width < 600;
-    final baseFontSize = isSmallScreen ? 10.0 : 12.0;
-    final padding = isSmallScreen ? 16.0 : 20.0;
-
     return showDialog(
       context: context,
       builder: (BuildContext context) {
         return Dialog(
           backgroundColor: Colors.transparent,
-          insetPadding: EdgeInsets.symmetric(
-            horizontal: isSmallScreen ? 16.0 : 24.0,
-            vertical: 16.0,
-          ),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              maxWidth: 400,
-              minWidth: isSmallScreen ? 280 : 320,
-            ),
-            child: NesDialog(
-              child: Padding(
-                padding: EdgeInsets.all(padding),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Header with success icon
-                    Row(
-                      children: [
-                        NesContainer(
-                          width: isSmallScreen ? 32 : 36,
-                          height: isSmallScreen ? 32 : 36,
-                          backgroundColor: Colors.green,
-                          child: Center(
-                            child: Icon(
-                              Icons.check_circle_outline,
-                              color: Colors.white,
-                              size: isSmallScreen ? 16 : 18,
-                            ),
+          insetPadding: EdgeInsets.all(20.0),
+          child: NesDialog(
+            child: Padding(
+              padding: EdgeInsets.all(20.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Header with success icon
+                  Row(
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: Colors.green,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Center(
+                          child: Icon(
+                            Icons.check_circle_outline,
+                            color: Colors.white,
+                            size: 20,
                           ),
                         ),
-                        SizedBox(width: isSmallScreen ? 12 : 16),
-                        Expanded(
-                          child: Text(
-                            title.toUpperCase(),
-                            style: TextStyle(
-                              fontSize: baseFontSize,
-                              color: Colors.green,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: isSmallScreen ? 16 : 20),
-
-                    // Success message
-                    Flexible(
-                      child: Text(
-                        message,
-                        style: TextStyle(
-                          fontSize: baseFontSize,
-                          color: Colors.black87,
-                        ),
-                        textAlign: TextAlign.center,
                       ),
-                    ),
-                    SizedBox(height: isSmallScreen ? 20 : 24),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          title.toUpperCase(),
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.green,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 16),
 
-                    // OK button
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: Flexible(
-                        child: NesButton(
-                          type: NesButtonType.success,
-                          onPressed: () {
-                            Navigator.of(context).pop();
-                          },
+                  // Success message
+                  Text(
+                    message,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.black87,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: 20),
+
+                  // OK button
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: SizedBox(
+                      width: 80,
+                      child: NesButton(
+                        type: NesButtonType.success,
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(vertical: 8),
                           child: Text(
                             'OK',
                             style: TextStyle(
-                              fontSize: baseFontSize,
+                              fontSize: 14,
                               color: Colors.white,
                             ),
-                            textAlign: TextAlign.center,
                           ),
                         ),
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),

@@ -62,7 +62,7 @@ class _SplashScreenState extends State<SplashScreen>
         : screenSize.height;
 
     return Scaffold(
-      backgroundColor: const Color.fromARGB(125, 233, 217, 193),
+      backgroundColor: const Color.fromRGBO(244, 236, 225, 1),
       body: Center(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
