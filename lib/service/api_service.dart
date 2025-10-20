@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
@@ -605,38 +606,42 @@ class ApiService {
     Future<http.Response> Function() requestFn,
   ) async {
     if (_storage.shouldRefreshAccessToken) {
-      //print('🔄 Access token needs refresh');
       final success = await _refreshAccessToken();
-      if (!success) {
+      if (!success)
         throw Exception('Authentication failed. Please login again.');
-      }
     }
-
-    var response = await requestFn();
 
     int retryCount = 0;
-    const maxRetries = 3;
+    const maxRetries = 2;
 
     while (retryCount <= maxRetries) {
-      if (response.statusCode == 401) {
-        //print('🔄 Token rejected (401), attempting refresh...');
-        final success = await _refreshAccessToken();
-        if (success) {
-          response = await requestFn();
-        } else {
-          throw Exception('Authentication failed. Please login again.');
+      try {
+        final response = await requestFn().timeout(const Duration(seconds: 10));
+
+        if (response.statusCode == 401) {
+          final refreshed = await _refreshAccessToken();
+          if (!refreshed)
+            throw Exception('Session expired. Please log in again.');
+          retryCount++;
+          continue;
         }
-      }
 
-      if (response.statusCode == 401 && retryCount < maxRetries) {
+        return response;
+      } on TimeoutException {
         retryCount++;
+        if (retryCount > maxRetries) {
+          throw Exception('Request timed out. Please try again.');
+        }
+        await Future.delayed(const Duration(milliseconds: 300));
         continue;
+      } catch (e) {
+        retryCount++;
+        if (retryCount > maxRetries) rethrow;
+        await Future.delayed(const Duration(milliseconds: 300));
       }
-
-      return response;
     }
 
-    throw Exception('Max retry attempts exceeded');
+    throw Exception('Max retries exceeded');
   }
 
   static Future<bool> _refreshAccessToken() async {

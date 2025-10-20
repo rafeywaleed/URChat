@@ -1687,10 +1687,10 @@ class _HomescreenState extends State<Homescreen>
       ),
       title: Text('URChat', style: GoogleFonts.pressStart2p(fontSize: 14)),
       actions: [
-        ElevatedButton(
-            onPressed: () => Navigator.push(context,
-                MaterialPageRoute(builder: (context) => SplashScreen())),
-            child: Text("Splash")),
+        // ElevatedButton(
+        //     onPressed: () => Navigator.push(context,
+        //         MaterialPageRoute(builder: (context) => SplashScreen())),
+        //     child: Text("Splash")),
         if (kIsWeb)
           FutureBuilder<bool>(
             future: NotificationService().hasNotificationPermission(),
