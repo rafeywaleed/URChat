@@ -26,7 +26,7 @@ class ChatRoom {
 
   factory ChatRoom.fromJson(Map<String, dynamic> json) {
     if (kDebugMode) {
-      print('🔍 Creating ChatRoom from JSON: $json');
+      //print('🔍 Creating ChatRoom from JSON: $json');
     }
 
     // Handle lastActivity - Spring Boot LocalDateTime format
@@ -79,7 +79,7 @@ class ChatRoom {
         return DateTime.now();
       } catch (e) {
         if (kDebugMode) {
-          print('⚠️ Error parsing date "$dateData": $e');
+          //print('⚠️ Error parsing date "$dateData": $e');
         }
         return DateTime.now();
       }

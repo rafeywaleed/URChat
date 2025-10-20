@@ -47,7 +47,7 @@ class _GroupPfpDialogState extends State<GroupPfpDialog> {
         ),
       );
     } catch (e) {
-      print('❌ Error updating group pfp: $e');
+      //print('❌ Error updating group pfp: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Failed to update: $e'),

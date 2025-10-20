@@ -102,7 +102,7 @@ class ApiService {
 
       return response.statusCode == 200;
     } catch (e) {
-      print('Logout API error: $e');
+      //print('Logout API error: $e');
       await _storage.clearAuthData();
       accessToken = null;
       refreshToken = null;
@@ -605,7 +605,7 @@ class ApiService {
     Future<http.Response> Function() requestFn,
   ) async {
     if (_storage.shouldRefreshAccessToken) {
-      print('🔄 Access token needs refresh');
+      //print('🔄 Access token needs refresh');
       final success = await _refreshAccessToken();
       if (!success) {
         throw Exception('Authentication failed. Please login again.');
@@ -619,7 +619,7 @@ class ApiService {
 
     while (retryCount <= maxRetries) {
       if (response.statusCode == 401) {
-        print('🔄 Token rejected (401), attempting refresh...');
+        //print('🔄 Token rejected (401), attempting refresh...');
         final success = await _refreshAccessToken();
         if (success) {
           response = await requestFn();
@@ -641,10 +641,10 @@ class ApiService {
 
   static Future<bool> _refreshAccessToken() async {
     try {
-      print('🔄 Refreshing access token...');
+      //print('🔄 Refreshing access token...');
 
       if (refreshToken == null || _storage.isRefreshTokenExpired) {
-        print('❌ Refresh token expired or missing');
+        //print('❌ Refresh token expired or missing');
         await logout();
         return false;
       }
@@ -660,14 +660,14 @@ class ApiService {
             TokenRefreshResponse.fromJson(jsonDecode(response.body));
         await _saveTokenData(tokenResponse);
         _webSocketService?.reconnectWithNewToken();
-        print('✅ Access token refreshed successfully');
+        //print('✅ Access token refreshed successfully');
         return true;
       } else {
-        print('❌ Token refresh failed: ${response.statusCode}');
+        //print('❌ Token refresh failed: ${response.statusCode}');
         return false;
       }
     } catch (e) {
-      print('❌ Error refreshing token: $e');
+      //print('❌ Error refreshing token: $e');
       return false;
     }
   }
@@ -724,7 +724,7 @@ class ApiService {
       );
       return response.statusCode == 200;
     } catch (e) {
-      print('❌ Server not reachable: $e');
+      //print('❌ Server not reachable: $e');
       return false;
     }
   }

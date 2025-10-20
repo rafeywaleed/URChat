@@ -16,7 +16,7 @@ class Message {
   });
 
   factory Message.fromJson(Map<String, dynamic> json) {
-    print('🔍 Creating Message from JSON: $json');
+    //print('🔍 Creating Message from JSON: $json');
 
     // Handle timestamp parsing
     DateTime timestamp;
@@ -27,7 +27,7 @@ class Message {
         timestamp = DateTime.now();
       }
     } catch (e) {
-      print('⚠️ Error parsing timestamp, using current time: $e');
+      //print('⚠️ Error parsing timestamp, using current time: $e');
       timestamp = DateTime.now();
     }
 

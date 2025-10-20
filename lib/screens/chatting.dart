@@ -112,7 +112,7 @@ class _URChatAppState extends State<URChatApp> {
         }
       }
     } catch (e) {
-      print('❌ Failed to load chat theme: $e');
+      //print('❌ Failed to load chat theme: $e');
       // Fallback to defaults already set in initState
     }
   }
@@ -151,9 +151,9 @@ class _URChatAppState extends State<URChatApp> {
       await ChatCacheService.saveChatTheme(
           widget.chatRoom.chatId, _selectedTheme, _isDarkMode);
 
-      print('✅ Chat theme updated on server and cache');
+      //print('✅ Chat theme updated on server and cache');
     } catch (e) {
-      print('❌ Failed to update chat theme: $e');
+      //print('❌ Failed to update chat theme: $e');
       // Revert changes if API call fails
       _revertThemeChanges();
       rethrow;
@@ -812,7 +812,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         });
       }
     } catch (e) {
-      print('Error loading messages: $e');
+      //print('Error loading messages: $e');
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -903,7 +903,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 
       // Only process typing events for THIS specific chat
       if (chatId != null && chatId != widget.chatRoom.chatId) {
-        print('⌨️ Ignoring typing event for different chat: $chatId');
+        //print('⌨️ Ignoring typing event for different chat: $chatId');
         return;
       }
 
@@ -1400,7 +1400,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       });
       _stopTyping();
     } catch (e) {
-      print('Error sending message: $e');
+      //print('Error sending message: $e');
       // Show error to user
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -1585,12 +1585,12 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 
   Future<void> _preloadUserProfiles() async {
     if (_messages.isEmpty) {
-      print('⏳ No messages yet, skipping user profile preload');
+      //print('⏳ No messages yet, skipping user profile preload');
       return;
     }
 
-    print("🚀 Starting preloadUserProfiles");
-    print("📊 Total messages: ${_messages.length}");
+    //print("🚀 Starting preloadUserProfiles");
+    //print("📊 Total messages: ${_messages.length}");
 
     // Get unique usernames from messages and typing users
     final usernames = <String>{};
@@ -1598,16 +1598,16 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     for (final message in _messages) {
       if (message.sender != ApiService.currentUsername) {
         usernames.add(message.sender);
-        print('📨 Found message from: ${message.sender}');
+        //print('📨 Found message from: ${message.sender}');
       }
     }
 
     usernames.addAll(_typingUsers.keys);
 
-    print('📝 Found ${usernames.length} unique users to preload: $usernames');
+    //print('📝 Found ${usernames.length} unique users to preload: $usernames');
 
     if (usernames.isEmpty) {
-      print('ℹ️ No users to preload');
+      //print('ℹ️ No users to preload');
       return;
     }
 
@@ -1619,10 +1619,10 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         _splitIntoBatches(usernames.toList(), 3); // 3 concurrent requests
 
     for (final batch in batches) {
-      print('🔄 Processing batch: $batch');
+      //print('🔄 Processing batch: $batch');
 
       final futures = batch.map((username) async {
-        print('🎯 Preloading profile for: $username');
+        //print('🎯 Preloading profile for: $username');
         await _fetchAndCacheUserProfile(username);
       }).toList();
 
@@ -1632,7 +1632,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       await Future.delayed(const Duration(milliseconds: 200));
     }
 
-    print('✅ Finished preloading user profiles');
+    //print('✅ Finished preloading user profiles');
 
     if (mounted) {
       setState(() {});
@@ -1640,7 +1640,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   }
 
   void _manuallyLoadProfiles() {
-    print('🔄 Manually triggering profile load');
+    //print('🔄 Manually triggering profile load');
     _preloadUserProfiles();
   }
 
@@ -1662,11 +1662,11 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       return;
     }
 
-    print('🔍 Fetching profile for: $username');
+    //print('🔍 Fetching profile for: $username');
 
     // Track if we're currently fetching this user to avoid duplicate API calls
     if (_currentlyFetchingUsers.contains(username)) {
-      print('⏳ Already fetching profile for $username, skipping...');
+      //print('⏳ Already fetching profile for $username, skipping...');
       return;
     }
 
@@ -1676,7 +1676,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       // 1. First try to get from cache for instant display
       var cachedProfile = await UserCacheService.getUserProfile(username);
       if (cachedProfile != null) {
-        print('✅ Found in cache: $username');
+        //print('✅ Found in cache: $username');
         _userProfiles[username] = cachedProfile;
         if (mounted) setState(() {});
       } else {
@@ -1692,7 +1692,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       }
 
       // 2. ALWAYS try to fetch from API to get fresh data (even if we have cache)
-      print('🌐 Calling API for user: $username');
+      //print('🌐 Calling API for user: $username');
 
       // Add a small delay to ensure UI is updated with cached/default data first
       await Future.delayed(const Duration(milliseconds: 100));
@@ -1700,14 +1700,14 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       final apiProfile = await ApiService.getUserProfile(username);
 
       if (apiProfile != null && apiProfile.isNotEmpty) {
-        print('✅ API response received for $username: $apiProfile');
+        //print('✅ API response received for $username: $apiProfile');
 
         // Convert API response to UserDTO
         final userDTO = UserDTO.fromJson(apiProfile);
 
         // Save to cache
         await UserCacheService.saveUser(userDTO);
-        print('✅ Saved to cache: ${userDTO.username}');
+        //print('✅ Saved to cache: ${userDTO.username}');
 
         // Update in-memory profile
         final updatedProfile = {
@@ -1720,16 +1720,16 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 
         // Always update with fresh API data
         _userProfiles[username] = updatedProfile;
-        print('🔄 Updated profile for $username with API data');
+        //print('🔄 Updated profile for $username with API data');
 
         if (mounted) {
           setState(() {});
         }
       } else {
-        print('❌ No API data received for $username');
+        //print('❌ No API data received for $username');
       }
     } catch (e) {
-      print('❌ Error fetching profile for $username: $e');
+      //print('❌ Error fetching profile for $username: $e');
       // Keep the cached/default profile if API fails
     } finally {
       _currentlyFetchingUsers.remove(username);
@@ -2219,10 +2219,10 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     final hasAnimatedVersion =
         AnimatedEmojiMapper.hasAnimatedVersion(trimmedContent);
 
-    print('🔍 Emoji Check: "$trimmedContent" - '
-        'Single: $isSingleEmoji, '
-        'Animated: $hasAnimatedVersion, '
-        'Length: ${trimmedContent.runes.length}');
+    //print('🔍 Emoji Check: "$trimmedContent" - '
+    // 'Single: $isSingleEmoji, '
+    // 'Animated: $hasAnimatedVersion, '
+    // 'Length: ${trimmedContent.runes.length}');
 
     return isSingleEmoji && hasAnimatedVersion;
   }
@@ -2237,7 +2237,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       );
     } else {
       // Fallback to regular text if animation fails
-      print('⚠️ No animated emoji data found for: $emoji');
+      //print('⚠️ No animated emoji data found for: $emoji');
       return Text(
         emoji,
         style: const TextStyle(fontSize: 48),
@@ -2613,7 +2613,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 
 // NEW: Handle message deletion from WebSocket
   void _handleMessageDeleted(Map<String, dynamic> deletionData) {
-    print('🗑️ Message deletion received: $deletionData');
+    //print('🗑️ Message deletion received: $deletionData');
 
     final deletedMessageId = deletionData['messageId'];
     final chatId = deletionData['chatId'];
@@ -2712,11 +2712,11 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
               _userProfiles[user.username] = profile;
             });
           }
-          print('✅ Cached user ${user.username} from message');
+          //print('✅ Cached user ${user.username} from message');
         }
       }
     } catch (e) {
-      print('❌ Failed to cache user from message: $e');
+      //print('❌ Failed to cache user from message: $e');
     }
   }
 
@@ -2994,10 +2994,10 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
             _userProfiles[username] = updatedProfile;
           });
         }
-        print('✅ Cached user $username from typing profile');
+        //print('✅ Cached user $username from typing profile');
       }
     } catch (e) {
-      print('❌ Failed to cache user from profile: $e');
+      //print('❌ Failed to cache user from profile: $e');
     }
   }
 }

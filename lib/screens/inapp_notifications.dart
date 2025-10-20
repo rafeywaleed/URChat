@@ -112,10 +112,10 @@ class InAppNotifications {
 
               // NEW: Use callback if available, otherwise fallback to navigation
               if (onOpenChat != null) {
-                print('🎯 Using callback to open chat: ${chat.chatId}');
+                //print('🎯 Using callback to open chat: ${chat.chatId}');
                 onOpenChat!(chat.chatId);
               } else {
-                print('🔄 Callback not available, using fallback navigation');
+                //print('🔄 Callback not available, using fallback navigation');
                 _fallbackNavigation(context, chat.chatId);
               }
             },

@@ -20,7 +20,7 @@ class ChatCacheService {
       };
       await prefs.setString('$_themePrefix$chatId', json.encode(themeData));
     } catch (e) {
-      print('❌ Failed to save theme to cache: $e');
+      //print('❌ Failed to save theme to cache: $e');
     }
   }
 
@@ -33,7 +33,7 @@ class ChatCacheService {
         return json.decode(themeJson);
       }
     } catch (e) {
-      print('❌ Failed to load theme from cache: $e');
+      //print('❌ Failed to load theme from cache: $e');
     }
     return null;
   }
@@ -58,7 +58,7 @@ class ChatCacheService {
       await prefs.setString(
           '$_messagesPrefix$chatId', json.encode(messagesData));
     } catch (e) {
-      print('❌ Failed to save messages to cache: $e');
+      //print('❌ Failed to save messages to cache: $e');
     }
   }
 
@@ -75,7 +75,7 @@ class ChatCacheService {
             .toList();
       }
     } catch (e) {
-      print('❌ Failed to load messages from cache: $e');
+      //print('❌ Failed to load messages from cache: $e');
     }
     return null;
   }
@@ -87,7 +87,7 @@ class ChatCacheService {
       await prefs.remove('$_themePrefix$chatId');
       await prefs.remove('$_messagesPrefix$chatId');
     } catch (e) {
-      print('❌ Failed to clear chat cache: $e');
+      //print('❌ Failed to clear chat cache: $e');
     }
   }
 
@@ -110,7 +110,7 @@ class ChatCacheService {
             messagesJson != null ? json.decode(messagesJson)['count'] : 0,
       };
     } catch (e) {
-      print('❌ Failed to get cache info: $e');
+      //print('❌ Failed to get cache info: $e');
       return {};
     }
   }
