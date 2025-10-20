@@ -582,36 +582,34 @@ class _HomescreenState extends State<Homescreen>
   List<ChatRoom> _convertToChatRoomList(dynamic data) {
     if (data == null) return [];
 
-    if (data is List<ChatRoom>) {
-      return data;
-    }
+    try {
+      if (data is List<ChatRoom>) {
+        return data;
+      }
 
-    if (data is List<dynamic>) {
-      return data
-          .map<ChatRoom>((item) {
-            if (item is ChatRoom) {
-              return item;
-            } else if (item is Map<String, dynamic>) {
-              try {
-                return ChatRoom.fromJson(item);
-              } catch (e) {
-                print('⚠️ Error converting map to ChatRoom: $e');
-                return _createFallbackChatRoom();
-              }
-            } else if (item is ChatRoomDTO) {
-              return ChatRoom.convertChatDTOToChatRoom(item);
-            } else {
-              print('⚠️ Unknown chat data type: ${item.runtimeType}');
-              return _createFallbackChatRoom();
-            }
-          })
-          .where((chat) => chat != null)
-          .cast<ChatRoom>()
-          .toList();
-    }
+      if (data is List<dynamic>) {
+        final List<ChatRoom> result = [];
+        for (final item in data) {
+          if (item is ChatRoom) {
+            result.add(item);
+          } else if (item is Map<String, dynamic>) {
+            result.add(ChatRoom.fromJson(item));
+          } else if (item is ChatRoomDTO) {
+            result.add(ChatRoom.convertChatDTOToChatRoom(item));
+          } else {
+            print('⚠️ Skipping unknown chat data type: ${item.runtimeType}');
+            continue;
+          }
+        }
+        return result;
+      }
 
-    print('⚠️ Unexpected data type for chat list: ${data.runtimeType}');
-    return [];
+      print('⚠️ Unexpected data type for chat list: ${data.runtimeType}');
+      return [];
+    } catch (e) {
+      print('❌ Error converting chat list: $e');
+      return [];
+    }
   }
 
   ChatRoom _createFallbackChatRoom() {

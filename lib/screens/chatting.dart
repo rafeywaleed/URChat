@@ -792,10 +792,10 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
             _isLoading = false;
           });
 
-          // Preload user profiles AFTER loading fresh messages
+          _debugTimestampIssues();
+
           _preloadUserProfiles();
 
-          // Save updated messages to cache
           if (_messages.isNotEmpty) {
             await ChatCacheService.saveChatMessages(
                 widget.chatRoom.chatId, _messages);
@@ -1755,7 +1755,24 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   }
 
   String _formatMessageTime(DateTime timestamp) {
-    return '${timestamp.hour.toString().padLeft(2, '0')}:${timestamp.minute.toString().padLeft(2, '0')}';
+    final localTime = timestamp.toLocal();
+    return '${localTime.hour.toString().padLeft(2, '0')}:${localTime.minute.toString().padLeft(2, '0')}';
+  }
+
+  String _formatTime(DateTime dateTime) {
+    final now = DateTime.now();
+    final localDateTime = dateTime.toLocal();
+    final difference = now.difference(localDateTime);
+
+    if (difference.inDays > 0) {
+      return '${difference.inDays}d';
+    } else if (difference.inHours > 0) {
+      return '${difference.inHours}h';
+    } else if (difference.inMinutes > 0) {
+      return '${difference.inMinutes}m';
+    } else {
+      return 'Now';
+    }
   }
 
   Widget _buildUserAvatar(String username) {
@@ -2987,7 +3004,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
               : DateTime.now(),
         );
         await UserCacheService.saveUser(user);
-        // Update in-memory profile
+
         final updatedProfile = await UserCacheService.getUserProfile(username);
         if (updatedProfile != null) {
           setState(() {
@@ -2999,5 +3016,26 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     } catch (e) {
       //print('❌ Failed to cache user from profile: $e');
     }
+  }
+
+  void _debugTimestampIssues() {
+    if (_messages.isEmpty) return;
+
+    print('=== TIMESTAMP DEBUG ===');
+    print('Current device time: ${DateTime.now()}');
+    print('Current device time (UTC): ${DateTime.now().toUtc()}');
+    print('Timezone offset: ${DateTime.now().timeZoneOffset}');
+
+    for (var i = 0; i < math.min(_messages.length, 3); i++) {
+      final msg = _messages[i];
+      print('Message ${i + 1}:');
+      print('  Content: ${msg.content}');
+      print('  Original timestamp: ${msg.timestamp}');
+      print('  Local: ${msg.timestamp.toLocal()}');
+      print('  UTC: ${msg.timestamp.toUtc()}');
+      print('  Formatted time: ${_formatMessageTime(msg.timestamp)}');
+      print('  ---');
+    }
+    print('=======================');
   }
 }
