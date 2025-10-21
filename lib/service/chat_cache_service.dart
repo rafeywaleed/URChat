@@ -62,7 +62,6 @@ class ChatCacheService {
     }
   }
 
-  // Load messages for a specific chat
   static Future<List<Message>?> loadChatMessages(String chatId) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -80,7 +79,6 @@ class ChatCacheService {
     return null;
   }
 
-  // Clear cache for a specific chat
   static Future<void> clearChatCache(String chatId) async {
     try {
       final prefs = await SharedPreferences.getInstance();

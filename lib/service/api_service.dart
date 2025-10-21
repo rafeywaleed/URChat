@@ -232,6 +232,7 @@ class ApiService {
 
     if (response.statusCode == 200) {
       final List<dynamic> data = jsonDecode(response.body);
+      print(data);
       return data.map((json) => Message.fromJson(json)).toList();
     } else {
       throw Exception('Failed to load messages: ${response.statusCode}');

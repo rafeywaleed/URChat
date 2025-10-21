@@ -753,15 +753,23 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
           await ChatCacheService.loadChatMessages(widget.chatRoom.chatId);
 
       if (cachedMessages != null && cachedMessages.isNotEmpty) {
+        print('📦 Loading ${cachedMessages.length} messages from cache');
+
+        // Clear current messages and add cached ones
+        _messages.clear();
+        _messages.addAll(cachedMessages);
+
+        // Log cached message timestamps
+        for (var msg in cachedMessages.take(3)) {
+          print('💾 Cached message time: ${msg.timestamp}');
+        }
+
         setState(() {
-          _messages.addAll(cachedMessages);
           _isLoading = false;
         });
 
-        // Preload user profiles AFTER loading cached messages
+        // Preload user profiles
         _preloadUserProfiles();
-
-        // Scroll to bottom after loading cached messages
         WidgetsBinding.instance.addPostFrameCallback((_) {
           _scrollToBottom();
         });
@@ -773,52 +781,54 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
           widget.chatRoom.chatId, 0, _pageSize);
 
       if (freshMessages.isNotEmpty) {
+        print('🌐 Loading ${freshMessages.length} fresh messages from API');
+
+        // Log fresh message timestamps
+        for (var msg in freshMessages.take(3)) {
+          print('🆕 Fresh message time: ${msg.timestamp}');
+        }
+
         freshMessages.sort((a, b) => a.timestamp.compareTo(b.timestamp));
 
-        // Merge fresh messages with cached messages
-        final Set<int> existingMessageIds =
-            _messages.map((msg) => msg.id).toSet();
-        final List<Message> newMessages = [];
-
-        for (final message in freshMessages) {
-          if (!existingMessageIds.contains(message.id)) {
-            newMessages.add(message);
-          }
-        }
+        // Clear and replace messages with fresh data
+        _messages.clear();
+        _messages.addAll(freshMessages);
 
         if (mounted) {
           setState(() {
-            _messages.addAll(newMessages);
             _isLoading = false;
           });
 
-          _debugTimestampIssues();
-
           _preloadUserProfiles();
 
-          if (_messages.isNotEmpty) {
-            await ChatCacheService.saveChatMessages(
-                widget.chatRoom.chatId, _messages);
-          }
+          // Update cache with corrected timestamps
+          await ChatCacheService.saveChatMessages(
+              widget.chatRoom.chatId, _messages);
+          print('✅ Cache updated with fresh messages');
 
           WidgetsBinding.instance.addPostFrameCallback((_) {
             _scrollToBottom();
           });
         }
       } else if (cachedMessages == null) {
-        // No cached messages and no fresh messages
         setState(() {
           _isLoading = false;
         });
       }
     } catch (e) {
-      //print('Error loading messages: $e');
+      print('❌ Error loading messages: $e');
       if (mounted) {
         setState(() {
           _isLoading = false;
         });
       }
     }
+  }
+
+  void _clearAndReloadMessages() async {
+    print('🔄 Clearing corrupted cache and reloading...');
+    await ChatCacheService.clearChatCache(widget.chatRoom.chatId);
+    _loadInitialMessages();
   }
 
   void _startTypingCleanupTimer() {
@@ -1439,13 +1449,19 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 
   Widget _buildMessageList() {
     final Map<DateTime, List<Message>> messagesByDate = {};
+
     for (final message in _messages) {
-      final messageDate = DateTime(message.timestamp.year,
-          message.timestamp.month, message.timestamp.day);
-      if (!messagesByDate.containsKey(messageDate)) {
-        messagesByDate[messageDate] = [];
+      // Convert UTC timestamp to local date for grouping
+      final messageLocalDate = DateTime(
+        message.timestamp.toLocal().year,
+        message.timestamp.toLocal().month,
+        message.timestamp.toLocal().day,
+      );
+
+      if (!messagesByDate.containsKey(messageLocalDate)) {
+        messagesByDate[messageLocalDate] = [];
       }
-      messagesByDate[messageDate]!.add(message);
+      messagesByDate[messageLocalDate]!.add(message);
     }
 
     final sortedDates = messagesByDate.keys.toList()
@@ -1490,7 +1506,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildDateSeparator(DateTime date) {
+  Widget _buildDateSeparator(DateTime localDate) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Center(
@@ -1502,7 +1518,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
             borderRadius: BorderRadius.circular(12),
           ),
           child: Text(
-            _formatDate(date),
+            _formatDate(localDate),
             style: ChatFonts.getTextStyle(
               _selectedFont,
               baseStyle: TextStyle(
@@ -1515,6 +1531,25 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         ),
       ),
     );
+  }
+
+  String _formatDate(DateTime localDate) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = DateTime(now.year, now.month, now.day - 1);
+
+    if (localDate == today) {
+      return 'Today';
+    } else if (localDate == yesterday) {
+      return 'Yesterday';
+    } else {
+      return '${localDate.day}/${localDate.month}/${localDate.year}';
+    }
+  }
+
+  String _formatMessageTime(DateTime utcTimestamp) {
+    final localTime = utcTimestamp.toLocal();
+    return '${localTime.hour.toString().padLeft(2, '0')}:${localTime.minute.toString().padLeft(2, '0')}';
   }
 
   Widget _buildTypingIndicator() {
@@ -1739,41 +1774,24 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 // Add this set to track currently fetching users
   final Set<String> _currentlyFetchingUsers = {};
 
-  String _formatDate(DateTime date) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final yesterday = DateTime(now.year, now.month, now.day - 1);
-    final messageDate = DateTime(date.year, date.month, date.day);
+  // String _formatDate(DateTime date) {
+  //   final now = DateTime.now();
+  //   final today = DateTime(now.year, now.month, now.day);
+  //   final yesterday = DateTime(now.year, now.month, now.day - 1);
+  //   final messageDate = DateTime(date.year, date.month, date.day);
 
-    if (messageDate == today) {
-      return 'Today';
-    } else if (messageDate == yesterday) {
-      return 'Yesterday';
-    } else {
-      return '${date.day}/${date.month}/${date.year}';
-    }
-  }
+  //   if (messageDate == today) {
+  //     return 'Today';
+  //   } else if (messageDate == yesterday) {
+  //     return 'Yesterday';
+  //   } else {
+  //     return '${date.day}/${date.month}/${date.year}';
+  //   }
+  // }
 
-  String _formatMessageTime(DateTime timestamp) {
-    final localTime = timestamp.toLocal();
-    return '${localTime.hour.toString().padLeft(2, '0')}:${localTime.minute.toString().padLeft(2, '0')}';
-  }
-
-  String _formatTime(DateTime dateTime) {
-    final now = DateTime.now();
-    final localDateTime = dateTime.toLocal();
-    final difference = now.difference(localDateTime);
-
-    if (difference.inDays > 0) {
-      return '${difference.inDays}d';
-    } else if (difference.inHours > 0) {
-      return '${difference.inHours}h';
-    } else if (difference.inMinutes > 0) {
-      return '${difference.inMinutes}m';
-    } else {
-      return 'Now';
-    }
-  }
+  // String _formatMessageTime(DateTime timestamp) {
+  //   return '${timestamp.hour.toString().padLeft(2, '0')}:${timestamp.minute.toString().padLeft(2, '0')}';
+  // }
 
   Widget _buildUserAvatar(String username) {
     final profile = _userProfiles[username] ??
@@ -1873,7 +1891,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     Widget messageContent;
 
     if (isSingleAnimatedEmoji) {
-      // Display animated emoji without bubble
       messageContent = Padding(
         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
         child: Row(
@@ -1902,12 +1919,10 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                       ),
                     ),
                   ),
-                // Animated emoji - FIXED: Use the actual emoji string
                 Container(
                   padding: const EdgeInsets.all(8),
                   child: _buildAnimatedEmojiWidget(message.content),
                 ),
-                // Timestamp
                 Padding(
                   padding: const EdgeInsets.only(top: 4),
                   child: Text(
@@ -1925,7 +1940,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         ),
       );
     } else {
-      // Regular message bubble
       messageContent = Padding(
         padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
         child: Row(
@@ -2019,7 +2033,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     return GestureDetector(
       onLongPress: canDelete
           ? () {
-              // Add haptic feedback
               Feedback.forLongPress(context);
               _showMessageOptions(message);
             }
@@ -2031,7 +2044,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     );
   }
 
-// UPDATED: Show message options menu with theme consistency
   void _showMessageOptions(Message message) {
     final colorScheme = Theme.of(context).colorScheme;
 
@@ -3004,7 +3016,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
               : DateTime.now(),
         );
         await UserCacheService.saveUser(user);
-
+        // Update in-memory profile
         final updatedProfile = await UserCacheService.getUserProfile(username);
         if (updatedProfile != null) {
           setState(() {
@@ -3016,26 +3028,5 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     } catch (e) {
       //print('❌ Failed to cache user from profile: $e');
     }
-  }
-
-  void _debugTimestampIssues() {
-    if (_messages.isEmpty) return;
-
-    print('=== TIMESTAMP DEBUG ===');
-    print('Current device time: ${DateTime.now()}');
-    print('Current device time (UTC): ${DateTime.now().toUtc()}');
-    print('Timezone offset: ${DateTime.now().timeZoneOffset}');
-
-    for (var i = 0; i < math.min(_messages.length, 3); i++) {
-      final msg = _messages[i];
-      print('Message ${i + 1}:');
-      print('  Content: ${msg.content}');
-      print('  Original timestamp: ${msg.timestamp}');
-      print('  Local: ${msg.timestamp.toLocal()}');
-      print('  UTC: ${msg.timestamp.toUtc()}');
-      print('  Formatted time: ${_formatMessageTime(msg.timestamp)}');
-      print('  ---');
-    }
-    print('=======================');
   }
 }
