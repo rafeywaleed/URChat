@@ -371,7 +371,6 @@ class _HomescreenState extends State<Homescreen>
         mounted) {
       //print('🚀 Opening initial chat: ${widget.initialChatId}');
 
-      // Add a small delay to ensure the UI is built
       Future.delayed(Duration(milliseconds: 500), () {
         if (!mounted) return;
 
@@ -383,7 +382,6 @@ class _HomescreenState extends State<Homescreen>
           // Chat found, select it
           _selectChat(existingChat);
         } catch (e) {
-          // If chat not found, refresh and try again
           //print('⚠️ Chat not found, refreshing and retrying: ${widget.initialChatId}');
           _loadFreshChats().then((_) {
             if (!mounted) return;

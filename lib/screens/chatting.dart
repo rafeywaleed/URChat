@@ -10,6 +10,7 @@ import 'package:urchat/model/chat_room.dart';
 import 'package:urchat/model/dto.dart';
 import 'package:urchat/model/message.dart';
 import 'package:urchat/screens/group_management_screen.dart';
+import 'package:urchat/screens/home_screen.dart';
 import 'package:urchat/screens/inapp_notifications.dart';
 import 'package:urchat/screens/user_profile.dart';
 import 'package:urchat/service/api_service.dart';
@@ -1879,6 +1880,10 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 
     final canDelete = _canDeleteMessage(message);
 
+    final maxBubbleWidth = _isMobileScreen
+        ? MediaQuery.of(context).size.width * 0.75
+        : MediaQuery.of(context).size.width * 0.5;
+
     final isSingleAnimatedEmoji = _isSingleAnimatedEmoji(message.content);
     final messageTextStyle = ChatFonts.getTextStyle(
       _selectedFont,
@@ -1950,9 +1955,12 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
             if (showAvatar) ...[
               _buildUserAvatar(message.sender),
               const SizedBox(width: 8),
-            ] else
-              SizedBox(width: 20),
-            Flexible(
+            ],
+            // SizedBox(width: 20),
+            ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: maxBubbleWidth,
+              ),
               child: Container(
                 padding:
                     const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
@@ -2290,6 +2298,11 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     return widget.chatRoom.chatName;
   }
 
+  bool get _isMobileScreen {
+    final mediaQuery = MediaQuery.of(context);
+    return mediaQuery.size.width < 768;
+  }
+
   @override
   Widget build(BuildContext context) {
     return WillPopScope(
@@ -2305,7 +2318,9 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
           leading: widget.onBack != null
               ? IconButton(
                   icon: const Icon(Icons.arrow_back),
-                  onPressed: widget.onBack,
+                  onPressed: _isMobileScreen
+                      ? widget.onBack
+                      : () => Navigator.of(context).pop(),
                 )
               : null,
           title: GestureDetector(
@@ -2412,46 +2427,55 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                       ),
                       const SizedBox(width: 4),
 
-                      // Message Text Field
                       Expanded(
-                        child: TextField(
-                          style: ChatFonts.getTextStyle(_selectedFont),
-                          // autofocus: true,
-                          controller: _messageController,
-                          decoration: InputDecoration(
-                            hintText: 'Type a message...',
-                            hintStyle: ChatFonts.getTextStyle(
-                              _selectedFont,
-                              baseStyle: TextStyle(),
-                            ),
-                            labelStyle: ChatFonts.getTextStyle(
-                              _selectedFont,
-                            ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(24),
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 12),
-                            suffixIcon: _isSending
-                                ? const Padding(
-                                    padding: EdgeInsets.all(12),
-                                    child: SizedBox(
-                                      width: 16,
-                                      height: 16,
-                                      child: CircularProgressIndicator(
-                                          strokeWidth: 2),
-                                    ),
-                                  )
-                                : null,
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(
+                            maxHeight: 90,
                           ),
-                          onChanged: (text) {
-                            if (text.isNotEmpty) {
-                              _startTyping();
-                            } else {
-                              _stopTyping();
-                            }
-                          },
-                          onSubmitted: (_) => _sendMessage(),
+                          child: TextField(
+                            style: ChatFonts.getTextStyle(_selectedFont),
+                            // autofocus: true,
+                            keyboardType: TextInputType.multiline,
+                            textInputAction: TextInputAction.newline,
+                            minLines: 1,
+                            maxLines: 15,
+                            expands: false,
+                            controller: _messageController,
+                            decoration: InputDecoration(
+                              hintText: 'Type a message...',
+                              hintStyle: ChatFonts.getTextStyle(
+                                _selectedFont,
+                                baseStyle: TextStyle(),
+                              ),
+                              labelStyle: ChatFonts.getTextStyle(
+                                _selectedFont,
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(24),
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 12),
+                              suffixIcon: _isSending
+                                  ? const Padding(
+                                      padding: EdgeInsets.all(12),
+                                      child: SizedBox(
+                                        width: 16,
+                                        height: 16,
+                                        child: CircularProgressIndicator(
+                                            strokeWidth: 2),
+                                      ),
+                                    )
+                                  : null,
+                            ),
+                            onChanged: (text) {
+                              if (text.isNotEmpty) {
+                                _startTyping();
+                              } else {
+                                _stopTyping();
+                              }
+                            },
+                            onSubmitted: (_) => _sendMessage(),
+                          ),
                         ),
                       ),
                       const SizedBox(width: 8),
