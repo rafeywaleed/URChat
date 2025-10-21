@@ -23,9 +23,12 @@ class InAppNotifications {
 
   bool get isInChat => currentChatId != null;
 
+  String? userLastMesasge;
+
   void addNotification(Map<String, dynamic> notification) {
     if (notification['chatId'] == currentChatId) return;
-
+    if (userLastMesasge != null && userLastMesasge == notification['message'])
+      return;
     messageNotifications.value = [
       ...messageNotifications.value,
       notification,

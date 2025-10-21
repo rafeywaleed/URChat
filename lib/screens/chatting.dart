@@ -1401,6 +1401,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 
     setState(() {
       _isSending = true;
+      InAppNotifications.instance.userLastMesasge = message;
     });
 
     try {

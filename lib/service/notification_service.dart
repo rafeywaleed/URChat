@@ -311,21 +311,14 @@ class NotificationService {
       //print('   Body: ${message.notification?.body}');
       //print('   Data: ${message.data}');
 
-      // 👇 NEW CONDITION
-      // Skip showing system notifications when app is visible
       final isAppInForeground =
           WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed;
 
       if (kIsWeb) {
-        // Web → show custom popup inside app
         if (isAppInForeground) {
-          //print('💬 Showing in-app notification on Web');
           _showWebInAppNotification(message);
-        } else {
-          //print('🌐 Skipping Web notification (handled by Service Worker)');
-        }
+        } else {}
       } else {
-        // Android/iOS → only show local notification if NOT in foreground
         if (!isAppInForeground) {
           //print('📲 App in background — showing system notification');
           _showLocalNotification(message);
