@@ -49,25 +49,26 @@ class _AuthScreenState extends State<AuthScreen> {
 
         await ApiService.initiateRegistration(registerRequest);
 
-        await showDialog(
+        final success = await showDialog(
           context: context,
           barrierDismissible: false,
           builder: (context) => OtpVerificationDialog(
             registerRequest: registerRequest,
-            onVerificationSuccess: () {
+            onVerificationSuccess: () async {
               _usernameController.clear();
               _passwordController.clear();
               _emailController.clear();
               _fullNameController.clear();
-
-              Navigator.of(context).pop();
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => Homescreen()),
-              );
             },
           ),
         );
+
+        if (success == true) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => Homescreen()),
+          );
+        }
       }
     } catch (e) {
       // ScaffoldMessenger.of(context).showSnackBar(
