@@ -80,7 +80,7 @@ class _HomescreenState extends State<Homescreen>
   bool _showChatScreen = false;
 
   int _currentTextIndex = 0;
-  late Timer _timer;
+
   bool _showRunningText = true;
 
   ChatRoom? get _selectedChat {
@@ -2160,7 +2160,6 @@ class _HomescreenState extends State<Homescreen>
   void _cancelAllTimers() {
     _connectionTimer.cancel();
     _debugTimer.cancel();
-    _timer.cancel();
   }
 
   @override
@@ -2169,7 +2168,7 @@ class _HomescreenState extends State<Homescreen>
     _connectivitySubscription.cancel();
     _connectionTimer.cancel();
     _debugTimer.cancel();
-    _timer.cancel();
+
     _webSocketService.disconnect();
     _focusNode.dispose();
     InAppNotifications.instance.setOnOpenChatCallback((_) {});
