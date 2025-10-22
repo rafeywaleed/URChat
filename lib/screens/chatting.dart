@@ -747,62 +747,48 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     try {
       setState(() {
         _isLoading = true;
+        _currentPage = 0;
+        _hasMoreMessages = true;
       });
 
-      // First try to load from cache
       final cachedMessages =
           await ChatCacheService.loadChatMessages(widget.chatRoom.chatId);
 
       if (cachedMessages != null && cachedMessages.isNotEmpty) {
         print('📦 Loading ${cachedMessages.length} messages from cache');
 
-        // Clear current messages and add cached ones
         _messages.clear();
         _messages.addAll(cachedMessages);
-
-        // Log cached message timestamps
-        for (var msg in cachedMessages.take(3)) {
-          print('💾 Cached message time: ${msg.timestamp}');
-        }
 
         setState(() {
           _isLoading = false;
         });
 
-        // Preload user profiles
         _preloadUserProfiles();
         WidgetsBinding.instance.addPostFrameCallback((_) {
           _scrollToBottom();
         });
       }
 
-      // Then load fresh data from API
-      final int _pageSize = 20;
       final freshMessages = await ApiService.getPaginatedMessages(
           widget.chatRoom.chatId, 0, _pageSize);
 
       if (freshMessages.isNotEmpty) {
         print('🌐 Loading ${freshMessages.length} fresh messages from API');
 
-        // Log fresh message timestamps
-        for (var msg in freshMessages.take(3)) {
-          print('🆕 Fresh message time: ${msg.timestamp}');
-        }
-
         freshMessages.sort((a, b) => a.timestamp.compareTo(b.timestamp));
 
-        // Clear and replace messages with fresh data
         _messages.clear();
         _messages.addAll(freshMessages);
 
         if (mounted) {
           setState(() {
             _isLoading = false;
+            _hasMoreMessages = freshMessages.length == _pageSize;
           });
 
           _preloadUserProfiles();
 
-          // Update cache with corrected timestamps
           await ChatCacheService.saveChatMessages(
               widget.chatRoom.chatId, _messages);
           print('✅ Cache updated with fresh messages');
@@ -814,6 +800,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       } else if (cachedMessages == null) {
         setState(() {
           _isLoading = false;
+          _hasMoreMessages = false;
         });
       }
     } catch (e) {
@@ -865,6 +852,13 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         } else {
           _scrollButtonAnimationController.reverse();
         }
+      }
+
+      if (_scrollController.position.pixels <= 100 &&
+          !_isLoadingMore &&
+          _hasMoreMessages &&
+          !_isLoading) {
+        _loadMoreMessages();
       }
     });
   }
@@ -1447,13 +1441,66 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     _typingTimer?.cancel();
   }
 
+  int _currentPage = 0;
+  final int _pageSize = 20;
+  bool _hasMoreMessages = true;
   bool _isLoadingMore = false;
+
+  Future<void> _loadMoreMessages() async {
+    if (_isLoadingMore || !_hasMoreMessages) return;
+
+    try {
+      setState(() {
+        _isLoadingMore = true;
+      });
+
+      final nextPage = _currentPage + 1;
+      final moreMessages = await ApiService.getPaginatedMessages(
+          widget.chatRoom.chatId, nextPage, _pageSize);
+
+      if (moreMessages.isNotEmpty) {
+        print(
+            '📥 Loading more messages: page $nextPage, ${moreMessages.length} messages');
+
+        moreMessages.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+
+        // Insert at the beginning to maintain chronological order
+        _messages.insertAll(0, moreMessages);
+
+        if (mounted) {
+          setState(() {
+            _currentPage = nextPage;
+            _hasMoreMessages = moreMessages.length ==
+                _pageSize; // If we got a full page, there might be more
+          });
+        }
+
+        // Preload user profiles for new messages
+        _preloadUserProfiles();
+
+        // Don't update cache for paginated messages to avoid storing too much data
+      } else {
+        // No more messages to load
+        setState(() {
+          _hasMoreMessages = false;
+        });
+      }
+    } catch (e) {
+      print('❌ Error loading more messages: $e');
+      // Don't show error to user for pagination failures
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingMore = false;
+        });
+      }
+    }
+  }
 
   Widget _buildMessageList() {
     final Map<DateTime, List<Message>> messagesByDate = {};
 
     for (final message in _messages) {
-      // Convert UTC timestamp to local date for grouping
       final messageLocalDate = DateTime(
         message.timestamp.toLocal().year,
         message.timestamp.toLocal().month,
@@ -1471,12 +1518,28 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 
     final List<Widget> messageWidgets = [];
 
+    // NEW: Add loading indicator for pagination at the top
     if (_isLoadingMore) {
       messageWidgets.add(
         const Padding(
           padding: EdgeInsets.all(16),
           child: Center(
             child: CircularProgressIndicator(),
+          ),
+        ),
+      );
+    }
+
+    // NEW: Add "Load More" button if there are more messages but auto-load failed
+    if (!_isLoadingMore && _hasMoreMessages && _messages.isNotEmpty) {
+      messageWidgets.add(
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Center(
+            child: TextButton(
+              onPressed: _loadMoreMessages,
+              child: const Text('Load older messages'),
+            ),
           ),
         ),
       );
