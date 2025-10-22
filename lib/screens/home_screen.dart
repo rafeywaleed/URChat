@@ -1,4 +1,5 @@
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:nes_ui/nes_ui.dart';
@@ -110,6 +111,8 @@ class _HomescreenState extends State<Homescreen>
     if (widget.openChatOnStart == true && widget.initialChatId != null) {
       _openInitialChat();
     }
+
+    _sendFCMToken();
 
     _loadInitialData();
     // .then((_) {
@@ -2223,5 +2226,22 @@ class _HomescreenState extends State<Homescreen>
     }
 
     //print('🌐 Connectivity changed: $results → Connected: $isConnected');
+  }
+
+  Future<void> _sendFCMToken() async {
+    String? fcmToken = await FirebaseMessaging.instance.getToken();
+
+    print("FCM TOken : ${fcmToken}");
+
+    try {
+      if (fcmToken != null) {
+        final fcmResponse = ApiService.saveFcmToken(fcmToken);
+        print("FCM Response : ${fcmResponse}");
+      } else {
+        print("FCM Token is null");
+      }
+    } catch (e) {
+      print("Error FCM Save Token to the backend : ${e}");
+    }
   }
 }
