@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:nes_ui/nes_ui.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class MazeGamePage extends StatefulWidget {
   const MazeGamePage({Key? key}) : super(key: key);
@@ -31,8 +32,23 @@ class _MazeGamePageState extends State<MazeGamePage> {
   @override
   void initState() {
     super.initState();
+    _loadHighScore();
     _newMaze();
     _startChaserLoop();
+  }
+
+  // Load high score from SharedPreferences
+  Future<void> _loadHighScore() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _highScore = prefs.getInt('maze_chase_high_score') ?? 0;
+    });
+  }
+
+  // Save high score to SharedPreferences
+  Future<void> _saveHighScore() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('maze_chase_high_score', _highScore);
   }
 
   @override
@@ -127,7 +143,10 @@ class _MazeGamePageState extends State<MazeGamePage> {
       _gameOver = true;
       _won = true;
       _score++;
-      if (_score > _highScore) _highScore = _score;
+      if (_score > _highScore) {
+        _highScore = _score;
+        _saveHighScore(); // Save new high score
+      }
       HapticFeedback.mediumImpact();
       _showDialog('LEVEL CLEAR!', 'You escaped the maze! +1 Score');
     }
@@ -364,6 +383,20 @@ class _MazeGamePageState extends State<MazeGamePage> {
     if (isMobile && screenWidth < 380) {
       return Column(
         children: [
+          // Back button row for small mobile
+          Row(
+            children: [
+              NesButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                type: NesButtonType.normal,
+                child: const Text('BACK'),
+              ),
+              const Spacer(),
+            ],
+          ),
+          const SizedBox(height: 8),
           NesContainer(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             child: const Text(
@@ -416,59 +449,79 @@ class _MazeGamePageState extends State<MazeGamePage> {
         ],
       );
     } else {
-      return Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Flexible(
-            child: NesContainer(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              child: Text(
-                'MAZE CHASER',
-                style: TextStyle(
-                  fontSize: isMobile ? 14 : 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
+          // Back button row for larger screens
+          Row(
+            children: [
+              NesButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                type: NesButtonType.normal,
+                child: const Text('BACK'),
+              ),
+              const Spacer(),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Flexible(
+                child: NesContainer(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  child: Text(
+                    'MAZE CHASER',
+                    style: TextStyle(
+                      fontSize: isMobile ? 14 : 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
+                  ),
                 ),
               ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Flexible(
-            child: Wrap(
-              alignment: WrapAlignment.end,
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                NesContainer(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  child: Text(
-                    'SCORE: $_score',
-                    style: TextStyle(
-                      fontSize: isMobile ? 11 : 14,
-                      color: Colors.black,
-                      fontWeight: FontWeight.bold,
+              const SizedBox(width: 8),
+              Flexible(
+                child: Wrap(
+                  alignment: WrapAlignment.end,
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    NesContainer(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      child: Text(
+                        'SCORE: $_score',
+                        style: TextStyle(
+                          fontSize: isMobile ? 11 : 14,
+                          color: Colors.black,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-                NesContainer(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  child: Text(
-                    'HIGH: $_highScore',
-                    style: TextStyle(
-                      fontSize: isMobile ? 11 : 14,
-                      color: Colors.black,
-                      fontWeight: FontWeight.bold,
+                    NesContainer(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      child: Text(
+                        'HIGH: $_highScore',
+                        style: TextStyle(
+                          fontSize: isMobile ? 11 : 14,
+                          color: Colors.black,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
-                  ),
+                    NesIconButton(
+                      icon: NesIcons.rotate,
+                      onPress: _newMaze,
+                    ),
+                  ],
                 ),
-                NesIconButton(
-                  icon: NesIcons.rotate,
-                  onPress: _newMaze,
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ],
       );

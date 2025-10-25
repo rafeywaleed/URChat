@@ -107,6 +107,7 @@ class _HomescreenState extends State<Homescreen>
   void initState() {
     super.initState();
 
+    // NotificationService().clearAllNotifications();
     NotificationService().clearAllNotifications();
     _tabController = TabController(length: 2, vsync: this);
 

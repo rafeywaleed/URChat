@@ -668,7 +668,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-    NotificationService().clearChatNotifications(widget.chatRoom.chatId);
+    // NotificationService().clearChatNotifications(widget.chatRoom.chatId);
     // NotificationService().onChatOpened(widget.chatRoom.chatId);
 
     _typingAnimationController = AnimationController(
