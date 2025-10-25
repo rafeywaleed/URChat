@@ -19,47 +19,36 @@
 
     <script>
         window.flutterWebRenderer = "html";
-        // Service worker registration with proper scope
+
         if ('serviceWorker' in navigator) {
             console.log('Service Worker is supported');
 
             window.addEventListener('load', function() {
-                // First, unregister any existing service workers
+                // Clean up existing service workers first
                 navigator.serviceWorker.getRegistrations().then(function(registrations) {
-                    for (let registration of registrations) {
-                        if (registration.scope.includes('127.0.0.1')) {
-                            console.log('Unregistering existing service worker:', registration.scope);
-                            registration.unregister();
-                        }
-                    }
-                }).then(function() {
-                    // Register the new service worker with the correct scope
-                    return navigator.serviceWorker.register('/firebase-messaging-sw.js', {
-                        scope: '/'
+                    const cleanupPromises = registrations.map(registration => {
+                        console.log('Unregistering service worker:', registration.scope);
+                        return registration.unregister();
                     });
+                    return Promise.all(cleanupPromises);
+                }).then(function() {
+                    // Register with explicit scope
+                    return navigator.serviceWorker.register('/firebase-messaging-sw.js');
                 }).then(function(registration) {
                     console.log('ServiceWorker registration successful with scope: ', registration.scope);
 
-                    // Check if service worker is active
-                    if (registration.active) {
-                        console.log('ServiceWorker is active');
+                    // Check if service worker is ready
+                    if (registration.installing) {
+                        console.log('Service worker installing');
+                    } else if (registration.waiting) {
+                        console.log('Service worker installed');
+                    } else if (registration.active) {
+                        console.log('Service worker active');
                     }
-
-                    registration.addEventListener('updatefound', () => {
-                        const newWorker = registration.installing;
-                        console.log('ServiceWorker update found:', newWorker);
-                    });
                 }).catch(function(err) {
                     console.log('ServiceWorker registration failed: ', err);
                 });
             });
-
-            // Listen for messages from service worker
-            navigator.serviceWorker.addEventListener('message', (event) => {
-                console.log('Received message from service worker:', event.data);
-            });
-        } else {
-            console.log('Service Worker is not supported');
         }
     </script>
 </head>

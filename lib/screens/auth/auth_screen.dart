@@ -233,6 +233,15 @@ class _AuthScreenState extends State<AuthScreen> {
     if (value == null || value.isEmpty) {
       return 'Password is required';
     }
+    if (value.length < 5) {
+      return 'Password must be at least 5 characters';
+    }
+    if (value.length > 128) {
+      return 'Password cannot exceed 128 characters';
+    }
+    if (value.contains(' ')) {
+      return 'Password cannot contain spaces';
+    }
     return null;
   }
 
@@ -269,6 +278,7 @@ class _AuthScreenState extends State<AuthScreen> {
         borderSide: BorderSide(color: _brown.withOpacity(0.4)),
         borderRadius: BorderRadius.circular(14),
       ),
+      errorMaxLines: 4,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
     );
   }

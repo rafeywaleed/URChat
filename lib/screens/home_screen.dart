@@ -106,6 +106,8 @@ class _HomescreenState extends State<Homescreen>
   @override
   void initState() {
     super.initState();
+
+    NotificationService().clearAllNotifications();
     _tabController = TabController(length: 2, vsync: this);
 
     if (widget.openChatOnStart == true && widget.initialChatId != null) {

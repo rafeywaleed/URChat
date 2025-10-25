@@ -12,6 +12,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:async';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:urchat/service/new_not.dart';
 import 'package:urchat/service/notification_service.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -27,7 +28,9 @@ Future<void> main() async {
   try {
     await LocalCacheService.init();
     await ApiService.init();
-    await NotificationService().initialize();
+    final notificationService = NotificationService();
+    await notificationService.initialize();
+    await notificationService.clearAllNotifications();
   } catch (e) {
     //print("❌ Error during app initialization: $e");
   }
@@ -46,6 +49,7 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
+    // NotificationService().clearAllNotificationsOnStart();
     _setupNotificationListener();
   }
 

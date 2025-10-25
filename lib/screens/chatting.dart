@@ -16,6 +16,7 @@ import 'package:urchat/screens/user_profile.dart';
 import 'package:urchat/service/api_service.dart';
 import 'package:urchat/service/chat_cache_service.dart';
 import 'package:urchat/service/font_prefrences.dart';
+import 'package:urchat/service/notification_service.dart';
 import 'package:urchat/service/user_cache_service.dart';
 import 'package:urchat/service/websocket_service.dart';
 import 'package:urchat/themes/butter/bfdemo.dart';
@@ -667,6 +668,8 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
+    NotificationService().clearChatNotifications(widget.chatRoom.chatId);
+    // NotificationService().onChatOpened(widget.chatRoom.chatId);
 
     _typingAnimationController = AnimationController(
       duration: const Duration(milliseconds: 1200),
@@ -701,6 +704,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 
   @override
   void dispose() {
+    // NotificationService().onChatClosed();
     _typingAnimationController.dispose();
     _scrollButtonAnimationController.dispose();
     _typingTimer?.cancel();
