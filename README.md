@@ -25,7 +25,7 @@ https://github.com/user-attachments/assets/9b862758-3a98-4a17-ba8b-fd088a879eff
 
 ## 🕹️ **Overview**
 
-**URChat** reimagines the nostalgic charm of NES-era visuals as a **modern, real-time chat app** — minimal, performant, and full of personality.  
+**URChat** reimagines the nostalgic charm of NES-era visuals as a **modern, real-time chat app**, minimal, performant, and full of personality.  
 It’s a full-stack system built for the web and mobile world, blending **retro design**, **real-time tech**, and **cross-platform accessibility**.
 
 > 💡 _Fast. Fun. Functional. URChat is lightweight yet loaded with powerful features._
@@ -41,8 +41,8 @@ It’s a full-stack system built for the web and mobile world, blending **retro 
 | 🔐 **JWT Auth System** | Secure Access + Refresh token-based authentication |
 | 📧 **SMTP Integration** | Email verification & password recovery |
 | 🧩 **Cross-Platform UI** | **Flutter** ensures seamless Web + Android experience |
-| 🎨 **Dynamic Chat Themes** | _Simple_, _Modern Elegant_, _Cute_ — each with **Light & Dark** variants |
-| 😀 **Emoji-Based Profiles** | No profile pics — expressive **animated emojis** & color-coded backgrounds |
+| 🎨 **Dynamic Chat Themes** | _Simple_, _Modern Elegant_, _Cute_. each with **Light & Dark** variants |
+| 😀 **Emoji-Based Profiles** | No profile pics, expressive **animated emojis** & color-coded backgrounds |
 | 🧑‍🤝‍🧑 **DM & Group Chats** | Supports **admin controls** and real-time group updates |
 | 🔍 **User Search** | Find and connect with users instantly |
 | 🕹️ **Offline Mini-Game** | Built-in **AI-generated maze chase game** playable offline |
@@ -85,4 +85,5 @@ It’s a full-stack system built for the web and mobile world, blending **retro 
              │                               │
              ▼                               ▼
      Firebase Cloud Msg.            PostgreSQL Database
+
 
